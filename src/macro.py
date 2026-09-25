@@ -511,10 +511,11 @@ class App:
             self.scene={'fishing':False,'loot':None,'reward':False}
         if now-self.last_scene>=.25 and self.scene_job is None:
             full=self.sample(full=True)
-            if self.config['auto_calibrate'] and not self.calibration.locked and self.calibration_job is None and self.engine.state in ('INICIO','ESPERANDO','PESCANDO','RESULTADO'):
+            if self.config['auto_calibrate'] and self.calibration_job is None and (not self.calibration.locked or now-getattr(self,'last_calibration_search',0)>=1) and self.engine.state in ('INICIO','ESPERANDO','PESCANDO','RESULTADO'):
                 stage=self.calibration.search_stage
                 self.bar_status.set({'current':'Procurando na região atual…','nearby':'Procurando ao redor da barra…','screen':'Procurando na tela do jogo…'}[stage])
                 self.calibration_job=(self.calibration_worker.submit(search_bar,full,self.config['roi'][:],stage),self.calibration_epoch,now)
+                self.last_calibration_search=now
             # A busca de painel jamais bloqueia o controle de 20 ms da barra.
             self.scene_job=(self.vision_worker.submit(self.signals.scan,full),self.scene_epoch,now)
             previous=self.cycle_id-1
@@ -541,7 +542,7 @@ class App:
         parsed,captured=self.ocr_results.get(self.cycle_id,(None,0))
         text_reward=parsed is not None and now-captured<4
         previous_state=self.engine.state
-        actions=self.engine.step(now,reading,self.scene['fishing'],self.scene['loot'],self.scene.get('reward',False) or text_reward)
+        actions=self.engine.step(now,reading,self.scene['fishing'],self.scene['loot'],self.scene.get('reward',False) or text_reward,scene_stamp=self.scene_time,scene_valid=now-self.scene_time<1)
         if previous_state=='PESCANDO' and self.engine.state!='PESCANDO' and self.config['auto_calibrate']:
             profile=self.calibration.finish()
             if profile:

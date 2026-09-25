@@ -2,6 +2,27 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.0.3](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.3)
+
+### Minigame
+
+- Conferência periódica da posição da barra mesmo após confirmar a calibração automática.
+- Recuperação da localização começa após 0,2 segundo sem leitura; a busca continua enquanto há sinal de pesca ativa, respeitando o limite total de 120 segundos.
+- Conferências de uma região estável não reiniciam o controlador.
+- Detecção trata a sobreposição branca que divide a faixa colorida e descarta regiões brancas grandes antes de selecionar o marcador.
+
+### Coleta
+
+- Recompensa reconhecida encerra a coleta imediatamente, sem gastar as tentativas restantes.
+- Quando um item antes identificado deixa de aparecer após T, a sequência pode terminar com três capturas distintas e ao menos 1,2 segundo de ausência persistente. O histórico indica que a recompensa não foi confirmada se não houve aviso de recompensa.
+- Sem item identificado nas duas primeiras tentativas, volta a pescar após validar a ausência. As cinco tentativas permanecem como limite para casos ainda não resolvidos.
+- Reaparecimento do item reinicia a verificação; capturas repetidas ou antigas não contam como novas evidências de ausência.
+- A verificação aguarda capturas mais lentas antes de gastar outra tentativa.
+
+### Validação
+
+- Testes de sobreposição, relocalização, retomada do controle, coleta antecipada, item girando e observações antigas. A validação automatizada não substitui uma sessão no jogo ao vivo.
+
 ## [7.0.2](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.2)
 
 ### Alterações

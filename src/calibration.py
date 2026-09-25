@@ -71,7 +71,7 @@ class AutoCalibration:
         if reading is not None:
             self.missing_since=None;return False
         if self.missing_since is None:self.missing_since=now
-        if self.locked and now-self.missing_since>=.5:
+        if self.locked and now-self.missing_since>=.2:
             self.locked=False;self.pending=[];self.roi=None
             self.samples=0;self.valid=0;self.recoveries+=1
             self.search_stage='current';self.search_misses=0
@@ -79,7 +79,6 @@ class AutoCalibration:
         return False
 
     def observe(self,candidate):
-        if self.locked:return None
         if not candidate or candidate['confidence']<.45:
             self.pending=[];self.search_misses+=1
             if self.search_misses>=2:
@@ -91,7 +90,11 @@ class AutoCalibration:
             self.pending=[]
         self.pending.append(roi)
         if len(self.pending)<3:return None
-        self.roi=np.median(self.pending[-3:],axis=0).tolist();self.locked=True
+        roi=np.median(self.pending[-3:],axis=0).tolist()
+        self.pending=[];self.search_misses=0;self.search_stage='current'
+        # Conferências periódicas não devem zerar o controlador se nada mudou.
+        if self.locked and self.roi and max(abs(a-b) for a,b in zip(roi,self.roi))<.005:return None
+        self.roi=roi;self.locked=True
         self.missing_since=None
         return self.roi
 

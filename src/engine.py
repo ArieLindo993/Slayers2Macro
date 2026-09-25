@@ -16,6 +16,7 @@ class Engine:
         self.cycles=0;self.collected=0;self.unconfirmed=0
         if preserve_counts:self.cycles,self.collected,self.unconfirmed=counts
         self.loot_seen=False;self.absent_since=None
+        self.absent_frames=0;self.last_collect_frame=None
         self.collect_started=None;self.reward_was_present=False
         self.last_fishing=now;self.track_started=now
         self.last_marker=now;self.positive=0
@@ -49,13 +50,12 @@ class Engine:
         """Coleta sem depender da detecção do texto/item na vara."""
         if self.collect_started is None:self.collect_started=now
         self.collect_attempts+=1
-        self.loot_seen=True
         self.state='TECLA_T';self.deadline=now+self.cfg['t_hold']
         self.message=f'Coletando com T · tentativa {self.collect_attempts}/{self.cfg["max_collect"]}'
         return [('mouse',False),('t',True)]
 
-    def finish(self,now,confirmed):
-        self.outcome='Coleta confirmada' if confirmed else ('Coleta não confirmada' if self.loot_seen else 'Sem recompensa detectada')
+    def finish(self,now,confirmed,reason=None):
+        self.outcome=reason or ('Coleta confirmada' if confirmed else ('Coleta não confirmada' if self.loot_seen else 'Sem recompensa detectada'))
         self.cycles+=1
         if confirmed:self.collected+=1
         else:self.unconfirmed+=1
@@ -65,7 +65,7 @@ class Engine:
         self.collect_started=None
         return [('mouse',False),('t',False)]
 
-    def step(self,now,reading,fishing,loot,reward=False):
+    def step(self,now,reading,fishing,loot,reward=False,scene_stamp=None,scene_valid=True):
         if self.state=='PARADO':return []
         reward_new=reward and not self.reward_was_present
         self.reward_was_present=reward
@@ -77,6 +77,7 @@ class Engine:
             return self.prepare_collect(now,loot)
         if self.state=='RESULTADO' and reward_new:return self.finish(now,True)
         if self.state in ('TECLA_T','VERIFICANDO_COLETA','MIRANDO_ITEM'):
+            if loot:self.loot_seen=True
             if reward_new and self.collect_attempts>0:return self.finish(now,True)
             if self.collect_started is not None and now-self.collect_started>self.cfg['collect_timeout']:
                 return self.finish(now,False)
@@ -125,8 +126,6 @@ class Engine:
                 self.state='RESULTADO';self.deadline=now+self.cfg['result_wait']
                 self.collect_attempts=0;self.loot_seen=False;self.absent_since=None;self.collect_started=None
                 self.message='Verificando se há item para coletar…'
-            elif now-self.last_marker>(20 if self.cfg.get('auto_calibrate') else 6):
-                return self.stop('Não consegui recuperar a barra. Use F6 para selecionar e F4 para retomar.')
             else:
                 self.message='Reencontrando a barra…' if self.cfg.get('auto_calibrate') else 'Aguardando leitura da barra…'
             if now-self.track_started>120:return self.stop('Pesca excedeu 120 segundos. Confira a tela.')
@@ -142,14 +141,32 @@ class Engine:
                 return ([('aim',loot)] if loot else [])+[('t',True)]
         elif self.state=='TECLA_T':
             if now>=self.deadline:
-                self.state='VERIFICANDO_COLETA';self.deadline=now+1.2;self.absent_since=None
+                self.state='VERIFICANDO_COLETA';self.deadline=now+1.8;self.absent_since=None
+                self.absent_frames=0;self.last_collect_frame=None;self.verification_started=now
                 self.message='Aguardando confirmação da recompensa…'
                 return [('t',False)]
         elif self.state=='VERIFICANDO_COLETA':
+            stamp=now if scene_stamp is None else scene_stamp
+            if not scene_valid or loot or active:
+                self.absent_since=None;self.absent_frames=0
+            elif stamp>=self.verification_started and stamp!=self.last_collect_frame:
+                self.last_collect_frame=stamp
+                if self.absent_since is None:self.absent_since=stamp
+                self.absent_frames+=1
+                if self.absent_frames>=3 and stamp-self.absent_since>=1.2:
+                    if self.loot_seen:
+                        return self.finish(now,False,'Item desapareceu após T; recompensa não confirmada')
+                    if self.collect_attempts>=2:
+                        return self.finish(now,False,'Nenhum item identificado em duas tentativas')
             if now>=self.deadline:
+                # Capturas lentas precisam de tempo para formar observações
+                # distintas; não gastar outra tentativa enquanto elas chegam.
+                if not loot and not active and now-self.verification_started<4:
+                    stable=self.absent_since is not None and self.absent_frames>=3 and stamp-self.absent_since>=1.2
+                    if not stable:return []
                 if self.collect_attempts>=self.cfg['max_collect']:return self.finish(now,False)
                 return self.prepare_collect(now,loot)
-            self.message='Aguardando recompensa; ausência do painel não confirma coleta.'
+            self.message='Conferindo recompensa e presença do item após T…'
         elif self.state=='REINICIANDO':
             if now>=self.deadline:
                 self.last_loot=None;self.loot_seen=False

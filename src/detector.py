@@ -10,11 +10,13 @@ class Reading:
     band: float
 
 
-def longest_run(mask, minimum):
+def longest_run(mask, minimum, maximum=None):
     indices = np.flatnonzero(mask)
     if not len(indices):
         return None
     groups = np.split(indices, np.flatnonzero(np.diff(indices) > 1) + 1)
+    groups = [run for run in groups if len(run)>=minimum and (maximum is None or len(run)<=maximum)]
+    if not groups:return None
     run = max(groups, key=len)
     if len(run) < minimum:
         return None
@@ -33,8 +35,16 @@ def detect(rgb):
     white = (r > 150) & (g > 160) & (b > 125) & ((np.maximum(r, g) - b) < 100) & (abs(r-g) < 85)
     margin = max(2, int(w * .28))
     central = white[:, margin:w-margin]
-    marker = longest_run(central.mean(axis=1) > .35, max(3, int(h*.018)))
-    target = longest_run(green.mean(axis=1) > .18, max(5, int(h*.035)))
+    white_rows = central.mean(axis=1) > .35
+    marker = longest_run(white_rows, max(3, int(h*.018)), h*.13)
+    green_rows = green.mean(axis=1) > .18
+    # O marcador pode ocultar o meio do alvo. Una apenas um intervalo
+    # branco delimitado por verde dos dois lados, nunca o fundo escuro.
+    if marker is not None:
+        start=int(round(marker[0]-(marker[1]-1)/2));end=start+marker[1]
+        if start>0 and end<h and green_rows[start-1] and green_rows[end]:
+            green_rows[start:end]=True
+    target = longest_run(green_rows, max(5, int(h*.035)), h*.25)
     if marker is None or target is None:
         return None
     if marker[1] > h*.13 or not h*.035 <= target[1] <= h*.25:

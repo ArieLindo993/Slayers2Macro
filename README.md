@@ -33,7 +33,7 @@ Mantenha os arquivos do atualizador juntos. Não mova apenas o executável nem a
 4. O macro lança a vara, espera o minigame, controla o marcador e tenta coletar o resultado segurando **T**.
 5. Acompanhe a primeira rodada pela prévia e pelo texto de status. Se precisar interromper, use **F10**.
 
-A sequência considera tentativas sem recompensa e repete a coleta quando necessário. O texto de reconhecimento do item não é requisito para iniciar a tentativa de coleta. Há limites de até três lançamentos e cinco tentativas de coleta para cada sequência.
+A sequência considera tentativas sem recompensa e repete a coleta quando necessário. O texto de reconhecimento do item não é requisito para iniciar a tentativa de coleta. Há limites de até três lançamentos e cinco tentativas de coleta para cada sequência. A coleta termina antes desse limite ao reconhecer a recompensa ou validar o desaparecimento persistente de um item após T. Sem item identificado nas duas primeiras tentativas, volta a pescar após conferir a ausência. O desaparecimento isolado não é registrado como recompensa confirmada.
 
 O Roblox precisa permanecer visível e em primeiro plano. Ao perder o foco, o macro pausa e libera as teclas e o mouse; volte ao jogo e pressione F4 para retomar. O macro usa o mouse e o teclado enquanto está ativo.
 
@@ -48,7 +48,7 @@ O Roblox precisa permanecer visível e em primeiro plano. Ao perder o foco, o ma
 
 ## Calibração e acompanhamento
 
-**Automática:** a barra é conferida a cada pesca. A localização precisa de três capturas consistentes para ser confirmada. Rodadas com leituras confiáveis refinam o perfil; isso não garante melhora em toda tentativa. Quando a localização se perde, a busca passa pela região atual, seus arredores e a tela do jogo.
+**Automática:** a barra é conferida a cada pesca. A localização precisa de três capturas consistentes para ser confirmada. Rodadas com leituras confiáveis refinam o perfil; isso não garante melhora em toda tentativa. A posição continua sendo conferida periodicamente mesmo após a confirmação. Quando a localização se perde, a busca passa pela região atual, seus arredores e a tela do jogo. Enquanto houver sinal de pesca ativa, tenta recuperar a leitura, respeitando o limite total de 120 segundos.
 
 **Manual:** quando o minigame estiver visível, pressione F6. Na captura congelada, arraste para selecionar a barra inteira e salve. Isso ativa o modo manual. Volte ao Roblox e pressione F4. A opção automática pode ser reativada na interface.
 
@@ -60,7 +60,7 @@ Na prévia, **azul** marca a região analisada, **verde** indica o alvo e **rosa
 
 Abra as configurações, altere os valores e clique em **Salvar e fechar**.
 
-| Ajuste | Padrão na versão 7.0.2 | Intervalo permitido |
+| Ajuste | Padrão atual | Intervalo permitido |
 | --- | --- | --- |
 | Duração do clique | 0,25 segundo | 0,08 a 1 segundo |
 | Segurar T | **3 segundos** | 0,2 a 5 segundos |
