@@ -4,10 +4,17 @@ import numpy as np
 from detector import detect
 
 
-def locate_bar(rgb,preferred=None):
+def locate_bar(rgb,preferred=None,search_box=None):
     h,w=rgb.shape[:2]
+    ox,oy=0,0;view=rgb
+    if search_box is not None:
+        x,y,bw,bh=search_box
+        ox=max(0,int(x*w));oy=max(0,int(y*h))
+        right=min(w,int((x+bw)*w));bottom=min(h,int((y+bh)*h))
+        if right-ox<16 or bottom-oy<60:return None
+        view=rgb[oy:bottom,ox:right]
     # Bordas compridas e paralelas distinguem o trilho da faixa móvel.
-    gray=cv2.cvtColor(rgb,cv2.COLOR_RGB2GRAY)
+    gray=cv2.cvtColor(view,cv2.COLOR_RGB2GRAY)
     edges=cv2.Canny(gray,20,60)
     joined=cv2.morphologyEx(edges,cv2.MORPH_CLOSE,np.ones((9,1),np.uint8))
     contours,_=cv2.findContours(joined,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
@@ -24,9 +31,9 @@ def locate_bar(rgb,preferred=None):
     candidates=[]
     for index,(x,y,bw,bh) in enumerate(boxes):
         if not .18*h<bh<.7*h or not .07<bw/bh<.25 or bw<16:continue
-        left=max(0,x-int(bw*.10));right=min(w,x+bw+int(bw*.10))
-        top=max(0,y-2);bottom=min(h,y+bh+2)
-        crop=rgb[top:bottom,left:right]
+        left=max(0,x-int(bw*.10));right=min(view.shape[1],x+bw+int(bw*.10))
+        top=max(0,y-2);bottom=min(view.shape[0],y+bh+2)
+        crop=view[top:bottom,left:right]
         reading=detect(crop)
         if reading is None:continue
         # Bordas externas têm que atravessar boa parte do trilho.
@@ -34,12 +41,19 @@ def locate_bar(rgb,preferred=None):
         side2=np.any(edges[y:y+bh,max(0,x+bw-4):min(w,x+bw+2)]>0,axis=1).mean()
         confidence=min(side1,side2)
         if confidence<.45:continue
-        roi=[left/w,top/h,(right-left)/w,(bottom-top)/h]
+        roi=[(left+ox)/w,(top+oy)/h,(right-left)/w,(bottom-top)/h]
         distance=sum(abs(a-b) for a,b in zip(roi,preferred)) if preferred else 0
         candidates.append((confidence+(.12 if index<complete_count else 0)-min(.15,distance*.1),roi))
     if not candidates:return None
     score,roi=max(candidates,key=lambda a:a[0])
     return {'roi':roi,'confidence':min(1.,float(score))}
+
+
+def search_bar(rgb,preferred,stage):
+    if stage=='screen':return locate_bar(rgb,preferred)
+    x,y,w,h=preferred
+    px,py=(.02,.025) if stage=='current' else (.12,.12)
+    return locate_bar(rgb,preferred,(x-px,y-py,w+2*px,h+2*py))
 
 
 class AutoCalibration:
@@ -51,6 +65,7 @@ class AutoCalibration:
         self.pending=[];self.locked=False;self.roi=None
         self.samples=0;self.valid=0
         self.missing_since=None;self.recoveries=0
+        self.search_stage='current';self.search_misses=0
 
     def check_tracking(self,reading,now):
         if reading is not None:
@@ -59,13 +74,18 @@ class AutoCalibration:
         if self.locked and now-self.missing_since>=.5:
             self.locked=False;self.pending=[];self.roi=None
             self.samples=0;self.valid=0;self.recoveries+=1
+            self.search_stage='current';self.search_misses=0
             return True
         return False
 
     def observe(self,candidate):
         if self.locked:return None
         if not candidate or candidate['confidence']<.45:
-            self.pending=[];return None
+            self.pending=[];self.search_misses+=1
+            if self.search_misses>=2:
+                self.search_stage={'current':'nearby','nearby':'screen','screen':'screen'}[self.search_stage]
+                self.search_misses=0
+            return None
         roi=candidate['roi']
         if self.pending and max(abs(a-b) for a,b in zip(roi,self.pending[-1]))>.015:
             self.pending=[]

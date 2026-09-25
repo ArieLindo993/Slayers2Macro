@@ -17,10 +17,11 @@ from detector import detect
 from engine import Engine
 from signals import Signals
 from item_history import ItemHistory, RewardReader
-from calibration import AutoCalibration,locate_bar
+from calibration import AutoCalibration,locate_bar,search_bar
 from selection import BarSelection
-
-VERSION='6.1.0'
+from product import APP_NAME,VERSION,GAME_PROFILE
+from local_data import data_directory,migrate_legacy,ProfileStore
+from diagnostics import Diagnostics,TrackingMetrics,annotated_preview
 
 U = C.WinDLL('user32', use_last_error=True)
 K = C.WinDLL('kernel32', use_last_error=True)
@@ -101,15 +102,22 @@ DEFAULTS={'roi':[.733,.289,.034,.369],'cast':None,'anticipation':.10,
 
 class App:
     def __init__(self):
-        self.root=tk.Tk();self.root.title('Pesca · Slayers 2 · '+VERSION)
-        self.root.geometry('540x520');self.root.resizable(False,False)
+        self.root=tk.Tk();self.root.title(APP_NAME+' · '+VERSION)
+        self.root.geometry('820x610');self.root.resizable(False,False)
         self.base=Path(sys.executable if getattr(sys,'frozen',False) else __file__).parent
-        self.config_path=self.base/'config.json'
+        self.data=data_directory();migrate_legacy(self.base,self.data)
+        self.config_path=self.data/'config.json'
+        self.profiles=ProfileStore(self.data/'profiles.json');self.profile_key=None
+        self.metrics=TrackingMetrics();self.round_metrics=TrackingMetrics();self.last_metrics=0
+        self.diagnostics=Diagnostics(self.data/'diagnostics');self.last_diagnostic=-float('inf')
+        self.diagnostic_worker=ThreadPoolExecutor(max_workers=1,thread_name_prefix='diagnostico-local')
+        self.diagnostic_job=None;self.last_live_preview=0
         self.config=dict(DEFAULTS)
         try:
             saved=json.loads(self.config_path.read_text('utf-8'))
             if not isinstance(saved,dict):raise ValueError()
             self.config['auto_calibrate']=saved.get('auto_calibrate',True) is not False
+            self.config['diagnostics_enabled']=saved.get('diagnostics_enabled',True) is not False
             profile=saved.get('calibration_profile')
             if isinstance(profile,dict):
                 roi=profile.get('roi',[])
@@ -136,12 +144,12 @@ class App:
         self.vision_worker=ThreadPoolExecutor(max_workers=1,thread_name_prefix='sinais-visuais')
         self.scene_job=None;self.scene_epoch=0;self.scene_time=0.;self.paused_state=None
         self.engine=Engine(self.config)
-        self.history=ItemHistory(self.base/'historico')
+        self.history=ItemHistory(self.data/'historico')
         self.history_window=None;self.history_tables=None
         self.reader=RewardReader();self.worker=ThreadPoolExecutor(max_workers=1,thread_name_prefix='leitura-itens')
         self.ocr_job=None;self.confirmation_jobs=[];self.history_retries={};self.last_ocr=0.;self.ocr_results={};self.ocr_error=None
         self.cycle_id=0;self.last_reward_crop=None
-        self.capture=mss.mss();self.active=False;self.held=False;self.t_down=False
+        self.capture=mss.MSS();self.active=False;self.held=False;self.t_down=False
         self.window=None;self.pending_start=None;self.corner=None;self.previous_keys={}
         self.last_scene=0.;self.last_preview=0.;self.scene={'fishing':False,'loot':None,'reward':False}
         self.settings=None;self.preview=None
@@ -168,10 +176,24 @@ class App:
         style.configure('TCheckbutton',background=bg)
         style.map('TCheckbutton',background=[('active',bg)])
         style.configure('TSpinbox',fieldbackground='white',foreground=ink)
-        main=ttk.Frame(self.root,padding=26);main.pack(fill='both',expand=True)
+        main=ttk.Frame(self.root,padding=20);main.pack(side='left',fill='both',expand=True)
+        vision=ttk.Frame(self.root,padding=16,width=230);vision.pack(side='right',fill='y');vision.pack_propagate(False)
+        ttk.Label(vision,text='Reconhecimento',font=('Segoe UI',14,'bold')).pack(anchor='w')
+        self.live_preview=ttk.Label(vision,text='Aguardando a barra',anchor='center')
+        self.live_preview.pack(fill='x',pady=12)
+        ttk.Label(vision,text='Azul: região lida\nVerde: faixa alvo\nRosa: marcador',style='Muted.TLabel').pack(anchor='w')
+        self.metrics_text=tk.StringVar(value='Qualidade: aguardando leituras')
+        ttk.Label(vision,textvariable=self.metrics_text,wraplength=195).pack(anchor='w',pady=14)
+        self.profile_text=tk.StringVar(value='Perfil: aguardando o jogo')
+        ttk.Label(vision,textvariable=self.profile_text,wraplength=195,style='Muted.TLabel').pack(anchor='w')
+        self.diagnostic_var=tk.BooleanVar(value=self.config.get('diagnostics_enabled',True))
+        ttk.Checkbutton(vision,text='Diagnóstico local',variable=self.diagnostic_var,command=self.toggle_diagnostics).pack(anchor='w',pady=(16,0))
+        ttk.Label(vision,text='Só o recorte da barra.\nAté 20 registros. Sem envio.',style='Muted.TLabel').pack(anchor='w',pady=6)
+        ttk.Button(vision,text='Abrir diagnósticos',command=self.open_diagnostics).pack(anchor='w')
         head=ttk.Frame(main);head.pack(fill='x')
-        ttk.Label(head,text='Pesca',font=('Segoe UI',23,'bold')).pack(side='left')
-        ttk.Label(head,text='SLAYERS 2  /  '+VERSION,style='Muted.TLabel',font=('Segoe UI',9)).pack(side='right')
+        ttk.Label(head,text=APP_NAME,font=('Segoe UI',23,'bold')).pack(side='left')
+        ttk.Label(head,text=VERSION,style='Muted.TLabel',font=('Segoe UI',9)).pack(side='right')
+        ttk.Label(main,text='Perfil de jogo: '+GAME_PROFILE,style='Muted.TLabel').pack(anchor='w')
         ttk.Label(main,textvariable=self.status,font=('Segoe UI',12),wraplength=415).pack(anchor='w',fill='x',pady=(24,12))
         ttk.Label(main,textvariable=self.counter,style='Muted.TLabel').pack(anchor='w')
         ttk.Label(main,textvariable=self.point_status,style='Muted.TLabel').pack(anchor='w',pady=(12,16))
@@ -179,7 +201,7 @@ class App:
         self.history_button.pack(anchor='w')
         ttk.Label(main,text='F8 marca a água · F6 seleciona a barra com o mouse',style='Muted.TLabel').pack(anchor='w',pady=(12,0))
         self.bar_status=tk.StringVar(value='Automático: conferir barra em cada pesca' if self.config['auto_calibrate'] else 'Barra: seleção manual salva')
-        ttk.Label(main,textvariable=self.bar_status,style='Muted.TLabel').pack(anchor='w',pady=4)
+        ttk.Label(main,textvariable=self.bar_status,style='Muted.TLabel',wraplength=480).pack(anchor='w',pady=4)
         self.auto_var=tk.BooleanVar(value=self.config['auto_calibrate'])
         ttk.Checkbutton(main,text='Calibrar automaticamente a cada pesca',variable=self.auto_var,command=self.toggle_auto).pack(anchor='w')
         ttk.Button(main,text='Selecionar barra com o mouse',command=self.schedule_selection).pack(anchor='w',pady=6)
@@ -216,7 +238,7 @@ class App:
     def clear_history(self):
         self.stop('Nova sessão. Use F4 para iniciar.')
         self.history.save()
-        self.history=ItemHistory(self.base/'historico')
+        self.history=ItemHistory(self.data/'historico');self.metrics.reset();self.round_metrics.reset()
         self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.last_reward_crop=None
         self.engine.reset(time.monotonic());self.engine.state='PARADO';self.paused_state=None
         self.refresh_history();self.counter.set('0 ciclos · 0 coletas confirmadas')
@@ -308,8 +330,35 @@ class App:
         self.status.set('Ajustes salvos. Use F4 dentro do jogo.')
 
     def save(self):
-        try:self.config_path.write_text(json.dumps(self.config,indent=2),encoding='utf-8')
+        try:
+            self.config_path.write_text(json.dumps(self.config,indent=2),encoding='utf-8')
+            self.profiles.save(self.profile_key,self.config['roi'],self.calibration.profile)
         except OSError:self.status.set('Ajustes aplicados; não foi possível salvar nesta pasta.')
+
+    def toggle_diagnostics(self):
+        self.config['diagnostics_enabled']=self.diagnostic_var.get();self.save()
+
+    def open_diagnostics(self):
+        folder=self.data/'diagnostics';folder.mkdir(parents=True,exist_ok=True)
+        os.startfile(folder)
+
+    def choose_profile(self,window):
+        try:
+            U.GetDpiForWindow.argtypes=[W.HWND];U.GetDpiForWindow.restype=W.UINT
+            dpi=U.GetDpiForWindow(window[0]) or 96
+            U.GetWindowLongW.argtypes=[W.HWND,C.c_int];U.GetWindowLongW.restype=W.LONG
+            mode='window' if U.GetWindowLongW(window[0],-16)&0x00C00000 else 'borderless'
+        except (AttributeError,OSError):dpi=96;mode='window'
+        key=self.profiles.key(window[3],window[4],mode,dpi)
+        if key!=self.profile_key:
+            if self.profile_key:self.save()
+            # A configuração antiga só serve para migrar o primeiro perfil.
+            fallback=self.config['roi'] if not self.profiles.profiles else DEFAULTS['roi']
+            roi,learned=self.profiles.load(key,fallback)
+            self.profile_key=key;self.config['roi']=roi
+            self.config['calibration_profile']=learned;self.calibration=AutoCalibration(learned)
+            self.calibration_epoch+=1;self.save()
+        self.profile_text.set(f'Perfil: {window[3]} × {window[4]}\n'+('Janela' if mode=='window' else 'Sem bordas / tela cheia')+f' · {round(dpi/96*100)}%')
 
     def button_start(self):
         self.pending_selection=None
@@ -326,6 +375,7 @@ class App:
         if down!=self.t_down:send_t(down);self.t_down=down
 
     def stop(self,reason):
+        self.metrics.pause();self.round_metrics.pause()
         self.pending_selection=None
         if self.active:
             self.paused_state=self.engine.state
@@ -339,6 +389,7 @@ class App:
         self.pending_selection=None
         self.pending_start=None
         if not window:self.stop('Volte ao Roblox e pressione F4.');return
+        self.choose_profile(window)
         if not self.config['cast'] and not self.dry.get():self.stop('Marque um ponto na água com F8.');return
         self.window=window;self.engine.reset(time.monotonic(),preserve_counts=True);self.active=True
         if self.paused_state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
@@ -379,12 +430,14 @@ class App:
         if not window:self.status.set('Abra o minigame no Roblox e pressione F6.');return
         self.stop('Selecionando a barra. O macro está pausado.')
         self.window=window
+        self.choose_profile(window)
         rgb=self.sample(full=True)
         self.calibration_epoch+=1
         self.selection=BarSelection(self.root,rgb,window,self.save_selection,self.selection_closed)
 
     def save_selection(self,roi):
         self.config['roi']=roi;self.config['auto_calibrate']=False;self.auto_var.set(False)
+        self.calibration.profile={};self.config['calibration_profile']={}
         self.calibration.begin();self.calibration_epoch+=1;self.save()
         self.bar_status.set('Barra manual salva · automático pode ser reativado')
         self.status.set('Seleção salva. Volte ao Roblox e pressione F4.')
@@ -427,10 +480,25 @@ class App:
         self.poll_calibration(now)
         rgb=self.sample();reading=detect(rgb)
         if self.engine.state=='PESCANDO':
+            self.metrics.observe(reading,now)
+            self.round_metrics.observe(reading,now)
             self.calibration.sample(reading)
+            if reading is None and now-self.engine.last_marker>=.5 and self.diagnostic_var.get() and now-self.last_diagnostic>=10 and (self.diagnostic_job is None or self.diagnostic_job.done()):
+                self.last_diagnostic=now
+                self.diagnostic_job=self.diagnostic_worker.submit(self.diagnostics.save,rgb.copy(),'PESCANDO',self.calibration.search_stage,self.metrics.summary())
             if self.config['auto_calibrate'] and self.calibration.check_tracking(reading,now):
                 self.calibration_epoch+=1
                 self.bar_status.set('Leitura perdida: recalibrando durante a pesca…')
+        else:self.metrics.pause();self.round_metrics.pause()
+        if now-self.last_live_preview>=.15:
+            self.live_photo=ImageTk.PhotoImage(annotated_preview(rgb,reading))
+            self.live_preview.configure(image=self.live_photo,text='');self.last_live_preview=now
+            quality=self.metrics.summary();inside=quality['inside_percent']
+            self.metrics_text.set(('Dentro da faixa: —' if inside is None else f'Dentro da faixa: {inside:.1f}%')+f'\nLeituras válidas: {quality["valid_percent"]:.1f}%\nTempo medido: {quality["observed_seconds"]:.1f}s')
+        if self.diagnostic_job is not None and self.diagnostic_job.done():
+            try:self.diagnostic_job.result()
+            except OSError:self.status.set('Não foi possível salvar o diagnóstico local.')
+            self.diagnostic_job=None
         if self.scene_job is not None and self.scene_job[0].done():
             future,epoch,captured=self.scene_job;self.scene_job=None
             scene=future.result()
@@ -441,7 +509,9 @@ class App:
         if now-self.last_scene>=.25 and self.scene_job is None:
             full=self.sample(full=True)
             if self.config['auto_calibrate'] and not self.calibration.locked and self.calibration_job is None and self.engine.state in ('INICIO','ESPERANDO','PESCANDO','RESULTADO'):
-                self.calibration_job=(self.calibration_worker.submit(locate_bar,full,self.config['roi'][:]),self.calibration_epoch,now)
+                stage=self.calibration.search_stage
+                self.bar_status.set({'current':'Procurando na região atual…','nearby':'Procurando ao redor da barra…','screen':'Procurando na tela do jogo…'}[stage])
+                self.calibration_job=(self.calibration_worker.submit(search_bar,full,self.config['roi'][:],stage),self.calibration_epoch,now)
             # A busca de painel jamais bloqueia o controle de 20 ms da barra.
             self.scene_job=(self.vision_worker.submit(self.signals.scan,full),self.scene_epoch,now)
             previous=self.cycle_id-1
@@ -485,6 +555,13 @@ class App:
             if self.engine.collected==previous_collected:
                 self.history.record_outcome(self.cycle_id,self.engine.outcome)
                 self.refresh_history()
+            entry=self.history.by_cycle.get(self.cycle_id)
+            if entry:
+                entry['tracking_quality']=self.round_metrics.summary()
+                entry['display_profile']=self.profile_key
+                entry['anticipation']=self.config['anticipation']
+                self.history.save()
+            self.round_metrics.reset()
             self.cycle_id+=1;self.last_reward_crop=None
             self.calibration.begin();self.calibration_epoch+=1
             # Resultados antigos só interessam enquanto resolvem uma linha pendente.
@@ -500,7 +577,7 @@ class App:
             if self.pending_start is not None and time.monotonic()>=self.pending_start:self.start(game_window())
             if self.active:self.update(time.monotonic())
         except Exception as exc:
-            try:self.stop('Erro: '+str(exc))
+            try:self.stop('Falha interna ('+type(exc).__name__+'). Tente retomar com F4.')
             except Exception:self.active=False;self.status.set('Falha ao liberar comando. Feche o macro.');self.root.destroy();return
         self.root.after(20,self.tick)
 
@@ -508,6 +585,7 @@ class App:
         try:self.stop('Fechando')
         finally:
             if self.selection:self.selection.cancel()
+            self.diagnostic_worker.shutdown(wait=True,cancel_futures=False)
             self.calibration_worker.shutdown(wait=True,cancel_futures=True)
             self.vision_worker.shutdown(wait=True,cancel_futures=True)
             self.worker.shutdown(wait=True,cancel_futures=False);self.poll_ocr();self.history.save()
@@ -530,6 +608,9 @@ if __name__=='__main__':
         result=RewardReader().read(RewardReader.crop(rgb))
         Path(sys.argv[3]).write_text(json.dumps(result),encoding='utf-8')
     elif len(sys.argv)==3 and sys.argv[1]=='--self-test':
+        import tempfile
+        test_data=tempfile.TemporaryDirectory(prefix='fishing-selftest-')
+        os.environ['FISHING_MACRO_DATA_DIR']=test_data.name
         app=App();app.root.withdraw();app.root.update_idletasks()
         result={'startup':True,'active':app.active,'screen_capture':False,'version':VERSION}
         test=app.capture.grab({'left':0,'top':0,'width':20,'height':20})
@@ -541,4 +622,5 @@ if __name__=='__main__':
         result['auto_calibration']=app.config['auto_calibrate']
         result['manual_selection']=callable(app.open_selection)
         app.history.path=None;app.close();Path(sys.argv[2]).write_text(json.dumps(result),encoding='utf-8')
+        test_data.cleanup()
     else:App().run()

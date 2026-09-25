@@ -9,3 +9,12 @@ historico/
 *.log
 .install/
 repository.txt
+profiles.json
+diagnostics/
+migration-v1.json
+test-results/
+*.mp4
+*.zip
+*.pem
+.env
+.env.*

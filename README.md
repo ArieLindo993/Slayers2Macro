@@ -1,25 +1,48 @@
-# Slayers2Macro
+# Fishing Macro
 
-Macro visual para Windows, baseado na versão 6.1.0. F8 marca a água; F4 inicia/pausa; F6 abre seleção manual; F10 para. Calibração automática, recuperação da barra durante a pesca, coleta com T e histórico JSON/CSV.
+Aplicativo local para Windows. O perfil disponível nesta versão é **Slayers 2**, no Roblox. A identidade do produto fica em `src/product.py`; o nome genérico não significa compatibilidade automática com outros jogos.
 
-## Atualizar sem extrair ZIPs manualmente
+## Instalar e atualizar
 
-Feche o macro e abra `Atualizar.cmd`. O destino padrão é `ArieLindo993/Slayers2Macro`. O atalho consulta a última Release, baixa o executável, confere o checksum e instala numa pasta separada. Nas próximas atualizações, o destino fica salvo. Os dados da instalação anterior feita pelo atalho são copiados; instalações antigas externas a ele não são migradas automaticamente.
+Baixe `Atualizador.zip` na [última Release](https://github.com/ArieLindo993/Slayers2Macro/releases/latest), extraia em uma pasta fixa e execute `Atualizar.cmd`. O atalho baixa o executável e verifica o checksum. Não exige Python, Git ou AutoHotkey para uso.
 
-Para repositório privado, o atualizador precisa do GitHub CLI (`gh`) autenticado com acesso ao repositório. Para público, não é necessário autenticar. Sem internet, ainda é possível abrir diretamente o executável já instalado em `.install`.
+- `Iniciar.cmd`: abre a versão instalada, inclusive sem internet.
+- `Atualizar.cmd`: procura e instala a versão mais recente.
+- `Voltar-versao.cmd`: restaura a instalação anterior, sem apagar o histórico. Feche o macro antes de trocar de versão. Depois de voltar, use Iniciar; Atualizar procura novamente a versão mais nova.
 
-Repositório: https://github.com/ArieLindo993/Slayers2Macro. Os executáveis são distribuídos pela página Releases. Consulte o resultado de cada compilação na aba Actions.
+O retorno exige uma instalação anterior feita pelo atualizador. Versões extraídas manualmente em outras pastas não são localizadas automaticamente.
 
-## Desenvolvimento
+## Usar
 
-Windows, Python 3.12. Instale `requirements.txt` em um ambiente virtual e rode `python src/macro.py`. Use `python build.py` para gerar o executável e um ZIP em `dist/`. As versões das dependências correspondem ao ambiente que compilou o macro; a instalação dessas versões no GitHub Actions ainda precisa ser verificada na primeira execução remota.
+Equipe a vara no Roblox, aponte para a água e pressione **F8**. **F4** inicia/pausa; **F10** para. A perda de foco pausa e libera as entradas.
 
-## Publicação
+A calibração automática confirma a barra em três capturas e refina o perfil nas rodadas confiáveis. Se a leitura falhar, tenta a região atual, os arredores e finalmente a tela do jogo. **F6** abre uma captura congelada para selecionar a barra inteira por arraste. Salvar ativa o modo manual; o automático pode ser reativado na interface.
 
-Depois de conectar este repositório ao GitHub, um push de tag como `v6.1.0` executa `.github/workflows/release.yml`, compila no Windows, testa a inicialização e publica o ZIP e seu checksum numa Release. A versão exibida é `VERSION` em `src/macro.py`: atualize-a junto com a tag.
+## Recursos da versão 7
 
-O Git guarda somente código e recursos visuais. Executáveis vão em Releases. Configuração, histórico, dependências e gravações pessoais não são versionados.
+1. Diagnósticos locais de perda de leitura, com até 20 pares de imagem/registro.
+2. Prévia anotada: azul = região, verde = alvo, rosa = marcador.
+3. Recuperação gradual da localização, sem bloquear o controle do mouse.
+4. Tempo dentro da faixa e percentual de leituras válidas. O percentual dentro da faixa considera apenas intervalos com leitura; não representa taxa de vitória. Métricas por ciclo ficam no JSON do histórico.
+5. Perfis separados por tamanho da janela, presença de bordas e DPI. Cada perfil guarda a região e seu aprendizado.
+6. Retorno à versão anterior por atalho, mantendo os dados locais.
 
-## Limites de validação
+## Dados e privacidade
 
-A v6.1 passou por testes de recuperação, imagens do vídeo, OCR e interface simulada; não houve confirmação de uma sessão completa no jogo ao vivo. A CI executa um teste de inicialização; esse teste não comprova desempenho no jogo.
+Configurações, perfis, histórico e diagnósticos ficam em `%LOCALAPPDATA%\FishingMacro`, separados dos executáveis. Não há telemetria ou envio automático desses dados. O atualizador acessa o GitHub exclusivamente para baixar versões.
+
+O diagnóstico salva apenas o recorte da região configurada, nunca uma captura inteira do desktop. Uma região mal selecionada pode conter outros elementos do jogo. Pode ser desativado na interface. Registros usam campos limitados e não contêm caminhos de arquivos, usuário do Windows, tokens ou mensagens de exceção.
+
+Vídeos, configurações, históricos e diagnósticos não são incluídos no Git nem na distribuição. Os modelos visuais incluídos são pequenos recortes dos indicadores do jogo. A migração da versão anterior é local e aditiva.
+
+## Desenvolvimento e publicação
+
+Windows e Python 3.12. Crie um ambiente virtual e instale `requirements.txt`. Execute `python -m unittest discover -s tests -v`, depois `python build.py`. Para desenvolvimento, execute `python src/macro.py`.
+
+Uma tag `v*` aciona a compilação Windows no GitHub Actions, executa os testes e publica o executável. Mantenha `VERSION` em `src/product.py` alinhada com a tag. O build inclui as informações de bibliotecas de terceiros disponíveis no ambiente de distribuição.
+
+O repositório continua público. Esta organização facilita futuras alterações de marca e distribuição, mas não inclui pagamentos, ativação por chave, restrições de cópia ou autenticação de clientes.
+
+## Validação
+
+Os testes cobrem métricas, perfis, recuperação, privacidade dos registros, prévia e retorno offline. O build testa a inicialização do executável. Testes com gravações foram usados no desenvolvimento, mas os arquivos pessoais que os originaram não são publicados. Esses testes não substituem uma sessão completa no jogo ao vivo.
