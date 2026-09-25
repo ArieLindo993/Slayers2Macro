@@ -2,6 +2,19 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.0.6](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.6)
+
+### Log de texto por execução
+
+- Arquivo `.txt` independente a cada abertura do aplicativo, com data, hora, milissegundos e fuso local em cada linha.
+- Registro de início, pausa e motivo, fechamento, lançamento, início/fim de minigame, perda/recuperação de leitura, calibração e alterações de ajustes.
+- Registro das tentativas de coleta, comandos T, presença do item, recompensa confirmada, item/quantidade reconhecidos e identificação posterior pelo OCR.
+- Ciclos sem recompensa ou com coleta não confirmada ficam explicitamente separados de coletas confirmadas.
+- Estado periódico a cada 30 segundos e erros internos/reconhecimento por classe de erro, sem mensagens contendo caminhos pessoais.
+- Logs locais em `%LOCALAPPDATA%\FishingMacro\logs`, acessíveis por **Abrir logs de texto**. Sessões anteriores são preservadas; o limite de 200 eventos do `runtime.json` não se aplica aos arquivos de texto.
+- Cada evento é acrescentado ao arquivo e o arquivo é fechado imediatamente. A interface sinaliza falha de gravação. Uma queda de energia ou encerramento forçado pode impedir o registro do evento final.
+- Testes de horários, persistência, sessões distintas, identificação tardia, falha de escrita e integração com início/pausa.
+
 ## [7.0.5](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.5)
 
 ### Calibração e sessões prolongadas

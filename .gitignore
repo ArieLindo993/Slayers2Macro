@@ -13,6 +13,7 @@ profiles.json
 runtime.json
 runtime.tmp
 diagnostics/
+logs/
 migration-v1.json
 test-results/
 *.mp4

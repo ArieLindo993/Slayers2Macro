@@ -22,6 +22,7 @@ from selection import BarSelection
 from product import APP_NAME,VERSION,GAME_PROFILE,DETECTOR_REVISION
 from local_data import data_directory,migrate_legacy,ProfileStore
 from diagnostics import Diagnostics,TrackingMetrics,annotated_preview,RuntimeJournal
+from session_log import SessionLog
 
 U = C.WinDLL('user32', use_last_error=True)
 K = C.WinDLL('kernel32', use_last_error=True)
@@ -107,6 +108,9 @@ class App:
         self.base=Path(sys.executable if getattr(sys,'frozen',False) else __file__).parent
         self.data=data_directory();migrate_legacy(self.base,self.data)
         self.config_path=self.data/'config.json'
+        self.session_log=SessionLog(self.data/'logs')
+        self.session_log.event('APLICATIVO_ABERTO',versao=VERSION)
+        self.last_log_snapshot=0;self.tracking_lost=False;self.previous_scene_item=False
         self.journal=RuntimeJournal(self.data/'runtime.json');self.journal.record('startup','INICIO')
         self.last_runtime=0
         self.profiles=ProfileStore(self.data/'profiles.json');self.profile_key=None
@@ -148,7 +152,7 @@ class App:
         self.vision_worker=ThreadPoolExecutor(max_workers=1,thread_name_prefix='sinais-visuais')
         self.scene_job=None;self.scene_epoch=0;self.scene_time=0.;self.paused_state=None
         self.engine=Engine(self.config)
-        self.history=ItemHistory(self.data/'historico')
+        self.history=ItemHistory(self.data/'historico',log=self.session_log)
         self.history_window=None;self.history_tables=None
         self.reader=RewardReader();self.worker=ThreadPoolExecutor(max_workers=1,thread_name_prefix='leitura-itens')
         self.ocr_job=None;self.confirmation_jobs=[];self.history_retries={};self.last_ocr=0.;self.ocr_results={};self.ocr_error=None
@@ -184,7 +188,7 @@ class App:
         vision=ttk.Frame(self.root,padding=16,width=230);vision.pack(side='right',fill='y');vision.pack_propagate(False)
         ttk.Label(vision,text='Reconhecimento',font=('Segoe UI',14,'bold')).pack(anchor='w')
         self.live_preview=ttk.Label(vision,text='Aguardando a barra',anchor='center')
-        self.live_preview.pack(fill='x',pady=12)
+        self.live_preview.pack(fill='x',pady=6)
         ttk.Label(vision,text='Azul: região lida\nVerde: faixa alvo\nRosa: marcador',style='Muted.TLabel').pack(anchor='w')
         self.metrics_text=tk.StringVar(value='Qualidade: aguardando leituras')
         ttk.Label(vision,textvariable=self.metrics_text,wraplength=195).pack(anchor='w',pady=14)
@@ -194,6 +198,9 @@ class App:
         ttk.Checkbutton(vision,text='Salvar recortes',variable=self.diagnostic_var,command=self.toggle_diagnostics).pack(anchor='w',pady=(16,0))
         ttk.Label(vision,text='Recortes: até 20.\nParadas registradas localmente.',style='Muted.TLabel').pack(anchor='w',pady=6)
         ttk.Button(vision,text='Abrir registros',command=self.open_diagnostics).pack(anchor='w')
+        ttk.Button(vision,text='Abrir logs de texto',command=self.open_logs).pack(anchor='w',pady=4)
+        self.log_status=tk.StringVar(value='Log de texto ativo')
+        ttk.Label(vision,textvariable=self.log_status,style='Muted.TLabel').pack(anchor='w')
         head=ttk.Frame(main);head.pack(fill='x')
         ttk.Label(head,text=APP_NAME,font=('Segoe UI',23,'bold')).pack(side='left')
         ttk.Label(head,text=VERSION,style='Muted.TLabel',font=('Segoe UI',9)).pack(side='right')
@@ -242,7 +249,8 @@ class App:
     def clear_history(self):
         self.stop('Nova sessão. Use F4 para iniciar.')
         self.history.save()
-        self.history=ItemHistory(self.data/'historico');self.metrics.reset();self.round_metrics.reset()
+        self.session_log.event('NOVA_SESSAO_DE_ITENS')
+        self.history=ItemHistory(self.data/'historico',log=self.session_log);self.metrics.reset();self.round_metrics.reset()
         self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.last_reward_crop=None
         self.engine.reset(time.monotonic());self.engine.state='PARADO';self.paused_state=None
         self.refresh_history();self.counter.set('0 ciclos · 0 coletas confirmadas')
@@ -277,13 +285,16 @@ class App:
             if not future.done():remaining.append((future,cycle));continue
             try:
                 if self.history.identify(cycle,future.result()):self.refresh_history()
-            except Exception as exc:self.ocr_error=str(exc);self.refresh_history()
+            except Exception as exc:
+                self.session_log.event('ERRO_RECONHECIMENTO_ITEM',tipo=type(exc).__name__,ciclo=cycle)
+                self.ocr_error=str(exc);self.refresh_history()
         self.confirmation_jobs=remaining
         if self.ocr_job is None or not self.ocr_job[0].done():return
         future,cycle,captured=self.ocr_job;self.ocr_job=None
         try:
             result=future.result();self.ocr_error=None
         except Exception as exc:
+            self.session_log.event('ERRO_RECONHECIMENTO_ITEM',tipo=type(exc).__name__,ciclo=cycle)
             self.ocr_error=str(exc);self.refresh_history();return
         if result:
             self.ocr_results[cycle]=(result,captured)
@@ -331,6 +342,7 @@ class App:
         except ValueError:
             messagebox.showerror('Valor inválido','Confira os tempos informados.',parent=self.settings);return
         self.config.update(values);self.save();self.settings.destroy();self.settings=None;self.preview=None
+        self.session_log.event('AJUSTES_SALVOS',**values)
         self.status.set('Ajustes salvos. Use F4 dentro do jogo.')
 
     def save(self):
@@ -344,6 +356,10 @@ class App:
 
     def open_diagnostics(self):
         folder=self.data;folder.mkdir(parents=True,exist_ok=True)
+        os.startfile(folder)
+
+    def open_logs(self):
+        folder=self.data/'logs';folder.mkdir(parents=True,exist_ok=True)
         os.startfile(folder)
 
     def choose_profile(self,window):
@@ -379,9 +395,12 @@ class App:
 
     def key_t(self,down):
         if down and (not self.active or self.dry.get() or game_window()!=self.window):return
-        if down!=self.t_down:send_t(down);self.t_down=down
+        if down!=self.t_down:
+            send_t(down);self.t_down=down
+            self.session_log.event('COMANDO_T_PRESSIONADO' if down else 'COMANDO_T_LIBERADO',ciclo=self.cycle_id)
 
     def stop(self,reason):
+        self.session_log.event('APLICATIVO_FECHADO' if reason=='Fechando' else 'MACRO_PAUSADO',motivo=reason,estado=self.engine.state,ciclo=self.cycle_id)
         code=('closed' if reason=='Fechando' else 'internal_error' if reason.startswith('Falha interna') else
               'focus_lost' if 'Roblox' in reason or 'Janela alterada' in reason else
               'fishing_timeout' if '120 segundos' in reason else 'cast_unconfirmed' if '3 lançamentos' in reason else 'user_pause')
@@ -403,6 +422,7 @@ class App:
         self.choose_profile(window)
         if not self.config['cast'] and not self.dry.get():self.stop('Marque um ponto na água com F8.');return
         self.window=window;self.engine.reset(time.monotonic(),preserve_counts=True);self.active=True
+        self.session_log.event('MACRO_INICIADO',ciclo=self.cycle_id,modo='observação' if self.dry.get() else 'pesca',calibracao='automática' if self.config['auto_calibrate'] else 'manual',segurar_T=self.config['t_hold'],perfil=self.profile_key)
         self.journal.record('started',self.engine.state,active=True,cycles=self.engine.cycles)
         if self.paused_state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
             self.engine.state='RESULTADO';self.engine.deadline=time.monotonic()+1
@@ -427,9 +447,11 @@ class App:
             point=cursor_relative(window)
             if all(0<v<1 for v in point):
                 self.config['cast']=list(point);self.save();self.refresh_point();self.status.set('Água marcada. Pressione F4 para iniciar.')
+                self.session_log.event('AGUA_MARCADA',ponto=point)
 
     def toggle_auto(self):
         self.config['auto_calibrate']=self.auto_var.get()
+        self.session_log.event('MODO_CALIBRACAO_ALTERADO',automatico=self.config['auto_calibrate'])
         self.calibration.begin();self.calibration_epoch+=1;self.save()
         self.bar_status.set('Automático: aguardando a barra' if self.auto_var.get() else 'Manual: região atual fixa')
 
@@ -448,6 +470,7 @@ class App:
         self.selection=BarSelection(self.root,rgb,window,self.save_selection,self.selection_closed)
 
     def save_selection(self,roi):
+        self.session_log.event('CALIBRACAO_MANUAL_SALVA',regiao=roi)
         self.config['roi']=roi;self.config['auto_calibrate']=False;self.auto_var.set(False)
         self.calibration.profile={};self.config['calibration_profile']={}
         self.calibration.begin();self.calibration_epoch+=1;self.save()
@@ -470,6 +493,7 @@ class App:
             return
         roi=self.calibration.observe(candidate)
         if roi:
+            self.session_log.event('BARRA_LOCALIZADA',ciclo=self.cycle_id,regiao=roi)
             self.config['roi']=roi;self.engine.control.reset()
             self.bar_status.set('Barra automática confirmada · aprendendo nesta pesca')
 
@@ -496,6 +520,10 @@ class App:
         if game_window()!=self.window:self.stop('Pausado: volte ao Roblox e use F4.');return
         self.poll_calibration(now)
         rgb=self.sample();reading=detect(rgb,require_marker_shape=self.config['auto_calibrate'] and not self.calibration.locked)
+        lost=self.engine.state=='PESCANDO' and reading is None and now-self.engine.last_marker>=.2
+        if lost!=self.tracking_lost:
+            if lost or reading is not None:self.session_log.event('LEITURA_PERDIDA' if lost else 'LEITURA_RECUPERADA',ciclo=self.cycle_id)
+            self.tracking_lost=lost
         if self.engine.state=='PESCANDO':
             self.metrics.observe(reading,now)
             self.round_metrics.observe(reading,now)
@@ -521,6 +549,10 @@ class App:
             scene=future.result()
             if epoch==self.scene_epoch and now-captured<1:
                 self.scene=scene;self.scene_time=captured
+                visible=bool(scene.get('loot'))
+                if visible!=self.previous_scene_item:
+                    self.session_log.event('ITEM_NA_VARA_DETECTADO' if visible else 'ITEM_NA_VARA_NAO_VISIVEL',ciclo=self.cycle_id)
+                    self.previous_scene_item=visible
         if now-self.scene_time>1:
             self.scene={'fishing':False,'loot':None,'reward':False}
         if now-self.last_scene>=.25 and self.scene_job is None:
@@ -557,6 +589,11 @@ class App:
         text_reward=parsed is not None and now-captured<4
         previous_state=self.engine.state
         actions=self.engine.step(now,reading,self.scene['fishing'],self.scene['loot'],self.scene.get('reward',False) or text_reward,scene_stamp=self.scene_time,scene_valid=now-self.scene_time<1)
+        if self.engine.state!=previous_state:
+            events={'POSICIONANDO':'LANCAMENTO_PREPARADO','CLIQUE':'VARA_LANCADA','ESPERANDO':'AGUARDANDO_PESCA','PESCANDO':'MINIGAME_INICIADO','RESULTADO':'MINIGAME_ENCERRADO','MIRANDO_ITEM':'TENTATIVA_DE_COLETA','TECLA_T':'T_PRESSIONADO','VERIFICANDO_COLETA':'T_LIBERADO_VERIFICANDO_COLETA','REINICIANDO':'PREPARANDO_PROXIMA_PESCA','PARADO':'PARADA_AUTOMATICA'}
+            self.session_log.event(events.get(self.engine.state,'MUDANCA_DE_ESTADO'),ciclo=self.cycle_id,anterior=previous_state,estado=self.engine.state,lancamento=self.engine.attempts,tentativa_coleta=self.engine.collect_attempts,descricao=self.engine.message)
+        if previous_state=='PESCANDO' and self.engine.state!='PESCANDO':
+            self.session_log.event('MINIGAME_FINALIZADO',ciclo=self.cycle_id,proxima_etapa=self.engine.state)
         if previous_state=='PESCANDO' and self.engine.state!='PESCANDO' and self.config['auto_calibrate']:
             profile=self.calibration.finish()
             if profile:
@@ -579,6 +616,7 @@ class App:
                 entry['display_profile']=self.profile_key
                 entry['anticipation']=self.config['anticipation']
                 self.history.save()
+            self.session_log.event('CICLO_CONCLUIDO',ciclo=self.cycle_id,resultado=self.engine.outcome,leituras_validas=self.round_metrics.summary()['valid_percent'],tempo_na_faixa=self.round_metrics.summary()['inside_percent'])
             self.round_metrics.reset()
             self.cycle_id+=1;self.last_reward_crop=None
             self.calibration.begin();self.calibration_epoch+=1
@@ -598,7 +636,12 @@ class App:
             if now-self.last_runtime>=5:
                 self.last_runtime=now
                 self.journal.checkpoint(self.engine.state,self.active,self.engine.cycles,now-self.scene_time)
+            if now-self.last_log_snapshot>=30:
+                self.last_log_snapshot=now
+                self.session_log.event('ESTADO_PERIODICO',ativo=self.active,estado=self.engine.state,ciclo=self.cycle_id,idade_leitura=round(now-self.scene_time,2) if self.scene_time else None)
+            self.log_status.set('Falha ao gravar log' if self.session_log.error else 'Log de texto ativo')
         except Exception as exc:
+            self.session_log.event('ERRO_INTERNO',tipo=type(exc).__name__,estado=self.engine.state,ciclo=self.cycle_id)
             try:self.stop('Falha interna ('+type(exc).__name__+'). Tente retomar com F4.')
             except Exception:self.active=False;self.status.set('Falha ao liberar comando. Feche o macro.');self.root.destroy();return
         self.root.after(20,self.tick)
@@ -611,6 +654,7 @@ class App:
             self.calibration_worker.shutdown(wait=True,cancel_futures=True)
             self.vision_worker.shutdown(wait=True,cancel_futures=True)
             self.worker.shutdown(wait=True,cancel_futures=False);self.poll_ocr();self.history.save()
+            self.session_log.event('ENCERRAMENTO_CONCLUIDO')
             self.capture.close();self.root.destroy()
 
     def run(self):

@@ -81,6 +81,16 @@ Os diagnósticos de perda de leitura são locais e limitados a até 20 pares de 
 
 O arquivo local `runtime.json` mantém até 200 eventos de execução e um estado recente atualizado a cada cinco segundos, para investigar paradas mesmo sem gravação. Registra pausas, perda de foco, limites de tempo e falhas internas tratadas; uma interrupção abrupta pode deixar apenas o último estado salvo. Use **Abrir registros** para acessar a pasta. Esse registro textual não contém capturas nem mensagens livres de exceção e não é enviado automaticamente.
 
+### Log completo de eventos em texto
+
+Desde a versão 7.0.6, cada abertura cria um arquivo `sessao-AAAAMMDD-HHMMSS-….txt` em `%LOCALAPPDATA%\FishingMacro\logs`. Clique em **Abrir logs de texto** para encontrar os arquivos e abra o desejado no Bloco de Notas.
+
+Cada linha informa data, horário com milissegundos e fuso local, tipo de evento e seus detalhes. São registrados início/pausa/fechamento, lançamentos, minigames, calibração, perda e recuperação de leitura, tentativas de coleta, comandos T, itens e quantidades reconhecidos, resultados não confirmados e erros. O número do ciclo permite relacionar uma coleta à identificação do item, mesmo quando o nome é lido depois.
+
+O log também salva um estado periódico a cada 30 segundos. Registra eventos e resultados, não um vídeo ou cada quadro capturado. Os arquivos anteriores não são apagados automaticamente e não estão sujeitos ao limite de 200 eventos do registro resumido. Uma interrupção forçada pode deixar apenas os eventos anteriores, sem uma linha de encerramento.
+
+O log permanece ativo mesmo com **Salvar recortes** desmarcado. Não é enviado automaticamente e não entra no GitHub ou no pacote de distribuição. Ao investigar um problema, compartilhe o arquivo da execução correspondente após revisar seu conteúdo.
+
 ## Atualizar ou voltar de versão
 
 Feche o macro antes de iniciar uma atualização ou trocar de versão.

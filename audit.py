@@ -6,7 +6,7 @@ tracked=subprocess.check_output(['git','ls-files','-z'],cwd=root).decode().split
 for name in filter(None,tracked):
     p=root/name
     assert p.name not in ('runtime.json','runtime.tmp','config.json','profiles.json'),name
-    assert not any(x in p.parts for x in ('historico','diagnostics','.install')),name
+    assert not any(x in p.parts for x in ('historico','diagnostics','logs','.install')),name
     assert p.suffix.lower() not in ('.mp4','.pem','.zip'),name
     if p.suffix.lower() in ('.py','.md','.txt','.ps1','.yml','.cmd'):
         text=p.read_text('utf-8')

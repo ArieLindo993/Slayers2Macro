@@ -29,7 +29,8 @@ def parse_reward(lines):
 
 
 class ItemHistory:
-    def __init__(self,directory=None):
+    def __init__(self,directory=None,log=None):
+        self.log=log
         self.started=datetime.now().astimezone()
         self.entries=[];self.by_cycle={};self.error=None
         self.path=Path(directory)/('sessao-'+self.started.strftime('%Y%m%d-%H%M%S-%f')+'.json') if directory else None
@@ -39,6 +40,7 @@ class ItemHistory:
         entry={'cycle':cycle,'time':datetime.now().astimezone().isoformat(timespec='seconds'),
                'name':'Nome não identificado','quantity':quantity,'identified':False}
         self.entries.append(entry);self.by_cycle[cycle]=entry
+        if self.log and quantity!=0:self.log.event('COLETA_CONFIRMADA',ciclo=cycle,item=result['name'] if result else 'Nome ainda não identificado',quantidade=result['quantity'] if result else quantity)
         if result:self.identify(cycle,result)
         else:self.save()
         return entry
@@ -47,12 +49,15 @@ class ItemHistory:
         if not result or cycle not in self.by_cycle:return False
         entry=self.by_cycle[cycle]
         if entry.get('status')=='unconfirmed':return False
+        changed=not entry['identified'] or entry['name']!=result['name'] or entry['quantity']!=result['quantity']
         entry.update(name=result['name'],quantity=result['quantity'],identified=True)
+        if self.log and changed:self.log.event('ITEM_IDENTIFICADO',ciclo=cycle,item=result['name'],quantidade=result['quantity'],confianca=result.get('confidence'))
         self.save();return True
 
     def record_outcome(self,cycle,message):
         entry=self.record(cycle,quantity=0)
         entry.update(name=message or 'Sem recompensa detectada',status='unconfirmed',identified=True)
+        if self.log:self.log.event('COLETA_NAO_CONFIRMADA',ciclo=cycle,motivo=entry['name'])
         self.save()
         return entry
 
