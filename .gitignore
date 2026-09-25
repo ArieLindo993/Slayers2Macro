@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+build/
+dist/
+*.spec
+config.json
+historico/
+*.log
+.install/
+repository.txt
