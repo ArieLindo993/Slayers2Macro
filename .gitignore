@@ -10,6 +10,8 @@ historico/
 .install/
 repository.txt
 profiles.json
+runtime.json
+runtime.tmp
 diagnostics/
 migration-v1.json
 test-results/

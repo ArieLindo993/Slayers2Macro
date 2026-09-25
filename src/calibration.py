@@ -2,6 +2,7 @@
 import cv2
 import numpy as np
 from detector import detect
+from product import DETECTOR_REVISION
 
 
 def locate_bar(rgb,preferred=None,search_box=None):
@@ -34,7 +35,7 @@ def locate_bar(rgb,preferred=None,search_box=None):
         left=max(0,x-int(bw*.10));right=min(view.shape[1],x+bw+int(bw*.10))
         top=max(0,y-2);bottom=min(view.shape[0],y+bh+2)
         crop=view[top:bottom,left:right]
-        reading=detect(crop)
+        reading=detect(crop,require_marker_shape=True)
         if reading is None:continue
         # Bordas externas têm que atravessar boa parte do trilho.
         side1=np.any(edges[y:y+bh,max(0,x-2):x+4]>0,axis=1).mean()
@@ -109,7 +110,7 @@ class AutoCalibration:
         if old and max(abs(a-b) for a,b in zip(old,self.roi))<.025:
             learned=[.75*a+.25*b for a,b in zip(old,self.roi)]
         else:learned=list(self.roi)
-        self.profile={'roi':learned,'rounds':int(self.profile.get('rounds',0))+1,
+        self.profile={'roi':learned,'rounds':int(self.profile.get('rounds',0))+1,'detector_revision':DETECTOR_REVISION,
                       'quality':round(self.valid/self.samples,3)}
         return self.profile
 

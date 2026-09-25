@@ -1,7 +1,7 @@
 """Dados por usuário, fora da instalação e sem envio pela rede."""
 import json,os,re,shutil
 from pathlib import Path
-from product import APP_ID
+from product import APP_ID,DETECTOR_REVISION
 
 def data_directory():
     override=os.environ.get('FISHING_MACRO_DATA_DIR')
@@ -44,12 +44,14 @@ class ProfileStore:
 
     def load(self,key,default):
         item=self.profiles.get(key,{})
+        if item.get('automatic',True) and item.get('detector_revision')!=DETECTOR_REVISION:
+            return list(default),{}
         learned=item.get('learned',{})
         if not isinstance(learned,dict) or not valid_roi(learned.get('roi')):learned={}
         return list(item.get('roi',default)),learned
 
     def save(self,key,roi,learned,automatic=True):
         if not key or not valid_roi(roi):return
-        self.profiles[key]={'roi':list(roi),'learned':learned if isinstance(learned,dict) else {},'automatic':bool(automatic)}
+        self.profiles[key]={'roi':list(roi),'learned':learned if isinstance(learned,dict) else {},'automatic':bool(automatic),'detector_revision':DETECTOR_REVISION}
         temp=self.path.with_suffix('.tmp')
         temp.write_text(json.dumps(self.profiles,indent=2),encoding='utf-8');temp.replace(self.path)

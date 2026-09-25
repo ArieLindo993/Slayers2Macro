@@ -19,9 +19,9 @@ from signals import Signals
 from item_history import ItemHistory, RewardReader
 from calibration import AutoCalibration,locate_bar,search_bar
 from selection import BarSelection
-from product import APP_NAME,VERSION,GAME_PROFILE
+from product import APP_NAME,VERSION,GAME_PROFILE,DETECTOR_REVISION
 from local_data import data_directory,migrate_legacy,ProfileStore
-from diagnostics import Diagnostics,TrackingMetrics,annotated_preview
+from diagnostics import Diagnostics,TrackingMetrics,annotated_preview,RuntimeJournal
 
 U = C.WinDLL('user32', use_last_error=True)
 K = C.WinDLL('kernel32', use_last_error=True)
@@ -107,6 +107,8 @@ class App:
         self.base=Path(sys.executable if getattr(sys,'frozen',False) else __file__).parent
         self.data=data_directory();migrate_legacy(self.base,self.data)
         self.config_path=self.data/'config.json'
+        self.journal=RuntimeJournal(self.data/'runtime.json');self.journal.record('startup','INICIO')
+        self.last_runtime=0
         self.profiles=ProfileStore(self.data/'profiles.json');self.profile_key=None
         self.metrics=TrackingMetrics();self.round_metrics=TrackingMetrics();self.last_metrics=0
         self.diagnostics=Diagnostics(self.data/'diagnostics');self.last_diagnostic=-float('inf')
@@ -133,6 +135,8 @@ class App:
                 x,y,w,h=roi
                 if 0<=x<1 and 0<=y<1 and .005<w<.3 and .05<h<.9 and x+w<=1 and y+h<=1:self.config['roi']=roi
         except (ValueError,TypeError,OSError):pass
+        if self.config['auto_calibrate'] and self.config.get('calibration_profile',{}).get('detector_revision')!=DETECTOR_REVISION:
+            self.config['roi']=list(DEFAULTS['roi']);self.config['calibration_profile']={}
         self.calibration=AutoCalibration(self.config.get('calibration_profile'))
         if self.config['auto_calibrate'] and self.calibration.profile.get('roi'):
             self.config['roi']=list(self.calibration.profile['roi'])
@@ -187,9 +191,9 @@ class App:
         self.profile_text=tk.StringVar(value='Perfil: aguardando o jogo')
         ttk.Label(vision,textvariable=self.profile_text,wraplength=195,style='Muted.TLabel').pack(anchor='w')
         self.diagnostic_var=tk.BooleanVar(value=self.config.get('diagnostics_enabled',True))
-        ttk.Checkbutton(vision,text='Diagnóstico local',variable=self.diagnostic_var,command=self.toggle_diagnostics).pack(anchor='w',pady=(16,0))
-        ttk.Label(vision,text='Só o recorte da barra.\nAté 20 registros. Sem envio.',style='Muted.TLabel').pack(anchor='w',pady=6)
-        ttk.Button(vision,text='Abrir diagnósticos',command=self.open_diagnostics).pack(anchor='w')
+        ttk.Checkbutton(vision,text='Salvar recortes',variable=self.diagnostic_var,command=self.toggle_diagnostics).pack(anchor='w',pady=(16,0))
+        ttk.Label(vision,text='Recortes: até 20.\nParadas registradas localmente.',style='Muted.TLabel').pack(anchor='w',pady=6)
+        ttk.Button(vision,text='Abrir registros',command=self.open_diagnostics).pack(anchor='w')
         head=ttk.Frame(main);head.pack(fill='x')
         ttk.Label(head,text=APP_NAME,font=('Segoe UI',23,'bold')).pack(side='left')
         ttk.Label(head,text=VERSION,style='Muted.TLabel',font=('Segoe UI',9)).pack(side='right')
@@ -339,7 +343,7 @@ class App:
         self.config['diagnostics_enabled']=self.diagnostic_var.get();self.save()
 
     def open_diagnostics(self):
-        folder=self.data/'diagnostics';folder.mkdir(parents=True,exist_ok=True)
+        folder=self.data;folder.mkdir(parents=True,exist_ok=True)
         os.startfile(folder)
 
     def choose_profile(self,window):
@@ -353,7 +357,7 @@ class App:
         if key!=self.profile_key:
             if self.profile_key:self.save()
             # A configuração antiga só serve para migrar o primeiro perfil.
-            fallback=self.config['roi'] if not self.profiles.profiles else DEFAULTS['roi']
+            fallback=DEFAULTS['roi'] if self.config['auto_calibrate'] or self.profiles.profiles else self.config['roi']
             roi,learned=self.profiles.load(key,fallback)
             automatic=self.profiles.profiles.get(key,{}).get('automatic',True if self.profiles.profiles else self.config['auto_calibrate']) is not False
             self.config['auto_calibrate']=automatic;self.auto_var.set(automatic)
@@ -378,6 +382,10 @@ class App:
         if down!=self.t_down:send_t(down);self.t_down=down
 
     def stop(self,reason):
+        code=('closed' if reason=='Fechando' else 'internal_error' if reason.startswith('Falha interna') else
+              'focus_lost' if 'Roblox' in reason or 'Janela alterada' in reason else
+              'fishing_timeout' if '120 segundos' in reason else 'cast_unconfirmed' if '3 lançamentos' in reason else 'user_pause')
+        self.journal.record(code,self.engine.state,active=False,cycles=self.engine.cycles)
         self.metrics.pause();self.round_metrics.pause()
         self.pending_selection=None
         if self.active:
@@ -395,6 +403,7 @@ class App:
         self.choose_profile(window)
         if not self.config['cast'] and not self.dry.get():self.stop('Marque um ponto na água com F8.');return
         self.window=window;self.engine.reset(time.monotonic(),preserve_counts=True);self.active=True
+        self.journal.record('started',self.engine.state,active=True,cycles=self.engine.cycles)
         if self.paused_state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
             self.engine.state='RESULTADO';self.engine.deadline=time.monotonic()+1
         self.paused_state=None;self.scene_epoch+=1;self.scene_time=0
@@ -454,6 +463,11 @@ class App:
         candidate=future.result()
         if not self.config['auto_calibrate'] or epoch!=self.calibration_epoch or now-captured>1:return
         if self.engine.state not in ('INICIO','ESPERANDO','PESCANDO','RESULTADO'):return
+        # Uma lista, painel ou inventário não pode ensinar um novo perfil.
+        # A confirmação do minigame vem de um sinal independente da barra.
+        if not self.scene.get('fishing') or now-self.scene_time>1:
+            self.calibration.pending=[]
+            return
         roi=self.calibration.observe(candidate)
         if roi:
             self.config['roi']=roi;self.engine.control.reset()
@@ -481,7 +495,7 @@ class App:
     def update(self,now):
         if game_window()!=self.window:self.stop('Pausado: volte ao Roblox e use F4.');return
         self.poll_calibration(now)
-        rgb=self.sample();reading=detect(rgb)
+        rgb=self.sample();reading=detect(rgb,require_marker_shape=self.config['auto_calibrate'] and not self.calibration.locked)
         if self.engine.state=='PESCANDO':
             self.metrics.observe(reading,now)
             self.round_metrics.observe(reading,now)
@@ -580,6 +594,10 @@ class App:
             if self.pending_selection is not None and time.monotonic()>=self.pending_selection:self.open_selection(game_window())
             if self.pending_start is not None and time.monotonic()>=self.pending_start:self.start(game_window())
             if self.active:self.update(time.monotonic())
+            now=time.monotonic()
+            if now-self.last_runtime>=5:
+                self.last_runtime=now
+                self.journal.checkpoint(self.engine.state,self.active,self.engine.cycles,now-self.scene_time)
         except Exception as exc:
             try:self.stop('Falha interna ('+type(exc).__name__+'). Tente retomar com F4.')
             except Exception:self.active=False;self.status.set('Falha ao liberar comando. Feche o macro.');self.root.destroy();return

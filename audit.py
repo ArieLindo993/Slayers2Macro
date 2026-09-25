@@ -5,6 +5,7 @@ root=Path(__file__).resolve().parent
 tracked=subprocess.check_output(['git','ls-files','-z'],cwd=root).decode().split('\0')
 for name in filter(None,tracked):
     p=root/name
+    assert p.name not in ('runtime.json','runtime.tmp','config.json','profiles.json'),name
     assert not any(x in p.parts for x in ('historico','diagnostics','.install')),name
     assert p.suffix.lower() not in ('.mp4','.pem','.zip'),name
     if p.suffix.lower() in ('.py','.md','.txt','.ps1','.yml','.cmd'):

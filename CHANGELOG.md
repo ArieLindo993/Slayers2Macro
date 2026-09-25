@@ -2,6 +2,28 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.0.5](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.5)
+
+### Calibração e sessões prolongadas
+
+- Corrigida uma condição em que a calibração podia aceitar texto de uma lista como marcador e salvar uma região incorreta.
+- Candidatos de calibração agora precisam de um marcador compacto, preenchido e centralizado, além da geometria do trilho.
+- Uma nova região só é confirmada com um sinal independente e recente de minigame ativo.
+- Perfis automáticos anteriores são invalidados para aprender novamente com os critérios corrigidos. Seleções manuais, ponto de lançamento, tempo de T e histórico são preservados.
+- A validação geométrica também protege leituras automáticas enquanto a região ainda não foi confirmada.
+
+### Registros locais
+
+- Novo `runtime.json`: registra inícios, pausas, perda de foco, limites de tempo e falhas internas tratadas, com até 200 eventos e um estado recente atualizado a cada cinco segundos.
+- Ao reabrir, identifica uma sessão anterior que ficou marcada como ativa sem encerramento registrado. Isso é evidência de uma interrupção, não prova da causa.
+- Botão **Abrir registros** abre a pasta de dados locais. A opção **Salvar recortes** controla as imagens; o registro textual de execução permanece local e não inclui capturas ou mensagens de exceção.
+- Arquivos de execução são ignorados pelo Git e bloqueados pela auditoria de publicação.
+
+### Validação
+
+- Testes de rejeição de texto, migração de perfis, sinal independente de pesca e persistência dos registros.
+- Comparação com quadros reais do minigame. Ainda é necessária validação em uma sessão longa no Roblox; não há garantia de execução ininterrupta.
+
 ## [7.0.4](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.4)
 
 ### Correção de detecção no minigame

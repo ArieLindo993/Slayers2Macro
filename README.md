@@ -52,6 +52,8 @@ O Roblox precisa permanecer visível e em primeiro plano. Ao perder o foco, o ma
 
 **Manual:** quando o minigame estiver visível, pressione F6. Na captura congelada, arraste para selecionar a barra inteira e salve. Isso ativa o modo manual. Volte ao Roblox e pressione F4. A opção automática pode ser reativada na interface.
 
+Na atualização para 7.0.5, perfis automáticos antigos são recalibrados para descartar regiões incorretas aprendidas anteriormente. Seleções manuais e demais configurações são preservadas. Uma nova região automática exige a forma do marcador e um sinal independente de minigame ativo.
+
 Os perfis são separados pelo tamanho da janela, presença de bordas e escala de exibição do Windows (DPI). Cada perfil guarda sua região, aprendizado e escolha entre modo automático e manual.
 
 Na prévia, **azul** marca a região analisada, **verde** indica o alvo e **rosa** indica o marcador. O indicador de tempo dentro da faixa considera apenas os intervalos com leitura válida: ele não representa a porcentagem de pescas vencidas.
@@ -75,7 +77,9 @@ O modo **Só observar** permite acompanhar a leitura sem enviar comandos ao jogo
 
 O botão **Itens obtidos** mostra os registros da sessão. O reconhecimento de nomes usa leitura de texto da tela e pode falhar: “Nome não identificado” não deve ser interpretado como um nome de item confirmado. Histórico e exportações usam JSON e CSV; métricas de acompanhamento por ciclo ficam no JSON.
 
-Os diagnósticos de perda de leitura são locais e limitados a até 20 pares de imagem e registro. A interface permite desativá-los. Eles ajudam a investigar quando e onde a leitura falhou.
+Os diagnósticos de perda de leitura são locais e limitados a até 20 pares de imagem e registro. A opção **Salvar recortes** permite desativar essas imagens. Eles ajudam a investigar quando e onde a leitura falhou.
+
+O arquivo local `runtime.json` mantém até 200 eventos de execução e um estado recente atualizado a cada cinco segundos, para investigar paradas mesmo sem gravação. Registra pausas, perda de foco, limites de tempo e falhas internas tratadas; uma interrupção abrupta pode deixar apenas o último estado salvo. Use **Abrir registros** para acessar a pasta. Esse registro textual não contém capturas nem mensagens livres de exceção e não é enviado automaticamente.
 
 ## Atualizar ou voltar de versão
 

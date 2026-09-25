@@ -1,6 +1,7 @@
 """Detecção visual e controle, sem acesso ao jogo ou à memória dele."""
 from dataclasses import dataclass
 import numpy as np
+import cv2
 
 
 @dataclass
@@ -23,7 +24,7 @@ def longest_run(mask, minimum, maximum=None):
     return float((run[0] + run[-1]) / 2), len(run)
 
 
-def detect(rgb):
+def detect(rgb,require_marker_shape=False):
     h, w = rgb.shape[:2]
     if h < 60 or w < 12:
         return None
@@ -62,6 +63,17 @@ def detect(rgb):
     target = longest_run(green_rows, max(5, int(h*.035)), h*.25)
     if marker is None or target is None:
         return None
+    if require_marker_shape:
+        # A calibração não pode confundir linhas de texto com o quadrado
+        # branco: exija um componente compacto e preenchido no centro.
+        _,_,stats,_=cv2.connectedComponentsWithStats(white.astype(np.uint8),8)
+        compact=False
+        for x,y,bw,bh,area in stats[1:]:
+            if (w*.2<=bw<=w*.7 and .55<=bw/max(1,bh)<=1.8
+                and max(3,h*.018)<=bh<=h*.13 and area/(bw*bh)>=.72
+                and abs(x+bw/2-w/2)<=w*.2 and y<=marker[0]<y+bh):
+                compact=True;break
+        if not compact:return None
     if marker[1] > h*.13 or not h*.035 <= target[1] <= h*.25:
         return None
     return Reading(target[0]/h, marker[0]/h, target[1]/h)
