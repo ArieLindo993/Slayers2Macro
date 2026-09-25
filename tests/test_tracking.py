@@ -9,6 +9,29 @@ from macro import DEFAULTS
 
 
 class TrackingRecovery(unittest.TestCase):
+    def test_translucent_outlined_target_and_dim_marker(self):
+        image=np.full((400,66,3),(44,90,140),np.uint8)
+        # Interior azulado; contorno amarelo dessaturado de apenas dois pixels.
+        image[60:102,3:63]=(87,117,115)
+        image[60:62,3:63]=(107,146,143)
+        image[100:102,3:63]=(107,146,143)
+        image[60:102,3:5]=(127,177,165)
+        image[60:102,61:63]=(127,177,165)
+        image[350:373,23:43]=(132,153,192)
+        r=detect(image)
+        self.assertIsNotNone(r)
+        self.assertAlmostEqual(r.target,80.5/400)
+        self.assertAlmostEqual(r.marker,361/400)
+        self.assertAlmostEqual(r.band,42/400)
+        self.assertTrue(Engine(dict(DEFAULTS)).control.step(r,0))
+
+    def test_unconnected_colored_lines_are_not_a_target(self):
+        image=np.full((400,66,3),(44,90,140),np.uint8)
+        image[60:62,:]=(107,146,143)
+        image[100:102,:]=(107,146,143)
+        image[350:373,23:43]=(132,153,192)
+        self.assertIsNone(detect(image))
+
     def collecting(self,loot):
         e=Engine(dict(DEFAULTS));e.prepare_collect(0,loot)
         e.step(.25,None,False,loot)

@@ -31,13 +31,28 @@ def detect(rgb):
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
     # A faixa tem preenchimento translúcido verde/amarelo; o marcador
     # permanece claro mesmo quando os dois se sobrepõem.
-    green = (g > 65) & (g > b * 1.12) & (r > 25) & (r < g * 1.4) & ((g > r * 1.12) | (r > b * 1.2))
+    green = (g > 65) & (g > b * 1.02) & (r > 25) & (r < g * 1.4) & ((g > r * 1.12) | (r > b * 1.2))
     white = (r > 150) & (g > 160) & (b > 125) & ((np.maximum(r, g) - b) < 100) & (abs(r-g) < 85)
+    # O mesmo marcador fica azul-acinzentado em quadros de baixo brilho.
+    # Exija componente vermelha suficiente para excluir a água azul ao fundo.
+    white |= (r>105)&(g>125)&(b>140)&(b>=g)&((b-r)<105)&(abs(r-g)<60)
     margin = max(2, int(w * .28))
     central = white[:, margin:w-margin]
     white_rows = central.mean(axis=1) > .35
     marker = longest_run(white_rows, max(3, int(h*.018)), h*.13)
-    green_rows = green.mean(axis=1) > .18
+    color_coverage = green.mean(axis=1)
+    green_rows = color_coverage > .18
+    # Fora do alvo o preenchimento amarelo/translúcido pode assumir a cor
+    # do cenário. As bordas superior/inferior e laterais continuam coloridas.
+    # Reconstrua só lacunas delimitadas, com suporte lateral em quase todas
+    # as linhas; não una manchas separadas por fundo sem contorno.
+    gaps=np.flatnonzero(~green_rows)
+    if len(gaps):
+        for gap in np.split(gaps,np.flatnonzero(np.diff(gaps)>1)+1):
+            start,end=int(gap[0]),int(gap[-1])+1
+            if start==0 or end==h or len(gap)>h*.15:continue
+            if np.mean((color_coverage[start:end]>=.035)|white_rows[start:end])>=.8:
+                green_rows[start:end]=True
     # O marcador pode ocultar o meio do alvo. Una apenas um intervalo
     # branco delimitado por verde dos dois lados, nunca o fundo escuro.
     if marker is not None:

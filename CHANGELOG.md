@@ -2,6 +2,21 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.0.4](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.4)
+
+### Correção de detecção no minigame
+
+- Corrigida a perda de leitura quando o marcador fica fora do alvo e a faixa passa a ficar amarelada/translúcida sobre o cenário azul.
+- O detector reconstrói o interior da faixa a partir das bordas coloridas, exigindo continuidade lateral para não unir linhas desconectadas.
+- Ajustada a identificação do marcador branco quando ele fica azul-acinzentado com brilho reduzido.
+- Mantidos o acompanhamento periódico e a recuperação de localização introduzidos na 7.0.3.
+
+### Validação
+
+- Correção comparada com a versão 7.0.3 no mesmo trecho de uma gravação de reprodução da falha, com aumento de 154 para 275 leituras válidas em 310 quadros analisados. O trecho inclui o desaparecimento do minigame; a contagem não é uma taxa de vitória.
+- Adicionados testes sintéticos da faixa translúcida, marcador escurecido e rejeição de linhas coloridas desconectadas. A gravação pessoal não faz parte do repositório ou da distribuição.
+- A reprodução em vídeo e os testes automatizados não equivalem a validar uma sessão ao vivo no Roblox.
+
 ## [7.0.3](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.3)
 
 ### Minigame
