@@ -5,7 +5,7 @@ try {
     if (!$Repositorio -and (Test-Path -LiteralPath $savedRepo)) {
         $Repositorio = (Get-Content -LiteralPath $savedRepo -Raw).Trim()
     }
-    if (!$Repositorio) { $Repositorio = Read-Host 'Repositorio GitHub (usuario/repositorio)' }
+    if (!$Repositorio) { $Repositorio = 'ArieLindo993/Slayers2Macro' }
     $Repositorio = $Repositorio -replace '^https://github.com/', '' -replace '\.git$', ''
     if ($Repositorio -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw 'Repositorio invalido.' }
     $headers = @{ 'User-Agent' = 'Slayers2Macro-Updater'; 'Accept' = 'application/vnd.github+json' }

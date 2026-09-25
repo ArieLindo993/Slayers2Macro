@@ -4,11 +4,11 @@ Macro visual para Windows, baseado na versão 6.1.0. F8 marca a água; F4 inicia
 
 ## Atualizar sem extrair ZIPs manualmente
 
-Feche o macro e abra `Atualizar.cmd`. Na primeira execução, informe `usuario/repositorio` do GitHub. O atalho consulta a última Release, baixa o executável, confere o checksum e instala numa pasta separada. Nas próximas atualizações, o destino fica salvo. Os dados da instalação anterior feita pelo atalho são copiados; instalações antigas externas a ele não são migradas automaticamente.
+Feche o macro e abra `Atualizar.cmd`. O destino padrão é `ArieLindo993/Slayers2Macro`. O atalho consulta a última Release, baixa o executável, confere o checksum e instala numa pasta separada. Nas próximas atualizações, o destino fica salvo. Os dados da instalação anterior feita pelo atalho são copiados; instalações antigas externas a ele não são migradas automaticamente.
 
 Para repositório privado, o atualizador precisa do GitHub CLI (`gh`) autenticado com acesso ao repositório. Para público, não é necessário autenticar. Sem internet, ainda é possível abrir diretamente o executável já instalado em `.install`.
 
-**Estado:** repositório preparado localmente. Publicação e download de Release ainda dependem de configurar o destino no GitHub. O atualizador não foi testado contra um repositório remoto real. Não confunda código preparado com publicação concluída.
+Repositório: https://github.com/ArieLindo993/Slayers2Macro. Os executáveis são distribuídos pela página Releases. Consulte o resultado de cada compilação na aba Actions.
 
 ## Desenvolvimento
 
