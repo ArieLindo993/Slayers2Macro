@@ -48,8 +48,8 @@ class ProfileStore:
         if not isinstance(learned,dict) or not valid_roi(learned.get('roi')):learned={}
         return list(item.get('roi',default)),learned
 
-    def save(self,key,roi,learned):
+    def save(self,key,roi,learned,automatic=True):
         if not key or not valid_roi(roi):return
-        self.profiles[key]={'roi':list(roi),'learned':learned if isinstance(learned,dict) else {}}
+        self.profiles[key]={'roi':list(roi),'learned':learned if isinstance(learned,dict) else {},'automatic':bool(automatic)}
         temp=self.path.with_suffix('.tmp')
         temp.write_text(json.dumps(self.profiles,indent=2),encoding='utf-8');temp.replace(self.path)

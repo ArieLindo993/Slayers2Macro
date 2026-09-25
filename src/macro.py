@@ -332,7 +332,7 @@ class App:
     def save(self):
         try:
             self.config_path.write_text(json.dumps(self.config,indent=2),encoding='utf-8')
-            self.profiles.save(self.profile_key,self.config['roi'],self.calibration.profile)
+            self.profiles.save(self.profile_key,self.config['roi'],self.calibration.profile,self.config['auto_calibrate'])
         except OSError:self.status.set('Ajustes aplicados; não foi possível salvar nesta pasta.')
 
     def toggle_diagnostics(self):
@@ -355,9 +355,12 @@ class App:
             # A configuração antiga só serve para migrar o primeiro perfil.
             fallback=self.config['roi'] if not self.profiles.profiles else DEFAULTS['roi']
             roi,learned=self.profiles.load(key,fallback)
+            automatic=self.profiles.profiles.get(key,{}).get('automatic',True if self.profiles.profiles else self.config['auto_calibrate']) is not False
+            self.config['auto_calibrate']=automatic;self.auto_var.set(automatic)
             self.profile_key=key;self.config['roi']=roi
             self.config['calibration_profile']=learned;self.calibration=AutoCalibration(learned)
             self.calibration_epoch+=1;self.save()
+            self.bar_status.set('Perfil automático: aguardando a barra' if automatic else 'Perfil manual: região salva')
         self.profile_text.set(f'Perfil: {window[3]} × {window[4]}\n'+('Janela' if mode=='window' else 'Sem bordas / tela cheia')+f' · {round(dpi/96*100)}%')
 
     def button_start(self):

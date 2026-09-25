@@ -109,8 +109,10 @@ class Features(unittest.TestCase):
                     first=app.profile_key
                     app.save_selection([.72,.19,.065,.62]);app.choose_profile((1,0,0,1280,720))
                     self.assertNotEqual(first,app.profile_key)
+                    self.assertTrue(app.config['auto_calibrate'])
                     self.assertNotEqual(app.config['roi'],[.72,.19,.065,.62])
                     app.choose_profile(w);self.assertEqual(app.config['roi'],[.72,.19,.065,.62])
+                    self.assertFalse(app.config['auto_calibrate'])
                     app.dry.set(True);app.window=w
                     with patch.object(app,'sample',side_effect=lambda full=False:frame() if full else frame()[100:400,580:627]):
                         app.update(__import__('time').monotonic());app.root.update_idletasks()

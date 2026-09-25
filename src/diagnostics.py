@@ -23,7 +23,7 @@ class TrackingMetrics:
                 'inside_percent':round(100*self.inside/self.valid,1) if self.valid else None}
 
 def annotated_preview(rgb,reading):
-    im=Image.fromarray(rgb).convert('RGB');im.thumbnail((160,260))
+    im=Image.fromarray(rgb).convert('RGB');im.thumbnail((160,200))
     draw=ImageDraw.Draw(im);w,h=im.size
     draw.rectangle((0,0,w-1,h-1),outline='#20b8ed',width=2)
     if reading:
