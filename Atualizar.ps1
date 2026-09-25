@@ -1,4 +1,4 @@
-param([string]$Repositorio)
+param([string]$Repositorio, [switch]$NaoAbrir)
 $ErrorActionPreference = 'Stop'
 try {
     $savedRepo = Join-Path $PSScriptRoot 'repository.txt'
@@ -61,7 +61,7 @@ try {
     Set-Content -LiteralPath $savedRepo -Value $Repositorio -Encoding ASCII
     Set-Content -LiteralPath (Join-Path $install 'current.txt') -Value ([string]$release.id) -Encoding ASCII
     Write-Host "Versao pronta: $($release.tag_name). Feche o macro anterior antes de abrir esta versao."
-    if ((Read-Host 'Abrir agora? (S/N)') -match '^[sS]$') { Start-Process -FilePath $exe -WindowStyle Hidden }
+    if (!$NaoAbrir -and (Read-Host 'Abrir agora? (S/N)') -match '^[sS]$') { Start-Process -FilePath $exe -WindowStyle Hidden }
 } catch {
     Write-Host ('Nao foi possivel atualizar: ' + $_.Exception.Message)
     Write-Host 'Confirme o repositorio e se existe uma Release. Para repositorio privado, autentique gh auth login.'

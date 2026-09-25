@@ -23,9 +23,10 @@ jobs:
           path: |
             dist/Slayers2Macro.zip
             dist/Slayers2Macro.zip.sha256
+            dist/Atualizador.zip
       - name: Publicar versão marcada
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create $env:RELEASE_TAG dist/Slayers2Macro.zip dist/Slayers2Macro.zip.sha256 --generate-notes
+        run: gh release create $env:RELEASE_TAG dist/Slayers2Macro.zip dist/Slayers2Macro.zip.sha256 dist/Atualizador.zip --generate-notes
