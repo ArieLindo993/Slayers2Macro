@@ -98,7 +98,7 @@ def cursor_relative(window):
 
 DEFAULTS={'roi':[.733,.289,.034,.369],'cast':None,'anticipation':.10,
           'wait_seconds':20.,'result_wait':12.,'recast_seconds':1.5,
-          'cast_hold':.25,'t_hold':1.5,'max_cast':3,'max_collect':5,'collect_timeout':35.,'auto_calibrate':True}
+          'cast_hold':.25,'t_hold':3.0,'max_cast':3,'max_collect':5,'collect_timeout':35.,'auto_calibrate':True}
 
 class App:
     def __init__(self):

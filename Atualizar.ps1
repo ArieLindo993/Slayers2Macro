@@ -8,6 +8,7 @@ function Get-InstalledExe([string]$Id, [string]$Base) {
     return $candidate
 }
 try {
+    Write-Host 'Preparando o atualizador...'
     $install = Join-Path $PSScriptRoot '.install'
     $stateFile = Join-Path $install 'current.txt'
     $previousFile = Join-Path $install 'previous.txt'
@@ -68,7 +69,8 @@ try {
         $token = & gh auth token 2>$null
         if ($LASTEXITCODE -eq 0 -and $token) { $headers.Authorization = "Bearer $token" }
     }
-    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repositorio/releases/latest" -Headers $headers
+    Write-Host 'Consultando a versao mais recente no GitHub...'
+    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repositorio/releases/latest" -Headers $headers -TimeoutSec 30
     $asset = @($release.assets | Where-Object name -EQ 'Slayers2Macro.zip')
     $checksum = @($release.assets | Where-Object name -EQ 'Slayers2Macro.zip.sha256')
     if ($asset.Count -ne 1 -or $checksum.Count -ne 1) { throw 'A versao publicada nao possui os arquivos esperados.' }
@@ -81,7 +83,10 @@ try {
         $zip = Join-Path $stage 'release.zip'
         $hashFile = Join-Path $stage 'release.sha256'
         $downloadHeaders = $headers.Clone(); $downloadHeaders.Accept = 'application/octet-stream'
+        $sizeMB = [math]::Round($asset[0].size / 1MB, 1)
+        Write-Host "Baixando $($release.tag_name) ($sizeMB MB). Aguarde; esta etapa pode levar alguns minutos."
         Invoke-WebRequest -UseBasicParsing -Uri $asset[0].url -Headers $downloadHeaders -OutFile $zip -TimeoutSec 180
+        Write-Host 'Download concluido. Verificando a integridade do arquivo...'
         Invoke-WebRequest -UseBasicParsing -Uri $checksum[0].url -Headers $downloadHeaders -OutFile $hashFile -TimeoutSec 60
         $expected = (Get-Content -LiteralPath $hashFile -Raw).Trim()
         if ($expected -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash -ne $expected) {
@@ -96,6 +101,7 @@ try {
                 if (!$target.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { throw 'Caminho invalido no ZIP.' }
             }
         } finally { $archive.Dispose() }
+        Write-Host 'Extraindo os arquivos. Aguarde a mensagem de conclusao...'
         Expand-Archive -LiteralPath $zip -DestinationPath $releaseDir
         if (!(Test-Path -LiteralPath $exe)) { throw 'Executavel ausente na versao baixada.' }
         # Recupera dados apenas da instalação anterior deste mesmo atualizador.
