@@ -2,6 +2,21 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.0.7](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.7)
+
+### Recuperação de lançamentos
+
+- Três lançamentos sem confirmação deixam de provocar pausa definitiva. O macro libera T/mouse e entra em recuperação automática.
+- As rodadas de recuperação aguardam 15, 30, 45 e depois até 60 segundos antes de uma nova série de lançamentos, evitando cliques contínuos.
+- Antes de relançar, exige leituras recentes e distintas. Se detectar pesca ou item para coletar, trata esse estado antes de lançar novamente.
+- Reinicia a busca automática da barra e registra os sinais de pesca, item, região e idade da captura no log da recuperação.
+- Preserva contadores/histórico. Pausas manuais, perda de foco e demais paradas explícitas continuam exigindo retomada pelo usuário; não há reconexão automática ao Roblox.
+
+### Validação
+
+- Testes reproduzem o limite de três lançamentos observado em uma sessão longa, retorno da pesca, presença de item, capturas antigas, pausa manual e cem recuperações sucessivas em tempo simulado.
+- A correção trata a pausa definitiva identificada no log; os registros não determinam por que o jogo deixou de confirmar os lançamentos. Testes simulados não equivalem a uma noite de execução no Roblox.
+
 ## [7.0.6](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.6)
 
 ### Log de texto por execução

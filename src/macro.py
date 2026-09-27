@@ -327,7 +327,7 @@ class App:
                         command=lambda:self.stop('Modo de observação alterado.')).pack(anchor='w',pady=12)
         ttk.Label(frame,text='Calibrar a barra',font=('Segoe UI',12,'bold')).pack(anchor='w',pady=(4,6))
         ttk.Label(frame,text='Automático: a barra é conferida em cada pesca.\nManual: F6 congela a imagem; arraste e salve.\nF8 salva o ponto de lançamento na água.',style='Muted.TLabel').pack(anchor='w')
-        ttk.Label(frame,text='Até 3 lançamentos e 5 tentativas de coleta.\nT é segurado mesmo se o painel desaparecer.',style='Muted.TLabel').pack(anchor='w',pady=12)
+        ttk.Label(frame,text='3 lançamentos por rodada; recuperação automática. Até 5 coletas.\nT é segurado mesmo se o painel desaparecer.',style='Muted.TLabel').pack(anchor='w',pady=12)
         self.preview=ttk.Label(frame,text='Prévia aparece no modo de observação',anchor='center')
         self.preview.pack(fill='x',expand=True)
         ttk.Button(frame,text='Salvar e fechar',style='Go.TButton',command=self.apply_settings).pack(fill='x',side='bottom')
@@ -485,7 +485,7 @@ class App:
         future,epoch,captured=self.calibration_job;self.calibration_job=None
         candidate=future.result()
         if not self.config['auto_calibrate'] or epoch!=self.calibration_epoch or now-captured>1:return
-        if self.engine.state not in ('INICIO','ESPERANDO','PESCANDO','RESULTADO'):return
+        if self.engine.state not in ('INICIO','ESPERANDO','PESCANDO','RESULTADO','RECUPERANDO'):return
         # Uma lista, painel ou inventário não pode ensinar um novo perfil.
         # A confirmação do minigame vem de um sinal independente da barra.
         if not self.scene.get('fishing') or now-self.scene_time>1:
@@ -509,6 +509,12 @@ class App:
         for kind,value in actions:
             if kind=='mouse':self.mouse(value)
             elif kind=='t':self.key_t(value)
+            elif kind=='recover':
+                self.session_log.event('RECUPERACAO_DE_LANCAMENTO',ciclo=self.cycle_id,rodada=value,
+                    regiao=self.config['roi'],pesca_visivel=self.scene.get('fishing'),
+                    item_visivel=bool(self.scene.get('loot')),pontuacao_pesca=self.scene.get('exit_score'),
+                    idade_captura=round(time.monotonic()-self.scene_time,2) if self.scene_time else None)
+                self.calibration.begin();self.calibration.search_stage='screen';self.calibration_epoch+=1
             elif kind=='stop':self.stop(value)
             elif kind=='aim':
                 if not self.active or game_window()!=self.window:self.stop('Janela alterada. Use F4 para retomar.');break
@@ -557,7 +563,7 @@ class App:
             self.scene={'fishing':False,'loot':None,'reward':False}
         if now-self.last_scene>=.25 and self.scene_job is None:
             full=self.sample(full=True)
-            if self.config['auto_calibrate'] and self.calibration_job is None and (not self.calibration.locked or now-getattr(self,'last_calibration_search',0)>=1) and self.engine.state in ('INICIO','ESPERANDO','PESCANDO','RESULTADO'):
+            if self.config['auto_calibrate'] and self.calibration_job is None and (not self.calibration.locked or now-getattr(self,'last_calibration_search',0)>=1) and self.engine.state in ('INICIO','ESPERANDO','PESCANDO','RESULTADO','RECUPERANDO'):
                 stage=self.calibration.search_stage
                 self.bar_status.set({'current':'Procurando na região atual…','nearby':'Procurando ao redor da barra…','screen':'Procurando na tela do jogo…'}[stage])
                 self.calibration_job=(self.calibration_worker.submit(search_bar,full,self.config['roi'][:],stage),self.calibration_epoch,now)
@@ -590,7 +596,7 @@ class App:
         previous_state=self.engine.state
         actions=self.engine.step(now,reading,self.scene['fishing'],self.scene['loot'],self.scene.get('reward',False) or text_reward,scene_stamp=self.scene_time,scene_valid=now-self.scene_time<1)
         if self.engine.state!=previous_state:
-            events={'POSICIONANDO':'LANCAMENTO_PREPARADO','CLIQUE':'VARA_LANCADA','ESPERANDO':'AGUARDANDO_PESCA','PESCANDO':'MINIGAME_INICIADO','RESULTADO':'MINIGAME_ENCERRADO','MIRANDO_ITEM':'TENTATIVA_DE_COLETA','TECLA_T':'T_PRESSIONADO','VERIFICANDO_COLETA':'T_LIBERADO_VERIFICANDO_COLETA','REINICIANDO':'PREPARANDO_PROXIMA_PESCA','PARADO':'PARADA_AUTOMATICA'}
+            events={'POSICIONANDO':'LANCAMENTO_PREPARADO','CLIQUE':'VARA_LANCADA','ESPERANDO':'AGUARDANDO_PESCA','PESCANDO':'MINIGAME_INICIADO','RESULTADO':'MINIGAME_ENCERRADO','MIRANDO_ITEM':'TENTATIVA_DE_COLETA','TECLA_T':'T_PRESSIONADO','VERIFICANDO_COLETA':'T_LIBERADO_VERIFICANDO_COLETA','REINICIANDO':'PREPARANDO_PROXIMA_PESCA','PARADO':'PARADA_AUTOMATICA','RECUPERANDO':'RECUPERACAO_AUTOMATICA'}
             self.session_log.event(events.get(self.engine.state,'MUDANCA_DE_ESTADO'),ciclo=self.cycle_id,anterior=previous_state,estado=self.engine.state,lancamento=self.engine.attempts,tentativa_coleta=self.engine.collect_attempts,descricao=self.engine.message)
         if previous_state=='PESCANDO' and self.engine.state!='PESCANDO':
             self.session_log.event('MINIGAME_FINALIZADO',ciclo=self.cycle_id,proxima_etapa=self.engine.state)

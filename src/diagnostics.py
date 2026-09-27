@@ -8,7 +8,7 @@ from product import VERSION
 class RuntimeJournal:
     """Estado de execução persistente, sem imagens, caminhos ou mensagens livres."""
     events_allowed={'startup','started','closed','internal_error','focus_lost','fishing_timeout','cast_unconfirmed','user_pause','previous_session_incomplete'}
-    states_allowed={'INICIO','POSICIONANDO','CLIQUE','ESPERANDO','PESCANDO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA','REINICIANDO','PARADO'}
+    states_allowed={'INICIO','POSICIONANDO','CLIQUE','ESPERANDO','PESCANDO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA','REINICIANDO','RECUPERANDO','PARADO'}
 
     def __init__(self,path):
         self.path=Path(path);self.events=[];self.snapshot={}

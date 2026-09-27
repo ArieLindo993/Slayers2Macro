@@ -21,6 +21,7 @@ class Engine:
         self.last_fishing=now;self.track_started=now
         self.last_marker=now;self.positive=0
         self.last_loot=None;self.outcome=None
+        self.recovery_count=0;self.recovery_frames=0;self.recovery_stamp=None
         self.control.reset()
 
     def stop(self,message):
@@ -36,7 +37,17 @@ class Engine:
     def track(self,now):
         self.state='PESCANDO';self.last_fishing=now;self.track_started=now;self.last_marker=now
         self.attempts=0;self.control.reset();self.message='Pesca confirmada. Acompanhando a barra.'
+        self.recovery_count=0
         return [('mouse',False),('t',False)]
+
+    def recover(self,now):
+        self.recovery_count+=1
+        delay=min(60,15*self.recovery_count)
+        self.state='RECUPERANDO';self.deadline=now+delay
+        self.recovery_frames=0;self.recovery_stamp=None
+        self.control.reset()
+        self.message=f'Lançamento não confirmado. Conferindo a tela; nova tentativa em {delay}s.'
+        return [('mouse',False),('t',False),('recover',self.recovery_count)]
 
     def prepare_collect(self,now,loot):
         if self.collect_started is None:self.collect_started=now
@@ -83,6 +94,20 @@ class Engine:
                 return self.finish(now,False)
         active=fishing or reading is not None
         self.positive=self.positive+1 if active else 0
+        if self.state=='RECUPERANDO':
+            if active and self.positive>=2:return self.track(now)
+            if loot and scene_valid:return self.prepare_collect(now,loot)
+            stamp=now if scene_stamp is None else scene_stamp
+            if not scene_valid:
+                self.recovery_frames=0;self.recovery_stamp=None
+                self.message='Recuperação: aguardando uma leitura recente da tela.'
+                return [('mouse',False),('t',False)]
+            if stamp!=self.recovery_stamp:
+                self.recovery_frames+=1;self.recovery_stamp=stamp
+            if now>=self.deadline and not active and self.recovery_frames>=2:
+                self.attempts=0
+                return self.cast(now)
+            return []
         if self.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA') and reading is not None and fishing and self.positive>=2:
             self.collect_attempts=0;self.collect_started=None
             return self.track(now)
@@ -110,7 +135,7 @@ class Engine:
             if loot:return self.prepare_collect(now,loot)
             if now>=self.deadline and not active:
                 if self.attempts>=self.cfg['max_cast']:
-                    return self.stop('Pesca não confirmada após 3 lançamentos. Confira vara e ponto na água.')
+                    return self.recover(now)
                 return self.cast(now)
         elif self.state=='PESCANDO':
             if active:self.last_fishing=now
