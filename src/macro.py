@@ -595,6 +595,14 @@ class App:
         text_reward=parsed is not None and now-captured<4
         previous_state=self.engine.state
         actions=self.engine.step(now,reading,self.scene['fishing'],self.scene['loot'],self.scene.get('reward',False) or text_reward,scene_stamp=self.scene_time,scene_valid=now-self.scene_time<1)
+        if previous_state in ('TECLA_T','VERIFICANDO_COLETA') and self.scene_time!=getattr(self,'last_collect_log_stamp',None):
+            self.last_collect_log_stamp=self.scene_time
+            self.session_log.event('VERIFICACAO_ITEM_APOS_T',ciclo=self.cycle_id,
+                indicador_visivel=bool(self.scene.get('loot')),recompensa_visivel=bool(self.scene.get('reward')),
+                pesca_visivel=bool(self.scene.get('fishing')),leitura_barra=reading is not None,
+                idade_captura=round(now-self.scene_time,3),captura_valida=now-self.scene_time<1,
+                capturas_sem_item=self.engine.absent_frames,item_visto_na_coleta=self.engine.loot_seen,
+                tentativa=self.engine.collect_attempts,decisao=self.engine.state)
         if self.engine.state!=previous_state:
             events={'POSICIONANDO':'LANCAMENTO_PREPARADO','CLIQUE':'VARA_LANCADA','ESPERANDO':'AGUARDANDO_PESCA','PESCANDO':'MINIGAME_INICIADO','RESULTADO':'MINIGAME_ENCERRADO','MIRANDO_ITEM':'TENTATIVA_DE_COLETA','TECLA_T':'T_PRESSIONADO','VERIFICANDO_COLETA':'T_LIBERADO_VERIFICANDO_COLETA','REINICIANDO':'PREPARANDO_PROXIMA_PESCA','PARADO':'PARADA_AUTOMATICA','RECUPERANDO':'RECUPERACAO_AUTOMATICA'}
             self.session_log.event(events.get(self.engine.state,'MUDANCA_DE_ESTADO'),ciclo=self.cycle_id,anterior=previous_state,estado=self.engine.state,lancamento=self.engine.attempts,tentativa_coleta=self.engine.collect_attempts,descricao=self.engine.message)

@@ -2,6 +2,22 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.0.8](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.8)
+
+### Validação após a coleta
+
+- Corrigida a contagem de ausência do indicador Collect: intervalos em que uma captura envelhece enquanto a próxima é processada não apagam mais as evidências já obtidas.
+- Somente capturas válidas, distintas e em ordem avançam a contagem. Reaparecimento do indicador, minigame ativo ou lacuna superior a três segundos entre observações reiniciam a verificação.
+- Sem evidência suficiente, aguarda novas capturas em vez de gastar automaticamente outra tentativa de T; o limite total de coleta continua valendo.
+- Mantida a saída após duas tentativas sem item, desde que a ausência seja validada. Recompensa reconhecida continua encerrando a coleta imediatamente.
+- Novo evento `VERIFICACAO_ITEM_APOS_T` no log: visibilidade do indicador/recompensa/minigame, idade e validade da captura, contagem de ausências, tentativa e decisão.
+
+A identificação usa o indicador visual Collect. A ausência desse indicador não comprova, sozinha, a coleta do objeto; esses resultados permanecem separados das recompensas confirmadas.
+
+### Validação
+
+- Testes com processamento lento entre capturas, duas tentativas sem item, item que reaparece, lacuna longa e falta de novas observações. Ainda é necessária validação no jogo ao vivo.
+
 ## [7.0.7](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.7)
 
 ### Recuperação de lançamentos

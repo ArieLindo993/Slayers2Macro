@@ -172,9 +172,14 @@ class Engine:
                 return [('t',False)]
         elif self.state=='VERIFICANDO_COLETA':
             stamp=now if scene_stamp is None else scene_stamp
-            if not scene_valid or loot or active:
+            if loot or active:
                 self.absent_since=None;self.absent_frames=0
-            elif stamp>=self.verification_started and stamp!=self.last_collect_frame:
+            elif scene_valid and stamp>=self.verification_started and (self.last_collect_frame is None or stamp>self.last_collect_frame):
+                # Uma captura envelhecida enquanto a próxima está sendo
+                # processada não é evidência de reaparecimento do item.
+                # Reinicie só se houve uma lacuna longa entre capturas válidas.
+                if self.last_collect_frame is not None and stamp-self.last_collect_frame>3:
+                    self.absent_since=None;self.absent_frames=0
                 self.last_collect_frame=stamp
                 if self.absent_since is None:self.absent_since=stamp
                 self.absent_frames+=1
@@ -186,9 +191,11 @@ class Engine:
             if now>=self.deadline:
                 # Capturas lentas precisam de tempo para formar observações
                 # distintas; não gastar outra tentativa enquanto elas chegam.
-                if not loot and not active and now-self.verification_started<4:
+                if not loot and not active:
                     stable=self.absent_since is not None and self.absent_frames>=3 and stamp-self.absent_since>=1.2
-                    if not stable:return []
+                    if not scene_valid or not stable:
+                        self.message='Conferindo novas capturas antes de decidir se repete a coleta…'
+                        return []
                 if self.collect_attempts>=self.cfg['max_collect']:return self.finish(now,False)
                 return self.prepare_collect(now,loot)
             self.message='Conferindo recompensa e presença do item após T…'
