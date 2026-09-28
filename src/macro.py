@@ -98,8 +98,8 @@ def cursor_relative(window):
 
 
 DEFAULTS={'roi':[.733,.289,.034,.369],'cast':None,'anticipation':.10,
-          'wait_seconds':20.,'result_wait':12.,'recast_seconds':1.5,
-          'cast_hold':.25,'t_hold':3.0,'max_cast':3,'max_collect':5,'collect_timeout':35.,'auto_calibrate':True}
+          'wait_seconds':20.,'result_wait':2.,'recast_seconds':1.5,
+          'cast_hold':.25,'t_hold':3.0,'max_cast':3,'max_collect':5,'collect_timeout':35.,'auto_calibrate':True,'fast_collection_defaults':True}
 
 class App:
     def __init__(self):
@@ -129,7 +129,7 @@ class App:
                 roi=profile.get('roi',[])
                 if len(roi)==4 and all(isinstance(v,(int,float)) and 0<v<1 for v in roi) and roi[0]+roi[2]<=1 and roi[1]+roi[3]<=1:
                     self.config['calibration_profile']=profile
-            for key,lo,hi in [('cast_hold',.08,1),('t_hold',.2,5),('wait_seconds',10,60),('result_wait',5,20)]:
+            for key,lo,hi in [('cast_hold',.08,1),('t_hold',.2,5),('wait_seconds',10,60),('result_wait',.5,20)]:
                 value=saved.get(key)
                 if isinstance(value,(int,float)) and lo<=value<=hi:self.config[key]=value
             point=saved.get('cast')
@@ -138,6 +138,10 @@ class App:
             if isinstance(roi,list) and len(roi)==4 and all(isinstance(v,(int,float)) for v in roi):
                 x,y,w,h=roi
                 if 0<=x<1 and 0<=y<1 and .005<w<.3 and .05<h<.9 and x+w<=1 and y+h<=1:self.config['roi']=roi
+            # Migra o antigo padrão de 12 s uma única vez; mantém outros ajustes.
+            if not saved.get('fast_collection_defaults') and self.config['result_wait']==12:
+                self.config['result_wait']=2.
+            self.config['fast_collection_defaults']=True
         except (ValueError,TypeError,OSError):pass
         if self.config['auto_calibrate'] and self.config.get('calibration_profile',{}).get('detector_revision')!=DETECTOR_REVISION:
             self.config['roi']=list(DEFAULTS['roi']);self.config['calibration_profile']={}
@@ -318,7 +322,7 @@ class App:
         self.fields={}
         for key,label,lo,hi in [('cast_hold','Duração do clique (s)',.08,1),('t_hold','Segurar T (s)',.2,5),
                                ('wait_seconds','Esperar a pesca antes de repetir (s)',10,60),
-                               ('result_wait','Esperar item depois da pesca (s)',5,20)]:
+                               ('result_wait','Esperar item depois da pesca (s)',.5,20)]:
             row=ttk.Frame(frame);row.pack(fill='x',pady=5)
             ttk.Label(row,text=label).pack(side='left')
             var=tk.StringVar(value=str(self.config[key]));self.fields[key]=(var,lo,hi)

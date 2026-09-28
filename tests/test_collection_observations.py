@@ -13,6 +13,7 @@ class CollectionObservations(unittest.TestCase):
     def slow_absence(self,e,base):
         for capture in (base,base+.8,base+1.6):
             e.step(capture+.7,None,False,None,scene_stamp=capture,scene_valid=True)
+            if e.state!='VERIFICANDO_COLETA':break
             if e.state=='VERIFICANDO_COLETA':
                 e.step(capture+1.05,None,False,None,scene_stamp=capture,scene_valid=False)
 
@@ -46,5 +47,29 @@ class CollectionObservations(unittest.TestCase):
 
     def test_item_reappearance_still_repeats_collection(self):
         e=self.begin((.5,.3));e.step(3.4,None,False,None)
-        e.step(4,None,False,(.5,.3));e.step(5.1,None,False,(.5,.3))
+        e.step(4,None,False,(.5,.3))
         self.assertEqual(e.state,'MIRANDO_ITEM');self.assertEqual(e.collect_attempts,2)
+
+    def test_two_distinct_frames_finish_after_short_absence(self):
+        e=self.begin((.5,.3))
+        e.step(3.3,None,False,None,scene_stamp=3.3)
+        e.step(3.8,None,False,None,scene_stamp=3.3)
+        self.assertEqual(e.absent_frames,1)
+        self.assertEqual(e.state,'VERIFICANDO_COLETA')
+        e.step(3.91,None,False,None,scene_stamp=3.91)
+        self.assertEqual(e.state,'REINICIANDO')
+
+    def test_old_default_migrates_once_custom_value_survives(self):
+        import tempfile,json,os
+        from unittest.mock import patch
+        import macro
+        with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,{'FISHING_MACRO_DATA_DIR':tmp}):
+            path=Path(tmp)/'config.json';path.write_text(json.dumps({'result_wait':12}))
+            app=macro.App();app.root.withdraw()
+            try:
+                self.assertEqual(app.config['result_wait'],2)
+                app.config['result_wait']=12;app.save()
+            finally:app.close()
+            app=macro.App();app.root.withdraw()
+            try:self.assertEqual(app.config['result_wait'],12)
+            finally:app.close()

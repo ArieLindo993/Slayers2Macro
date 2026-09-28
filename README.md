@@ -67,9 +67,9 @@ Abra as configurações, altere os valores e clique em **Salvar e fechar**.
 | Duração do clique | 0,25 segundo | 0,08 a 1 segundo |
 | Segurar T | **3 segundos** | 0,2 a 5 segundos |
 | Esperar a pesca antes de repetir | 20 segundos | 10 a 60 segundos |
-| Esperar item depois da pesca | 12 segundos | 5 a 20 segundos |
+| Esperar item depois da pesca | 2 segundos | 0,5 a 20 segundos |
 
-**Atualizações preservam configurações salvas.** Se você usava 1,5 segundo para T, altere “Segurar T (s)” para 3 manualmente. O novo padrão se aplica a configurações novas ou sem esse valor salvo.
+**Atualizações preservam configurações salvas, salvo migrações documentadas.** Na 7.0.9, o antigo padrão de 12 segundos para esperar o item passa uma única vez para 2 segundos. Outros valores dessa espera são preservados. Se você usava 1,5 segundo para T, altere “Segurar T (s)” para 3 manualmente. O novo padrão se aplica a configurações novas ou sem esse valor salvo.
 
 O modo **Só observar** permite acompanhar a leitura sem enviar comandos ao jogo.
 

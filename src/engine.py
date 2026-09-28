@@ -166,7 +166,7 @@ class Engine:
                 return ([('aim',loot)] if loot else [])+[('t',True)]
         elif self.state=='TECLA_T':
             if now>=self.deadline:
-                self.state='VERIFICANDO_COLETA';self.deadline=now+1.8;self.absent_since=None
+                self.state='VERIFICANDO_COLETA';self.deadline=now+.6;self.absent_since=None
                 self.absent_frames=0;self.last_collect_frame=None;self.verification_started=now
                 self.message='Aguardando confirmação da recompensa…'
                 return [('t',False)]
@@ -183,7 +183,7 @@ class Engine:
                 self.last_collect_frame=stamp
                 if self.absent_since is None:self.absent_since=stamp
                 self.absent_frames+=1
-                if self.absent_frames>=3 and stamp-self.absent_since>=1.2:
+                if self.absent_frames>=2 and stamp-self.absent_since>=.6:
                     if self.loot_seen:
                         return self.finish(now,False,'Item desapareceu após T; recompensa não confirmada')
                     if self.collect_attempts>=2:
@@ -192,7 +192,7 @@ class Engine:
                 # Capturas lentas precisam de tempo para formar observações
                 # distintas; não gastar outra tentativa enquanto elas chegam.
                 if not loot and not active:
-                    stable=self.absent_since is not None and self.absent_frames>=3 and stamp-self.absent_since>=1.2
+                    stable=self.absent_since is not None and self.absent_frames>=2 and stamp-self.absent_since>=.6
                     if not scene_valid or not stable:
                         self.message='Conferindo novas capturas antes de decidir se repete a coleta…'
                         return []

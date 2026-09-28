@@ -2,6 +2,17 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.0.9](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.9)
+
+### Verificação de coleta mais rápida
+
+- Espera padrão pelo item após o minigame reduzida de 12 para 2 segundos. O antigo valor padrão salvo de 12 segundos é migrado uma vez; outros valores personalizados são preservados.
+- Ajuste manual dessa espera agora aceita valores de 0,5 a 20 segundos.
+- Após soltar T, a ausência pode ser validada por duas capturas distintas ao longo de pelo menos 0,6 segundo, substituindo três capturas e 1,2 segundo.
+- Intervalo mínimo para repetir a coleta quando o indicador continua visível reduzido de 1,8 para 0,6 segundo.
+- Preservados T por 3 segundos, checagem de capturas recentes, confirmação por recompensa e tratamento de item que reaparece. A latência real depende do processamento das capturas.
+- Testes da validação rápida, capturas repetidas e migração única do padrão, além dos testes existentes.
+
 ## [7.0.8](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.8)
 
 ### Validação após a coleta
