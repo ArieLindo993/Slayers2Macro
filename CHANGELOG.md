@@ -2,7 +2,7 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
-## [7.2.1](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.2.1)
+## [7.2.2](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.2.2)
 
 ### Recuperação em sessões longas
 
@@ -19,11 +19,12 @@ Alterações verificadas nas tags e no código do repositório. A versão mais r
 
 - Logs passam a registrar atraso de análise, descartes, duração máxima de atualização, contagem de evidências e prazo de recuperação, filas e reinícios dos processos. Erros internos incluem etapa e origem sem caminhos pessoais.
 - Corrigida a instalação incompleta após interrupção da extração: arquivos são verificados em uma pasta temporária antes de substituir a versão instalada.
+- A verificação SHA-256 usa diretamente o .NET do Windows, evitando falhas quando o ambiente não disponibiliza o comando Get-FileHash.
 - Preservados F8/F4/F6/F10, duração padrão de T, calibração manual, configurações, histórico e arquivos locais.
 
 ### Validação
 
-- 70 testes automatizados, incluindo oito horas simuladas com capturas lentas, atrasos de até 2,4 segundos, tarefas travadas/encerradas, transmissão interrompida de imagens, falhas de captura, coleta, pausas, calibração e instalação interrompida.
+- 71 testes automatizados, incluindo oito horas simuladas com capturas lentas, atrasos de até 2,4 segundos, tarefas travadas/encerradas, transmissão interrompida de imagens, falhas de captura, coleta, pausas, calibração e instalação interrompida.
 - Verificação local de 28 quadros de gravações fornecidas, reconhecimento de duas recompensas reais e controle simulado; esses arquivos pessoais não integram o pacote.
 - Autoteste também exercita visão, calibração e OCR em processos separados no executável empacotado.
 - [Relatório da investigação](docs/ESTABILIDADE.md). Simulação e reprodução de falhas não equivalem a uma noite de validação no Roblox ao vivo.

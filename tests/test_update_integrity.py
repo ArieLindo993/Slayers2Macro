@@ -94,6 +94,7 @@ function Expand-Archive {
 }
 ''')
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn('simulated interrupted extraction',result.stdout)
         self.assertEqual((self.install / 'current.txt').read_text().strip(), '1')
         self.assertEqual((old / 'Slayers2Macro.exe').read_bytes(), b'legacy placeholder; never executed')
         self.assertFalse((self.install / '2').exists())
@@ -114,8 +115,18 @@ function Expand-Archive {
 }
 ''')
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Extracao incompleta',result.stdout)
         self.assertEqual((self.install / 'current.txt').read_text().strip(), '1')
         self.assertFalse((self.install / '2').exists())
+
+    def test_corrupted_archive_is_rejected_before_extraction(self):
+        self.legacy('1');(self.install/'current.txt').write_text('1')
+        self.archive.write_bytes(self.archive.read_bytes()+b'corrupted download')
+        result=self.run_updater()
+        self.assertNotEqual(result.returncode,0)
+        self.assertIn('checksum incorreto',result.stdout)
+        self.assertFalse((self.install/'2').exists())
+        self.assertEqual((self.install/'current.txt').read_text().strip(),'1')
 
     def test_legacy_offline_start_and_rollback_still_work(self):
         self.legacy('1')

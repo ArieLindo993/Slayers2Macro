@@ -16,6 +16,19 @@ function Assert-InstallChild([string]$Path, [string]$Base) {
     $root = [IO.Path]::GetFullPath($Base).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
     if (![IO.Path]::GetFullPath($Path).StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { throw 'Caminho fora da pasta de instalacao.' }
 }
+function Get-PackageHash([string]$Path) {
+    # Use o .NET do Windows diretamente, sem depender da descoberta de modulos
+    # do PowerShell herdada de outro terminal ou do ambiente de compilacao.
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    $stream = $null
+    try {
+        $stream = [IO.File]::OpenRead($Path)
+        return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+    } finally {
+        if ($stream) { $stream.Dispose() }
+        $algorithm.Dispose()
+    }
+}
 try {
     Write-Host 'Preparando o atualizador...'
     $install = Join-Path $PSScriptRoot '.install'
@@ -101,7 +114,7 @@ try {
         Write-Host 'Download concluido. Verificando a integridade do arquivo...'
         Invoke-WebRequest -UseBasicParsing -Uri $checksum[0].url -Headers $downloadHeaders -OutFile $hashFile -TimeoutSec 60
         $expected = (Get-Content -LiteralPath $hashFile -Raw).Trim()
-        if ($expected -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash -ne $expected) {
+        if ($expected -notmatch '^[a-fA-F0-9]{64}$' -or (Get-PackageHash $zip) -ne $expected) {
             throw 'Download incompleto ou checksum incorreto. A instalacao anterior foi preservada.'
         }
         Add-Type -AssemblyName System.IO.Compression.FileSystem
