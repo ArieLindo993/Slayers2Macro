@@ -44,10 +44,9 @@ $ErrorActionPreference = 'Stop'
 Import-Module Microsoft.PowerShell.Utility
 Import-Module Microsoft.PowerShell.Archive
 function Get-Process { [CmdletBinding()]param([string]$Name) }
-function Get-Command {
-    [CmdletBinding()]param([string]$Name)
-    if ($Name -ne 'gh') { Microsoft.PowerShell.Core\Get-Command @PSBoundParameters }
-}
+# Keep PowerShell command/module discovery intact. Intercept only GitHub's CLI
+# so this fixture never reads the user's credentials or contacts the service.
+function gh { $global:LASTEXITCODE = 0 }
 function Invoke-RestMethod {
     param($Uri, $Headers, $TimeoutSec)
     return [pscustomobject]@{ id = 2; tag_name = 'test'; assets = @(

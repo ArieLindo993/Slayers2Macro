@@ -2,7 +2,7 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
-## [7.2.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.2.0)
+## [7.2.1](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.2.1)
 
 ### Recuperação em sessões longas
 

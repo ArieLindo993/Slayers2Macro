@@ -1,4 +1,4 @@
-# Investigação de estabilidade — 7.2.0
+# Investigação de estabilidade — 7.2.1
 
 ## Falha confirmada
 
