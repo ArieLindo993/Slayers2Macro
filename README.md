@@ -4,6 +4,8 @@ Macro de pesca para **Slayers 2, no Roblox**, com interface para Windows, calibr
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Ver versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Histórico de alterações](CHANGELOG.md)**
 
+**Versão 7.2.0:** corrigida a recuperação que podia ficar aguardando indefinidamente durante sessões longas. Análises visuais travadas agora são reiniciadas, e os logs mostram atrasos e recuperações. Veja a [investigação e os testes](docs/ESTABILIDADE.md).
+
 ## Interface
 
 A interface usa um tema noturno inspirado em pesca e Demon Slayer, com verde-jade e detalhes dourados. Desde a 7.1.1, o cabeçalho exibe o ícone de Slayers 2, sem o padrão xadrez. O painel principal reúne status, preparação e inventário; a lateral mantém reconhecimento e registros. A mudança é visual: atalhos, opções e mecânicas permanecem iguais.
@@ -52,7 +54,7 @@ O Roblox precisa permanecer visível e em primeiro plano. Ao perder o foco, o ma
 
 ## Calibração e acompanhamento
 
-**Automática:** a barra é conferida a cada pesca. A localização precisa de três capturas consistentes para ser confirmada. Rodadas com leituras confiáveis refinam o perfil; isso não garante melhora em toda tentativa. A posição continua sendo conferida periodicamente mesmo após a confirmação. Quando a localização se perde, a busca passa pela região atual, seus arredores e a tela do jogo. Enquanto houver sinal de pesca ativa, tenta recuperar a leitura, respeitando o limite total de 120 segundos.
+**Automática:** a barra é conferida a cada pesca. A localização precisa de três capturas consistentes para ser confirmada. Rodadas com leituras confiáveis refinam o perfil; isso não garante melhora em toda tentativa. A posição continua sendo conferida periodicamente mesmo após a confirmação. Quando a localização se perde, a busca passa pela região atual, seus arredores e a tela do jogo. Desde a 7.2.0, 120 segundos sem reencontrar o marcador levam à recuperação automática, em vez de uma pausa definitiva. Leituras válidas não são interrompidas por esse prazo. O candidato da calibração e o sinal independente de pesca são verificados na mesma captura.
 
 **Manual:** quando o minigame estiver visível, pressione F6. Na captura congelada, arraste para selecionar a barra inteira e salve. Isso ativa o modo manual. Volte ao Roblox e pressione F4. A opção automática pode ser reativada na interface.
 
@@ -93,6 +95,10 @@ Cada linha informa data, horário com milissegundos e fuso local, tipo de evento
 
 O log também salva um estado periódico a cada 30 segundos. Registra eventos e resultados, não um vídeo ou cada quadro capturado. Os arquivos anteriores não são apagados automaticamente e não estão sujeitos ao limite de 200 eventos do registro resumido. Uma interrupção forçada pode deixar apenas os eventos anteriores, sem uma linha de encerramento.
 
+Na 7.2.0, o estado periódico também informa idade e atraso das análises, capturas descartadas, evidências e prazo da recuperação, tarefas pendentes e reinícios dos processos de análise. Falhas de captura e de análise têm eventos próprios; erros internos incluem a etapa e nomes de funções/arquivos, sem caminhos pessoais.
+
+O processamento de sinais, calibração, nomes de itens e recortes usa processos locais com filas limitadas. Se uma tarefa travar, seu processo é encerrado e a próxima análise inicia outro. A barra continua sendo lida diretamente a cada atualização. Com a mesma janela do Roblox ainda em primeiro plano, mudanças de tamanho ou posição provocam ajuste e recuperação; sair do Roblox continua pausando o macro.
+
 O log permanece ativo mesmo com **Salvar recortes** desmarcado. Não é enviado automaticamente e não entra no GitHub ou no pacote de distribuição. Ao investigar um problema, compartilhe o arquivo da execução correspondente após revisar seu conteúdo.
 
 ## Atualizar ou voltar de versão
@@ -106,6 +112,8 @@ Feche o macro antes de iniciar uma atualização ou trocar de versão.
 | **Voltar-versao.cmd** | Alterna para a versão anterior disponível na mesma instalação, preservando os dados locais. |
 
 Para atualizar os próprios atalhos e o script do atualizador, baixe um novo **Atualizador.zip** e extraia na mesma pasta, substituindo os arquivos e preservando `.install`.
+
+O atualizador 7.2.0 extrai e verifica os arquivos antes de substituir a instalação. Uma extração incompleta é baixada novamente, mesmo que já exista um executável nessa pasta. Para receber essa correção no atualizador, substitua os arquivos dele conforme a orientação acima.
 
 O retorno exige uma versão anterior instalada pelo atualizador. Instalações manuais em outras pastas não são localizadas automaticamente. Depois de voltar, use **Iniciar.cmd**; executar Atualizar novamente procura a versão mais recente.
 

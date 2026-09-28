@@ -2,6 +2,32 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.2.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.2.0)
+
+### Recuperação em sessões longas
+
+- Corrigido o travamento em `RECUPERANDO`: intervalos curtos sem leitura não apagam mais a primeira confirmação necessária para relançar. Capturas repetidas, fora de ordem ou anteriores à recuperação não contam como novas evidências.
+- Confirmar pesca pelo indicador visual agora exige capturas independentes; reutilizar uma imagem em dois ticks não equivale a duas confirmações.
+- Removida a pausa definitiva de 120 segundos. Esse prazo agora conta a ausência do marcador e inicia recuperação; o acompanhamento válido continua normalmente.
+- Resultados de análise entre 1 e 2,5 segundos deixam de ser descartados prematuramente. Capturas mais antigas continuam inválidas; o controle da barra usa sua própria captura atual.
+- Calibração valida o candidato e o indicador de pesca na mesma imagem, eliminando a dependência de uma análise anterior atrasada.
+- Visão, calibração, OCR e diagnóstico passam a usar processos reiniciáveis e filas limitadas. Travamento ou falha de um deles não encerra automaticamente a sessão nem acumula tarefas indefinidamente.
+- Perda temporária da captura inicia recuperação e recria o capturador. Alterar a posição/tamanho da mesma janela ajusta as coordenadas; pausa manual e perda real de foco continuam exigindo F4.
+- Durante o controle válido da barra, verificações rápidas evitam buscas completas desnecessárias. Uma verificação completa continua sendo solicitada periodicamente, e o desaparecimento do indicador aciona a busca de coleta/recompensa.
+
+### Diagnóstico e instalação
+
+- Logs passam a registrar atraso de análise, descartes, duração máxima de atualização, contagem de evidências e prazo de recuperação, filas e reinícios dos processos. Erros internos incluem etapa e origem sem caminhos pessoais.
+- Corrigida a instalação incompleta após interrupção da extração: arquivos são verificados em uma pasta temporária antes de substituir a versão instalada.
+- Preservados F8/F4/F6/F10, duração padrão de T, calibração manual, configurações, histórico e arquivos locais.
+
+### Validação
+
+- 70 testes automatizados, incluindo oito horas simuladas com capturas lentas, atrasos de até 2,4 segundos, tarefas travadas/encerradas, transmissão interrompida de imagens, falhas de captura, coleta, pausas, calibração e instalação interrompida.
+- Verificação local de 28 quadros de gravações fornecidas, reconhecimento de duas recompensas reais e controle simulado; esses arquivos pessoais não integram o pacote.
+- Autoteste também exercita visão, calibração e OCR em processos separados no executável empacotado.
+- [Relatório da investigação](docs/ESTABILIDADE.md). Simulação e reprodução de falhas não equivalem a uma noite de validação no Roblox ao vivo.
+
 ## [7.1.1](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.1.1)
 
 ### Cabeçalho

@@ -7,6 +7,15 @@ function Get-InstalledExe([string]$Id, [string]$Base) {
     if (!(Test-Path -LiteralPath $candidate)) { throw 'Esta versao nao esta instalada.' }
     return $candidate
 }
+function Test-CompleteInstall([string]$Directory, [string]$Id) {
+    $marker = Join-Path $Directory 'installation.complete'
+    if (!(Test-Path -LiteralPath (Join-Path $Directory 'Slayers2Macro.exe') -PathType Leaf) -or !(Test-Path -LiteralPath $marker -PathType Leaf)) { return $false }
+    return (Get-Content -LiteralPath $marker -Raw).Trim() -eq $Id
+}
+function Assert-InstallChild([string]$Path, [string]$Base) {
+    $root = [IO.Path]::GetFullPath($Base).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    if (![IO.Path]::GetFullPath($Path).StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { throw 'Caminho fora da pasta de instalacao.' }
+}
 try {
     Write-Host 'Preparando o atualizador...'
     $install = Join-Path $PSScriptRoot '.install'
@@ -75,11 +84,14 @@ try {
     $checksum = @($release.assets | Where-Object name -EQ 'Slayers2Macro.zip.sha256')
     if ($asset.Count -ne 1 -or $checksum.Count -ne 1) { throw 'A versao publicada nao possui os arquivos esperados.' }
     New-Item -ItemType Directory -Path $install -Force | Out-Null
-    $releaseDir = Join-Path $install ([string]$release.id)
+    $releaseId = [string]$release.id
+    if ($releaseId -notmatch '^\d+$') { throw 'Identificador de versao invalido.' }
+    $releaseDir = Join-Path $install $releaseId
     $exe = Join-Path $releaseDir 'Slayers2Macro.exe'
-    if (!(Test-Path -LiteralPath $exe)) {
+    if (!(Test-CompleteInstall $releaseDir $releaseId)) {
         $stage = Join-Path $install ('staging-' + [guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $stage | Out-Null
+        $unpacked = Join-Path $stage 'package'
         $zip = Join-Path $stage 'release.zip'
         $hashFile = Join-Path $stage 'release.sha256'
         $downloadHeaders = $headers.Clone(); $downloadHeaders.Accept = 'application/octet-stream'
@@ -94,16 +106,21 @@ try {
         }
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $archive = [IO.Compression.ZipFile]::OpenRead($zip)
+        $expectedFiles = @()
         try {
-            $root = [IO.Path]::GetFullPath($releaseDir) + [IO.Path]::DirectorySeparatorChar
+            $root = [IO.Path]::GetFullPath($unpacked) + [IO.Path]::DirectorySeparatorChar
             foreach ($entry in $archive.Entries) {
-                $target = [IO.Path]::GetFullPath((Join-Path $releaseDir $entry.FullName))
+                $target = [IO.Path]::GetFullPath((Join-Path $unpacked $entry.FullName))
                 if (!$target.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { throw 'Caminho invalido no ZIP.' }
+                if ($entry.Name) { $expectedFiles += [pscustomobject]@{ Path = $target; Length = $entry.Length } }
             }
         } finally { $archive.Dispose() }
         Write-Host 'Extraindo os arquivos. Aguarde a mensagem de conclusao...'
-        Expand-Archive -LiteralPath $zip -DestinationPath $releaseDir
-        if (!(Test-Path -LiteralPath $exe)) { throw 'Executavel ausente na versao baixada.' }
+        Expand-Archive -LiteralPath $zip -DestinationPath $unpacked
+        if (!(Test-Path -LiteralPath (Join-Path $unpacked 'Slayers2Macro.exe') -PathType Leaf)) { throw 'Executavel ausente na versao baixada.' }
+        foreach ($file in $expectedFiles) {
+            if (!(Test-Path -LiteralPath $file.Path -PathType Leaf) -or (Get-Item -LiteralPath $file.Path).Length -ne $file.Length) { throw 'Extracao incompleta. A instalacao anterior foi preservada.' }
+        }
         # Recupera dados apenas da instalação anterior deste mesmo atualizador.
         $stateFile = Join-Path $install 'current.txt'
         if (Test-Path -LiteralPath $stateFile) {
@@ -112,9 +129,24 @@ try {
                 $previous = Join-Path $install $previousId
                 foreach ($name in @('config.json','historico')) {
                     $dataPath = Join-Path $previous $name
-                    if (Test-Path -LiteralPath $dataPath) { Copy-Item -LiteralPath $dataPath -Destination $releaseDir -Recurse }
+                    if (Test-Path -LiteralPath $dataPath) { Copy-Item -LiteralPath $dataPath -Destination $unpacked -Recurse }
                 }
             }
+        }
+        # O executavel sozinho nao comprova uma extracao completa. A pasta anterior
+        # continua intacta ate a validacao; o marcador so aparece por renomeacao.
+        $markerTemp = Join-Path $unpacked 'installation.complete.tmp'
+        Set-Content -LiteralPath $markerTemp -Value $releaseId -Encoding ASCII
+        Move-Item -LiteralPath $markerTemp -Destination (Join-Path $unpacked 'installation.complete') -Force
+        $backup = Join-Path $stage 'previous-install'
+        foreach ($path in @($unpacked, $releaseDir, $backup)) { Assert-InstallChild $path $install }
+        $hadPrevious = Test-Path -LiteralPath $releaseDir
+        if ($hadPrevious) { Move-Item -LiteralPath $releaseDir -Destination $backup }
+        try {
+            Move-Item -LiteralPath $unpacked -Destination $releaseDir
+        } catch {
+            if ($hadPrevious -and !(Test-Path -LiteralPath $releaseDir)) { Move-Item -LiteralPath $backup -Destination $releaseDir }
+            throw
         }
     }
     Set-Content -LiteralPath $savedRepo -Value $Repositorio -Encoding ASCII

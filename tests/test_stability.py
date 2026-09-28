@@ -48,12 +48,12 @@ class Stability(unittest.TestCase):
             try:
                 roi=[.72,.28,.04,.37];app.engine.state='PESCANDO'
                 for _ in range(3):
-                    future=Future();future.set_result({'roi':roi,'confidence':1})
+                    future=Future();future.set_result({'fishing':False,'candidate':{'roi':roi,'confidence':1}})
                     app.calibration_job=(future,app.calibration_epoch,10)
                     app.scene={'fishing':False};app.scene_time=10;app.poll_calibration(10.1)
                 self.assertFalse(app.calibration.locked)
                 for _ in range(3):
-                    future=Future();future.set_result({'roi':roi,'confidence':1})
+                    future=Future();future.set_result({'fishing':True,'candidate':{'roi':roi,'confidence':1}})
                     app.calibration_job=(future,app.calibration_epoch,10)
                     app.scene={'fishing':True};app.poll_calibration(10.1)
                 self.assertTrue(app.calibration.locked)

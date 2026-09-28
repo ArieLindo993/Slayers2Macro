@@ -86,14 +86,17 @@ class Features(unittest.TestCase):
             (base/'.install/current.txt').write_text('2');(base/'.install/previous.txt').write_text('1')
             local=base/'appdata';data=local/'FishingMacro';(data/'historico').mkdir(parents=True)
             (data/'config.json').write_text('{"cast":[0.4,0.5]}');(data/'historico/session.json').write_text('{"items":7}')
-            env=dict(os.environ,LOCALAPPDATA=str(local))
-            r=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(script),'-Voltar','-NaoAbrir'],env=env,capture_output=True,text=True)
+            env=dict(os.environ,LOCALAPPDATA=str(local),UPDATER_TEST_PATH=str(script))
+            # This fixture never launches an exe and must not depend on whether
+            # a real user is running the macro while the tests execute.
+            command="function Get-Process { param($Name) }; & $env:UPDATER_TEST_PATH -Voltar -NaoAbrir; exit $LASTEXITCODE"
+            r=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-Command',command],env=env,capture_output=True,text=True)
             self.assertEqual(r.returncode,0,r.stdout+r.stderr)
             self.assertEqual((base/'.install/current.txt').read_text().strip(),'1')
             self.assertEqual((base/'.install/1/historico/session.json').read_text(),'{"items":7}')
             self.assertEqual((data/'historico/session.json').read_text(),'{"items":7}')
             (base/'.install/previous.txt').write_text('../outside')
-            r=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(script),'-Voltar','-NaoAbrir'],env=env,capture_output=True,text=True)
+            r=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-Command',command],env=env,capture_output=True,text=True)
             self.assertNotEqual(r.returncode,0)
 
     def test_gui_profiles_and_preview(self):

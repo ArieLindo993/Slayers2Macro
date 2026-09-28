@@ -18,6 +18,7 @@ class CastRecovery(unittest.TestCase):
     def test_recorded_failure_recovers_preserving_history(self):
         e=self.exhausted()
         self.assertEqual(e.step(101,None,False,None),[])
+        e.step(114.3,None,False,None)
         actions=e.step(115,None,False,None)
         self.assertEqual(e.state,'POSICIONANDO');self.assertEqual(e.cycles,93)
         self.assertEqual(e.attempts,1);self.assertIn(('aim',[.5,.5]),actions)
@@ -45,6 +46,7 @@ class CastRecovery(unittest.TestCase):
         for iteration in range(1,101):
             self.assertEqual(e.deadline-now,min(60,15*iteration))
             e.step(now+1,None,False,None)
+            e.step(e.deadline-.7,None,False,None)
             now=e.deadline;e.step(now,None,False,None)
             self.assertEqual(e.state,'POSICIONANDO')
             # Três lançamentos falharam de novo: reproduz a condição de entrada.

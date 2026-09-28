@@ -6,9 +6,11 @@ import os
 from pathlib import Path
 import sys
 import time
+import traceback
+import multiprocessing
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-from concurrent.futures import ThreadPoolExecutor
+from background import BackgroundWorker
 from datetime import datetime
 import numpy as np
 import mss
@@ -102,6 +104,10 @@ DEFAULTS={'roi':[.733,.289,.034,.369],'cast':None,'anticipation':.10,
           'wait_seconds':20.,'result_wait':2.,'recast_seconds':1.5,
           'cast_hold':.25,'t_hold':3.0,'max_cast':3,'max_collect':5,'collect_timeout':35.,'auto_calibrate':True,'fast_collection_defaults':True}
 
+# Observações lentas continuam úteis por um intervalo limitado. A barra usa
+# capturas próprias em cada tick; nunca usa imagens atrasadas para mover o mouse.
+SCENE_MAX_AGE=2.5
+
 class App:
     def __init__(self):
         self.root=tk.Tk();self.root.title(APP_NAME+' · '+VERSION)
@@ -117,7 +123,7 @@ class App:
         self.profiles=ProfileStore(self.data/'profiles.json');self.profile_key=None
         self.metrics=TrackingMetrics();self.round_metrics=TrackingMetrics();self.last_metrics=0
         self.diagnostics=Diagnostics(self.data/'diagnostics');self.last_diagnostic=-float('inf')
-        self.diagnostic_worker=ThreadPoolExecutor(max_workers=1,thread_name_prefix='diagnostico-local')
+        self.diagnostic_worker=BackgroundWorker('diagnostico-local',timeout=10,max_pending=1)
         self.diagnostic_job=None;self.last_live_preview=0
         self.config=dict(DEFAULTS)
         try:
@@ -149,17 +155,20 @@ class App:
         self.calibration=AutoCalibration(self.config.get('calibration_profile'))
         if self.config['auto_calibrate'] and self.calibration.profile.get('roi'):
             self.config['roi']=list(self.calibration.profile['roi'])
-        self.calibration_worker=ThreadPoolExecutor(max_workers=1,thread_name_prefix='calibracao')
+        self.calibration_worker=BackgroundWorker('calibracao',timeout=10,max_pending=1)
         self.calibration_job=None;self.calibration_epoch=0;self.last_calibration=0
         self.selection=None;self.pending_selection=None
         assets=Path(getattr(sys,'_MEIPASS',self.base))/'assets'
         self.signals=Signals(assets)
-        self.vision_worker=ThreadPoolExecutor(max_workers=1,thread_name_prefix='sinais-visuais')
+        self.vision_worker=BackgroundWorker('sinais-visuais',timeout=10,max_pending=1)
         self.scene_job=None;self.scene_epoch=0;self.scene_time=0.;self.paused_state=None
+        self.scene_latency=None;self.scene_dropped=0;self.last_vision_warning=-float('inf')
+        self.capture_retry_at=0.;self.capture_failures=0;self.started_at=0.;self.last_tick=None
+        self.tick_max_ms=0.;self.tick_stage='inicio';self.full_scene_at=0.
         self.engine=Engine(self.config)
         self.history=ItemHistory(self.data/'historico',log=self.session_log)
         self.history_window=None;self.history_tables=None
-        self.reader=RewardReader();self.worker=ThreadPoolExecutor(max_workers=1,thread_name_prefix='leitura-itens')
+        self.reader=RewardReader();self.worker=BackgroundWorker('leitura-itens',timeout=30,max_pending=3)
         self.ocr_job=None;self.confirmation_jobs=[];self.history_retries={};self.last_ocr=0.;self.ocr_results={};self.ocr_error=None
         self.cycle_id=0;self.last_reward_crop=None
         self.capture=mss.MSS();self.active=False;self.held=False;self.t_down=False
@@ -251,6 +260,7 @@ class App:
         self.session_log.event('NOVA_SESSAO_DE_ITENS')
         self.history=ItemHistory(self.data/'historico',log=self.session_log);self.metrics.reset();self.round_metrics.reset()
         self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.last_reward_crop=None
+        self.history_retries={}
         self.engine.reset(time.monotonic());self.engine.state='PARADO';self.paused_state=None
         self.refresh_history();self.counter.set('0 ciclos · 0 coletas confirmadas')
 
@@ -302,7 +312,8 @@ class App:
     def submit_ocr(self,crop,now):
         if self.ocr_job is not None:return
         self.last_ocr=now
-        self.ocr_job=(self.worker.submit(self.reader.read,crop.copy()),self.cycle_id,now)
+        future=self.submit_background(self.worker,self.reader.read,crop.copy())
+        if future is not None:self.ocr_job=(future,self.cycle_id,now)
 
     def refresh_point(self):
         self.point_status.set('Ponto na água salvo · F8 para alterar' if self.config['cast'] else 'Aponte para a água e pressione F8')
@@ -421,6 +432,7 @@ class App:
         self.choose_profile(window)
         if not self.config['cast'] and not self.dry.get():self.stop('Marque um ponto na água com F8.');return
         self.window=window;self.engine.reset(time.monotonic(),preserve_counts=True);self.active=True
+        self.started_at=time.monotonic();self.capture_retry_at=0.;self.capture_failures=0
         self.session_log.event('MACRO_INICIADO',ciclo=self.cycle_id,modo='observação' if self.dry.get() else 'pesca',calibracao='automática' if self.config['auto_calibrate'] else 'manual',segurar_T=self.config['t_hold'],perfil=self.profile_key)
         self.journal.record('started',self.engine.state,active=True,cycles=self.engine.cycles)
         if self.paused_state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
@@ -482,19 +494,69 @@ class App:
     def poll_calibration(self,now):
         if self.calibration_job is None or not self.calibration_job[0].done():return
         future,epoch,captured=self.calibration_job;self.calibration_job=None
-        candidate=future.result()
-        if not self.config['auto_calibrate'] or epoch!=self.calibration_epoch or now-captured>1:return
+        try:result=future.result()
+        except Exception as exc:
+            self.background_error('calibracao',exc);return
+        if not self.config['auto_calibrate'] or epoch!=self.calibration_epoch or not 0<=now-captured<SCENE_MAX_AGE:return
         if self.engine.state not in ('INICIO','ESPERANDO','PESCANDO','RESULTADO','RECUPERANDO'):return
         # Uma lista, painel ou inventário não pode ensinar um novo perfil.
         # A confirmação do minigame vem de um sinal independente da barra.
-        if not self.scene.get('fishing') or now-self.scene_time>1:
+        if not result['fishing']:
             self.calibration.pending=[]
             return
-        roi=self.calibration.observe(candidate)
+        roi=self.calibration.observe(result['candidate'])
         if roi:
             self.session_log.event('BARRA_LOCALIZADA',ciclo=self.cycle_id,regiao=roi)
             self.config['roi']=roi;self.engine.control.reset()
             self.bar_status.set('Barra automática confirmada · aprendendo nesta pesca')
+
+    def background_error(self,component,exc):
+        self.session_log.event('FALHA_TAREFA_VISUAL',componente=component,tipo=type(exc).__name__,
+                               estado=self.engine.state,ciclo=self.cycle_id,acao='tentar nova captura')
+
+    def submit_background(self,worker,function,*args):
+        if not worker.can_submit:return None
+        try:return worker.submit(function,*args)
+        except Exception as exc:
+            self.background_error(worker.name,exc)
+            return None
+
+    def poll_scene(self,now):
+        if self.scene_job is not None and self.scene_job[0].done():
+            future,epoch,captured=self.scene_job;self.scene_job=None
+            try:scene=future.result()
+            except Exception as exc:self.background_error('sinais',exc)
+            else:
+                self.scene_latency=max(0,now-captured)
+                if epoch==self.scene_epoch and captured>self.scene_time and 0<=now-captured<SCENE_MAX_AGE:
+                    self.scene=scene;self.scene_time=captured
+                    visible=bool(scene.get('loot'))
+                    if visible!=self.previous_scene_item:
+                        self.session_log.event('ITEM_NA_VARA_DETECTADO' if visible else 'ITEM_NA_VARA_NAO_VISIVEL',ciclo=self.cycle_id)
+                        self.previous_scene_item=visible
+                else:
+                    self.scene_dropped+=1
+                    if now-self.last_vision_warning>=10:
+                        self.last_vision_warning=now
+                        self.session_log.event('CAPTURA_DESCARTADA',idade=round(now-captured,3),
+                            mesma_etapa=epoch==self.scene_epoch,ciclo=self.cycle_id)
+        if not 0<=now-self.scene_time<SCENE_MAX_AGE:
+            self.scene={'fishing':False,'loot':None,'reward':False}
+
+    def sync_window(self):
+        current=game_window()
+        if not current or not self.window or current[0]!=self.window[0]:
+            self.stop('Pausado: o Roblox perdeu o foco. Volte ao jogo e use F4.');return False
+        if current!=self.window:
+            # A mesma janela continua em primeiro plano: ajuste as coordenadas,
+            # invalide capturas antigas e solte comandos antes de observar de novo.
+            self.mouse(False);self.key_t(False)
+            self.window=current;self.choose_profile(current)
+            self.scene_epoch+=1;self.scene_time=0.;self.scene={'fishing':False,'loot':None,'reward':False}
+            self.calibration.begin();self.calibration_epoch+=1
+            self.session_log.event('JANELA_REDIMENSIONADA',largura=current[3],altura=current[4],ciclo=self.cycle_id)
+            self.execute(self.engine.recover(time.monotonic(),reason='vision_unavailable'))
+        return True
 
     def sample(self,full=False):
         _,x,y,w,h=self.window
@@ -512,7 +574,8 @@ class App:
                 self.session_log.event('RECUPERACAO_DE_LANCAMENTO',ciclo=self.cycle_id,rodada=value,
                     regiao=self.config['roi'],pesca_visivel=self.scene.get('fishing'),
                     item_visivel=bool(self.scene.get('loot')),pontuacao_pesca=self.scene.get('exit_score'),
-                    idade_captura=round(time.monotonic()-self.scene_time,2) if self.scene_time else None)
+                    idade_captura=round(time.monotonic()-self.scene_time,2) if self.scene_time else None,
+                    motivo=self.engine.recovery_reason)
                 self.calibration.begin();self.calibration.search_stage='screen';self.calibration_epoch+=1
             elif kind=='stop':self.stop(value)
             elif kind=='aim':
@@ -522,9 +585,14 @@ class App:
                 if not U.SetCursorPos(int(x+value[0]*w),int(y+value[1]*h)):raise RuntimeError('Não foi possível posicionar o mouse.')
 
     def update(self,now):
-        if game_window()!=self.window:self.stop('Pausado: volte ao Roblox e use F4.');return
+        if not self.sync_window():return
+        if now<self.capture_retry_at:return
+        self.tick_stage='sinais';self.poll_scene(now)
+        self.tick_stage='calibracao'
         self.poll_calibration(now)
+        self.tick_stage='captura'
         rgb=self.sample();reading=detect(rgb,require_marker_shape=self.config['auto_calibrate'] and not self.calibration.locked)
+        self.capture_failures=0
         lost=self.engine.state=='PESCANDO' and reading is None and now-self.engine.last_marker>=.2
         if lost!=self.tracking_lost:
             if lost or reading is not None:self.session_log.event('LEITURA_PERDIDA' if lost else 'LEITURA_RECUPERADA',ciclo=self.cycle_id)
@@ -535,7 +603,7 @@ class App:
             self.calibration.sample(reading)
             if reading is None and now-self.engine.last_marker>=.5 and self.diagnostic_var.get() and now-self.last_diagnostic>=10 and (self.diagnostic_job is None or self.diagnostic_job.done()):
                 self.last_diagnostic=now
-                self.diagnostic_job=self.diagnostic_worker.submit(self.diagnostics.save,rgb.copy(),'PESCANDO',self.calibration.search_stage,self.metrics.summary())
+                self.diagnostic_job=self.submit_background(self.diagnostic_worker,self.diagnostics.save,rgb.copy(),'PESCANDO',self.calibration.search_stage,self.metrics.summary())
             if self.config['auto_calibrate'] and self.calibration.check_tracking(reading,now):
                 self.calibration_epoch+=1
                 self.bar_status.set('Leitura perdida: recalibrando durante a pesca…')
@@ -547,40 +615,37 @@ class App:
             self.metrics_text.set(('Dentro da faixa: —' if inside is None else f'Dentro da faixa: {inside:.1f}%')+f'\nLeituras válidas: {quality["valid_percent"]:.1f}%\nTempo medido: {quality["observed_seconds"]:.1f}s')
         if self.diagnostic_job is not None and self.diagnostic_job.done():
             try:self.diagnostic_job.result()
-            except OSError:self.status.set('Não foi possível salvar o diagnóstico local.')
+            except Exception as exc:self.background_error('diagnostico',exc)
             self.diagnostic_job=None
-        if self.scene_job is not None and self.scene_job[0].done():
-            future,epoch,captured=self.scene_job;self.scene_job=None
-            scene=future.result()
-            if epoch==self.scene_epoch and now-captured<1:
-                self.scene=scene;self.scene_time=captured
-                visible=bool(scene.get('loot'))
-                if visible!=self.previous_scene_item:
-                    self.session_log.event('ITEM_NA_VARA_DETECTADO' if visible else 'ITEM_NA_VARA_NAO_VISIVEL',ciclo=self.cycle_id)
-                    self.previous_scene_item=visible
-        if now-self.scene_time>1:
-            self.scene={'fishing':False,'loot':None,'reward':False}
-        if now-self.last_scene>=.25 and self.scene_job is None:
+        if now-self.last_scene>=.25 and self.scene_job is None and self.vision_worker.can_submit:
+            self.tick_stage='captura'
             full=self.sample(full=True)
+            captured=time.monotonic()
+            self.tick_stage='agendamento_visual'
             if self.config['auto_calibrate'] and self.calibration_job is None and (not self.calibration.locked or now-getattr(self,'last_calibration_search',0)>=1) and self.engine.state in ('INICIO','ESPERANDO','PESCANDO','RESULTADO','RECUPERANDO'):
                 stage=self.calibration.search_stage
                 self.bar_status.set({'current':'Procurando na região atual…','nearby':'Procurando ao redor da barra…','screen':'Procurando na tela do jogo…'}[stage])
-                self.calibration_job=(self.calibration_worker.submit(search_bar,full,self.config['roi'][:],stage),self.calibration_epoch,now)
+                future=self.submit_background(self.calibration_worker,self.signals.find_bar,full,self.config['roi'][:],stage)
+                if future is not None:self.calibration_job=(future,self.calibration_epoch,captured)
                 self.last_calibration_search=now
             # A busca de painel jamais bloqueia o controle de 20 ms da barra.
-            self.scene_job=(self.vision_worker.submit(self.signals.scan,full),self.scene_epoch,now)
+            quick=self.engine.state=='PESCANDO' and reading is not None and now-self.full_scene_at<1
+            if not quick:self.full_scene_at=now
+            future=self.submit_background(self.vision_worker,self.signals.scan,full,quick)
+            if future is not None:self.scene_job=(future,self.scene_epoch,captured)
             previous=self.cycle_id-1
             entry=self.history.by_cycle.get(previous)
-            if (not self.dry.get() and self.scene.get('reward') and entry and not entry['identified']
+            if (not self.dry.get() and self.worker.can_submit and self.scene.get('reward') and entry and not entry['identified']
                 and now-self.last_ocr>=.75 and self.history_retries.get(previous,0)<3
                 and not any(cycle==previous for _,cycle in self.confirmation_jobs)):
                 crop=RewardReader.crop(full,self.scene.get('reward_point'))
-                self.confirmation_jobs.append((self.worker.submit(self.reader.read,crop),previous))
+                future=self.submit_background(self.worker,self.reader.read,crop)
+                if future is not None:self.confirmation_jobs.append((future,previous))
                 self.history_retries[previous]=self.history_retries.get(previous,0)+1;self.last_ocr=now
             if not self.dry.get() and self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
                 crop=RewardReader.crop(full,self.scene.get('reward_point'))
                 if self.scene.get('reward'):self.last_reward_crop=crop
-                if now-self.last_ocr>=.75:self.submit_ocr(crop,now)
+                if now-self.last_ocr>=.75 and self.worker.can_submit:self.submit_ocr(crop,now)
             self.last_scene=time.monotonic()
         now=time.monotonic()
         if self.preview is not None and self.preview.winfo_exists() and now-self.last_preview>.25:
@@ -593,13 +658,21 @@ class App:
         parsed,captured=self.ocr_results.get(self.cycle_id,(None,0))
         text_reward=parsed is not None and now-captured<4
         previous_state=self.engine.state
-        actions=self.engine.step(now,reading,self.scene['fishing'],self.scene['loot'],self.scene.get('reward',False) or text_reward,scene_stamp=self.scene_time,scene_valid=now-self.scene_time<1)
+        self.tick_stage='controle'
+        if (reading is None and now-max(self.scene_time,self.started_at)>5
+            and self.engine.state!='RECUPERANDO'):
+            actions=self.engine.recover(now,reason='vision_unavailable')
+        else:
+            scene_valid=0<=now-self.scene_time<SCENE_MAX_AGE
+            actions=self.engine.step(now,reading,self.scene['fishing'],self.scene['loot'],
+                (self.scene.get('reward',False) and scene_valid) or text_reward,
+                scene_stamp=self.scene_time,scene_valid=scene_valid)
         if previous_state in ('TECLA_T','VERIFICANDO_COLETA') and self.scene_time!=getattr(self,'last_collect_log_stamp',None):
             self.last_collect_log_stamp=self.scene_time
             self.session_log.event('VERIFICACAO_ITEM_APOS_T',ciclo=self.cycle_id,
                 indicador_visivel=bool(self.scene.get('loot')),recompensa_visivel=bool(self.scene.get('reward')),
                 pesca_visivel=bool(self.scene.get('fishing')),leitura_barra=reading is not None,
-                idade_captura=round(now-self.scene_time,3),captura_valida=now-self.scene_time<1,
+                idade_captura=round(now-self.scene_time,3),captura_valida=0<=now-self.scene_time<SCENE_MAX_AGE,
                 capturas_sem_item=self.engine.absent_frames,item_visto_na_coleta=self.engine.loot_seen,
                 tentativa=self.engine.collect_attempts,decisao=self.engine.state)
         if self.engine.state!=previous_state:
@@ -613,11 +686,13 @@ class App:
                 self.config['calibration_profile']=profile
                 self.config['roi']=list(profile['roi']);self.save()
                 self.bar_status.set(f'Perfil atualizado · {profile["rounds"]} pescas com leituras confiáveis')
-        self.execute(actions)
+        self.tick_stage='comandos';self.execute(actions)
+        self.tick_stage='historico'
         if self.engine.collected>previous_collected:
             self.history.record(self.cycle_id,parsed if text_reward else None,1 if self.scene.get('reward') else None)
-            if not text_reward and self.last_reward_crop is not None:
-                self.confirmation_jobs.append((self.worker.submit(self.reader.read,self.last_reward_crop.copy()),self.cycle_id))
+            if not text_reward and self.last_reward_crop is not None and self.worker.can_submit:
+                future=self.submit_background(self.worker,self.reader.read,self.last_reward_crop.copy())
+                if future is not None:self.confirmation_jobs.append((future,self.cycle_id))
             self.refresh_history()
         if self.engine.cycles>previous_cycles:
             if self.engine.collected==previous_collected:
@@ -635,38 +710,78 @@ class App:
             self.calibration.begin();self.calibration_epoch+=1
             # Resultados antigos só interessam enquanto resolvem uma linha pendente.
             self.ocr_results={k:v for k,v in self.ocr_results.items() if k>=self.cycle_id-1}
+            self.history_retries={k:v for k,v in self.history_retries.items() if k>=self.cycle_id-1}
         if self.active:self.status.set(self.engine.message)
         self.counter.set(f'{self.engine.cycles} ciclos   ·   {self.engine.collected} coletas confirmadas')
 
     def tick(self):
+        began=time.monotonic()
         try:
+            self.tick_stage='tarefas'
+            for worker in (self.worker,self.vision_worker,self.calibration_worker,self.diagnostic_worker):worker.poll()
+            self.tick_stage='ocr'
             self.poll_ocr()
+            self.tick_stage='atalhos'
             self.keys()
             if self.pending_selection is not None and time.monotonic()>=self.pending_selection:self.open_selection(game_window())
             if self.pending_start is not None and time.monotonic()>=self.pending_start:self.start(game_window())
             if self.active:self.update(time.monotonic())
             now=time.monotonic()
+            self.tick_max_ms=max(self.tick_max_ms,(now-began)*1000)
+            self.tick_stage='registros'
             if now-self.last_runtime>=5:
                 self.last_runtime=now
                 self.journal.checkpoint(self.engine.state,self.active,self.engine.cycles,now-self.scene_time)
             if now-self.last_log_snapshot>=30:
                 self.last_log_snapshot=now
-                self.session_log.event('ESTADO_PERIODICO',ativo=self.active,estado=self.engine.state,ciclo=self.cycle_id,idade_leitura=round(now-self.scene_time,2) if self.scene_time else None)
+                self.session_log.event('ESTADO_PERIODICO',ativo=self.active,estado=self.engine.state,ciclo=self.cycle_id,
+                    idade_leitura=round(now-self.scene_time,2) if self.scene_time else None,
+                    atraso_analise=round(self.scene_latency,3) if self.scene_latency is not None else None,
+                    capturas_descartadas=self.scene_dropped,maior_tick_ms=round(self.tick_max_ms,1),
+                    capturas_recuperacao=self.engine.recovery_frames,
+                    prazo_recuperacao=round(max(0,self.engine.deadline-now),1) if self.engine.state=='RECUPERANDO' else None,
+                    tarefas_visao=self.vision_worker.pending_count,tarefas_ocr=self.worker.pending_count,
+                    reinicios_visao=self.vision_worker.restarts,reinicios_calibracao=self.calibration_worker.restarts,
+                    reinicios_ocr=self.worker.restarts)
+                self.tick_max_ms=0.
             self.log_status.set('Falha ao gravar log' if self.session_log.error else 'Log de texto ativo')
+        except mss.exception.ScreenShotError as exc:
+            # Uma captura temporariamente indisponível não cancela a sessão.
+            self.capture_failures+=1;now=time.monotonic()
+            self.capture_retry_at=now+min(10,self.capture_failures)
+            self.session_log.event('FALHA_CAPTURA',tipo=type(exc).__name__,etapa=self.tick_stage,
+                                   tentativa=self.capture_failures,ciclo=self.cycle_id)
+            try:
+                self.execute(self.engine.recover(now,reason='vision_unavailable'))
+                self.scene_epoch+=1;self.scene_time=0.;self.calibration_epoch+=1
+                try:self.capture.close()
+                except Exception:pass
+                self.capture=mss.MSS()
+            except Exception as failure:
+                if not self.fail(failure):return
         except Exception as exc:
-            self.session_log.event('ERRO_INTERNO',tipo=type(exc).__name__,estado=self.engine.state,ciclo=self.cycle_id)
-            try:self.stop('Falha interna ('+type(exc).__name__+'). Tente retomar com F4.')
-            except Exception:self.active=False;self.status.set('Falha ao liberar comando. Feche o macro.');self.root.destroy();return
+            if not self.fail(exc):return
         self.root.after(20,self.tick)
+
+    def fail(self,exc):
+        frames=traceback.extract_tb(exc.__traceback__)[-5:]
+        trace=' > '.join(f'{Path(f.filename).name}:{f.lineno}:{f.name}' for f in frames)
+        self.session_log.event('ERRO_INTERNO',tipo=type(exc).__name__,estado=self.engine.state,ciclo=self.cycle_id,
+                               etapa=self.tick_stage,origem=trace)
+        try:self.stop('Falha interna ('+type(exc).__name__+'). Tente retomar com F4.')
+        except Exception:
+            self.active=False;self.status.set('Falha ao liberar comando. Feche o macro.');self.root.destroy();return False
+        return True
 
     def close(self):
         try:self.stop('Fechando')
         finally:
             if self.selection:self.selection.cancel()
-            self.diagnostic_worker.shutdown(wait=True,cancel_futures=False)
-            self.calibration_worker.shutdown(wait=True,cancel_futures=True)
-            self.vision_worker.shutdown(wait=True,cancel_futures=True)
-            self.worker.shutdown(wait=True,cancel_futures=False);self.poll_ocr();self.history.save()
+            # shutdown has a bounded wait (at most one second per worker).
+            self.diagnostic_worker.shutdown(cancel_futures=True)
+            self.calibration_worker.shutdown(cancel_futures=True)
+            self.vision_worker.shutdown(cancel_futures=True)
+            self.worker.shutdown(cancel_futures=True);self.poll_ocr();self.history.save()
             self.session_log.event('ENCERRAMENTO_CONCLUIDO')
             self.capture.close();self.root.destroy()
 
@@ -678,6 +793,7 @@ class App:
 
 
 if __name__=='__main__':
+    multiprocessing.freeze_support()
     if len(sys.argv)==4 and sys.argv[1]=='--calibration-test':
         rgb=np.array(Image.open(sys.argv[2]).convert('RGB'))
         result=locate_bar(rgb)
@@ -700,6 +816,18 @@ if __name__=='__main__':
         result['vision_background']=hasattr(app,'vision_worker')
         result['auto_calibration']=app.config['auto_calibrate']
         result['manual_selection']=callable(app.open_selection)
+        # Exercise spawn in the frozen executable, including the OCR model.
+        # All frames are synthetic and no game input is sent.
+        blank=np.zeros((1080,1920,3),np.uint8)
+        jobs=[(app.vision_worker,app.vision_worker.submit(app.signals.scan,blank)),
+              (app.calibration_worker,app.calibration_worker.submit(app.signals.find_bar,blank,DEFAULTS['roi'],'screen')),
+              (app.worker,app.worker.submit(app.reader.read,np.zeros((48,352,3),np.uint8)))]
+        deadline=time.monotonic()+30
+        while not all(future.done() for _,future in jobs) and time.monotonic()<deadline:
+            for worker,_ in jobs:worker.poll()
+            time.sleep(.02)
+        result['isolated_workers']=all(f.done() and f.exception() is None for _,f in jobs)
+        result['blank_scene_safe']=result['isolated_workers'] and not jobs[0][1].result()['fishing'] and not jobs[1][1].result()['fishing'] and jobs[2][1].result() is None
         app.history.path=None;app.close();Path(sys.argv[2]).write_text(json.dumps(result),encoding='utf-8')
         test_data.cleanup()
     else:App().run()

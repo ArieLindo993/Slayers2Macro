@@ -115,9 +115,11 @@ class TrackingRecovery(unittest.TestCase):
         e.step(34,None,False,None)
         self.assertEqual(e.state,'RESULTADO')
 
-    def test_recovery_still_has_overall_timeout(self):
+    def test_lost_marker_timeout_enters_recovery_without_stopping_session(self):
         e=Engine(dict(DEFAULTS));e.track(0)
-        e.step(121,None,True,None)
-        self.assertEqual(e.state,'PARADO')
+        actions=e.step(121,None,True,None)
+        self.assertEqual(e.state,'RECUPERANDO')
+        self.assertIn(('mouse',False),actions);self.assertIn(('t',False),actions)
+        self.assertFalse(any(kind=='stop' for kind,_ in actions))
 
 if __name__=='__main__':unittest.main()

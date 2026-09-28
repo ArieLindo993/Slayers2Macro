@@ -12,6 +12,7 @@ result=root/'build/self-test.json'
 subprocess.run([str(exe),'--self-test',str(result)],check=True,timeout=45)
 data=json.loads(result.read_text())
 assert data['startup'] and data['collect_without_prompt'] and data['auto_calibration']
+assert data['isolated_workers'] and data['blank_scene_safe'], data
 notices=root/'dist/Slayers2Macro/THIRD_PARTY';notices.mkdir(exist_ok=True)
 dependencies=[]
 for name in ('mss','numpy','opencv-python','Pillow','rapidocr-onnxruntime','onnxruntime','pyinstaller'):
