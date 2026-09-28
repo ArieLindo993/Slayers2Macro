@@ -6,7 +6,7 @@ Macro de pesca para **Slayers 2, no Roblox**, com interface para Windows, calibr
 
 ## Interface
 
-A versão 7.1.0 usa um tema noturno inspirado em pesca e Demon Slayer, com verde-jade, detalhes dourados e xadrez discreto. O painel principal reúne status, preparação e inventário; a lateral mantém reconhecimento e registros. A mudança é visual: atalhos, opções e mecânicas permanecem iguais.
+A interface usa um tema noturno inspirado em pesca e Demon Slayer, com verde-jade e detalhes dourados. Desde a 7.1.1, o cabeçalho exibe o ícone de Slayers 2, sem o padrão xadrez. O painel principal reúne status, preparação e inventário; a lateral mantém reconhecimento e registros. A mudança é visual: atalhos, opções e mecânicas permanecem iguais.
 
 ## Instalação rápida
 
@@ -134,7 +134,7 @@ Configurações, perfis, histórico e diagnósticos ficam em `%LOCALAPPDATA%\Fis
 
 O diagnóstico salva apenas o recorte da região configurada, não uma captura inteira do desktop. Uma seleção incorreta pode incluir outros elementos visíveis. Seus registros usam campos limitados, sem caminhos pessoais, tokens ou mensagens de exceção.
 
-Vídeos pessoais, configurações, históricos e diagnósticos não são incluídos no repositório nem nos pacotes. Os recursos visuais distribuídos são pequenos recortes de indicadores do jogo. A migração de dados antigos é local e aditiva.
+Vídeos pessoais, configurações, históricos e diagnósticos não são incluídos no repositório nem nos pacotes. Os recursos visuais distribuídos são recortes de indicadores e o ícone da [página de Slayers 2 no Roblox](https://www.roblox.com/games/16205713724/Slayers-2). A migração de dados antigos é local e aditiva.
 
 O repositório e os downloads são públicos. O aplicativo ainda não inclui pagamentos, ativação por chave, autenticação de clientes ou restrições de cópia.
 

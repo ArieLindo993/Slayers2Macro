@@ -2,6 +2,15 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.1.1](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.1.1)
+
+### Cabeçalho
+
+- Ícone de anzol substituído pelo ícone da página de Slayers 2 no Roblox indicada pelo usuário.
+- Removido o padrão de quadrados verdes.
+- Imagem incluída no pacote; não exige conexão para exibir o cabeçalho.
+- Alteração exclusivamente visual, sem mudanças nas mecânicas ou configurações.
+
 ## [7.1.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.1.0)
 
 ### Renovação visual

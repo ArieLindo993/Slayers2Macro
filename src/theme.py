@@ -1,6 +1,9 @@
 """Apresentação visual: não altera captura, atalhos ou controle da pesca."""
 import tkinter as tk
 from tkinter import ttk
+from pathlib import Path
+import sys
+from PIL import Image,ImageTk
 
 BG='#0b1319'
 PANEL='#111f27'
@@ -49,17 +52,12 @@ def configure_theme(root):
 def masthead(parent,title,version,profile):
     canvas=tk.Canvas(parent,height=104,bg=BG,highlightthickness=0)
     canvas.pack(fill='x',pady=(0,18))
+    assets=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent))/'assets'
+    with Image.open(assets/'game_icon.png') as source:
+        canvas.game_icon=ImageTk.PhotoImage(source.convert('RGB').resize((64,64),Image.Resampling.LANCZOS),master=canvas)
     def draw(event):
         canvas.delete('all');w=event.width
-        # Xadrez discreto e ondas: referências ao haori e à respiração da água.
-        for row in range(4):
-            for col in range(5):
-                x=w-90+col*18;y=4+row*18
-                canvas.create_rectangle(x,y,x+18,y+18,fill='#16392f' if (row+col)%2==0 else '#10241f',outline='')
-        canvas.create_oval(2,10,60,68,outline='#35544f',width=1)
-        canvas.create_line(32,18,32,45,fill=JADE,width=2)
-        canvas.create_arc(20,34,44,58,start=180,extent=180,style='arc',outline=JADE,width=2)
-        canvas.create_line(20,46,20,41,25,45,fill=JADE,width=2)
+        canvas.create_image(0,12,image=canvas.game_icon,anchor='nw')
         canvas.create_text(78,12,text=profile.upper()+'  /  PESCA',anchor='nw',fill=GOLD,font=('Segoe UI',9,'bold'))
         canvas.create_text(76,31,text=title,anchor='nw',fill=INK,font=('Segoe UI',25,'bold'))
         canvas.create_text(78,72,text='Concentre-se no ritmo da água.',anchor='nw',fill=MUTED,font=('Segoe UI',10))
