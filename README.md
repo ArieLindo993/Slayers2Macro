@@ -4,6 +4,10 @@ Macro de pesca para **Slayers 2, no Roblox**, com interface para Windows, calibr
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Ver versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Histórico de alterações](CHANGELOG.md)**
 
+## Interface
+
+A versão 7.1.0 usa um tema noturno inspirado em pesca e Demon Slayer, com verde-jade, detalhes dourados e xadrez discreto. O painel principal reúne status, preparação e inventário; a lateral mantém reconhecimento e registros. A mudança é visual: atalhos, opções e mecânicas permanecem iguais.
+
 ## Instalação rápida
 
 Para utilizar o executável, você precisa de Windows e do Roblox. Não é necessário instalar Python, Git ou AutoHotkey. É preciso internet para baixar as atualizações e jogar Roblox.

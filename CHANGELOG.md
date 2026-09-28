@@ -2,6 +2,22 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.1.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.1.0)
+
+### Renovação visual
+
+- Tema noturno em azul-escuro e verde-jade, com detalhes dourados, símbolo de anzol e xadrez discreto inspirado no universo de Demon Slayer.
+- Tela principal organizada em status da pescaria, preparação, inventário da sessão e painel de reconhecimento/registros.
+- Botões com estados de foco e interação; destaque para iniciar e parar.
+- Tema consistente nas configurações, tabelas do histórico e seleção manual da barra.
+- Janela principal de 900 × 720 e ações do histórico em uma faixa inferior reservada para permanecerem acessíveis.
+
+### Compatibilidade
+
+- Alteração somente de apresentação: algoritmos, tempos, recuperação, coleta, calibração, atalhos, histórico, logs e configurações mantidos.
+- Nenhuma nova dependência, download de imagens ou migração de dados.
+- Verificação dos callbacks dos controles, testes existentes e inspeção das janelas com dados fictícios.
+
 ## [7.0.9](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.9)
 
 ### Verificação de coleta mais rápida
