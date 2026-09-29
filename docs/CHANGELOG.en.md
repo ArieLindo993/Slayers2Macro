@@ -4,6 +4,18 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.33](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.33-beta)
+
+### Stricter item name validation
+
+- Observed-name catalogue and explicit corrections for Golden Fish, Clown Fish, Crustadon, Coral, Sea Horse and other variants. Distinct items such as OuwFish/OuwFwesh and Refinement Ore/Mythic Refinement Ore stay separate.
+- Fragments such as Fish, a Fish and Ore, border-clipped words and suspected near-name errors remain **Unidentified name**, preserving reward quantities.
+- New names require matching high-confidence readings from two different images. Reprocessing the same image cannot confirm a new name; suspicious near-matches are not learned as new species.
+- Later conflicting readings cannot overwrite a validated name. Late identification does not duplicate collection counts; pending-name memory is bounded.
+- Pending names and conflicts are logged. Older files are preserved; validation applies to new entries.
+- Includes the clearer thumbnails and direct inventory rewards from Beta 0.0.32.
+- Validation: 107 tests, local replay of a real history with totals preserved, and OCR of real OuwFish/Metal Scraps frames. Personal data was not published.
+
 ## [Beta 0.0.32](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.32-beta)
 
 ### Clearer icons and direct inventory rewards

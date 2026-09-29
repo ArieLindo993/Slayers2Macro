@@ -6,18 +6,10 @@ import json
 import re
 import hashlib
 from item_icons import decode_icon,MAX_ICONS
+from item_names import canonical_name,name_evidence,key as name_key,resembles_known
 
 
-def canonical_name(name):
-    name=' '.join(str(name).split())
-    key=re.sub(r'[^a-z0-9]', '',name.casefold())
-    # Apenas aliases conhecidos: prefixos arbitrários podem ser espécies distintas.
-    if key in ('clown','clownf','clownfi','clownfis','clownfish'):return 'Clown Fish'
-    if key=='metalscraps':return 'Metal Scraps'
-    return name
-
-
-def parse_reward(lines):
+def parse_reward(lines,width=None):
     if not lines:return None
     names=[];quantities=[]
     for box,text,score in lines:
@@ -28,15 +20,19 @@ def parse_reward(lines):
             qty=int(match[1])
             if 1<=qty<=9999:quantities.append((y,qty,score))
         elif score>=.85 and 2<=len(text)<=90 and re.search(r'[A-Za-zÀ-ÿ]',text):
-            names.append((y,text,score,min(p[0] for p in box),max(p[1] for p in box)-min(p[1] for p in box)))
+            names.append((y,text,score,min(p[0] for p in box),max(p[1] for p in box)-min(p[1] for p in box),max(p[0] for p in box)))
     if not quantities or not names:return None
     qty_y,qty,qty_score=max(quantities,key=lambda v:v[2])
     above=[n for n in names if n[0]<qty_y]
     if not above:return None
     closest=max(above,key=lambda v:v[0])
     row=sorted((n for n in above if abs(n[0]-closest[0])<=max(3,min(n[4],closest[4])*.4)),key=lambda n:n[3])
-    name=canonical_name(' '.join(n[1] for n in row));confidence=min(n[2] for n in row)
-    return {'name':name,'quantity':qty,'confidence':min(confidence,qty_score)}
+    raw=' '.join(n[1] for n in row);name,known,fragment=name_evidence(raw)
+    confidence=min(n[2] for n in row)
+    clipped=min(n[3] for n in row)<=2 or (width is not None and max(n[5] for n in row)>=width-2)
+    return {'name':name,'quantity':qty,'confidence':min(confidence,qty_score),
+            'raw_name':raw,'name_confidence':confidence,'name_known':known,
+            'name_ambiguous':fragment or clipped,'name_validated':known and not clipped and confidence>=.90}
 
 
 class ItemHistory:
@@ -45,6 +41,7 @@ class ItemHistory:
         self.started=datetime.now().astimezone()
         self.entries=[];self.by_cycle={};self.error=None
         self.icons={};self.icons_by_name={};self.icon_quality={}
+        self.name_votes={};self.last_name_cycle=-1;self.validated_names={}
         self.path=Path(directory)/('sessao-'+self.started.strftime('%Y%m%d-%H%M%S-%f')+'.json') if directory else None
 
     def record(self,cycle,result=None,quantity=None):
@@ -59,17 +56,48 @@ class ItemHistory:
 
     def identify(self,cycle,result,*,confirm=False):
         if not result or cycle not in self.by_cycle:return False
+        self.last_name_cycle=max(self.last_name_cycle,cycle)
+        self.name_votes={k:v for k,v in self.name_votes.items() if k>=self.last_name_cycle-1}
         entry=self.by_cycle[cycle]
         if entry.get('status')=='unconfirmed':
             if not confirm:return False
             entry.pop('status',None)
+            entry.update(name='Nome não identificado',quantity=result['quantity'],identified=False)
             if self.log:self.log.event('COLETA_CONFIRMADA_TARDIA',ciclo=cycle,item=result['name'],quantidade=result['quantity'])
         result=dict(result,name=canonical_name(result['name']))
+        if not result.get('name_validated',True):
+            normalized=name_key(result['name']);known=self.validated_names.get(normalized)
+            if known and not result.get('name_ambiguous') and result.get('name_confidence',0)>=.9:
+                result.update(name=known,name_validated=True)
+            elif not result.get('name_known') and any(resembles_known(normalized,k) for k in self.validated_names):
+                result['name_ambiguous']=True
+        if not result.get('name_validated',True):
+            # New names need agreement from two different captured images.
+            # Reprocessing the same crop cannot manufacture confirmation.
+            accepted=False
+            if not result.get('name_ambiguous') and result.get('name_confidence',0)>= (.85 if result.get('name_known') else .92):
+                vote=self.name_votes.get(cycle)
+                if not vote or vote['name'].casefold()!=result['name'].casefold():
+                    vote={'name':result['name'],'samples':set()};self.name_votes[cycle]=vote
+                sample=result.get('sample_id')
+                if sample:vote['samples'].add(sample)
+                accepted=len(vote['samples'])>=2
+            if not accepted:
+                if not entry['identified']:entry['quantity']=result['quantity']
+                if self.log:self.log.event('NOME_AGUARDANDO_CONFIRMACAO',ciclo=cycle,leitura=result.get('raw_name',result['name']),confianca=result.get('name_confidence'))
+                self.save();return True
+        if entry.get('identified') and entry['name']!='Nome não identificado' and entry['name']!=result['name']:
+            # A later OCR error must not rename a validated item.
+            if result.get('name_validated') is not None:
+                if self.log:self.log.event('NOME_CONFLITANTE_IGNORADO',ciclo=cycle,item=entry['name'],leitura=result['name'])
+                self.save();return True
+        self.name_votes.pop(cycle,None)
         # Reutiliza grafia da sessão, sem fundir espécies por semelhança.
         result['name']=next((e['name'] for e in self.entries if e.get('identified') and e.get('status')!='unconfirmed'
             and e['name'].casefold()==result['name'].casefold()),result['name'])
         changed=not entry['identified'] or entry['name']!=result['name'] or entry['quantity']!=result['quantity']
         entry.update(name=result['name'],quantity=result['quantity'],identified=True)
+        self.validated_names[name_key(entry['name'])]=entry['name']
         self._associate_icon(entry)
         if self.log and changed:self.log.event('ITEM_IDENTIFICADO',ciclo=cycle,item=result['name'],quantidade=result['quantity'],confianca=result.get('confidence'))
         self.save();return True
@@ -158,7 +186,9 @@ class RewardReader:
             self.reader=RapidOCR(intra_op_num_threads=1,inter_op_num_threads=1,det_limit_side_len=320)
         enlarged=cv2.resize(rgb[:,:,::-1],None,fx=3,fy=3,interpolation=cv2.INTER_CUBIC)
         result,_=self.reader(enlarged,use_cls=False)
-        return parse_reward(result)
+        parsed=parse_reward(result,width=enlarged.shape[1])
+        if parsed:parsed['sample_id']=hashlib.sha256(rgb.tobytes()).hexdigest()
+        return parsed
 
     @staticmethod
     def crop(rgb,point=None):

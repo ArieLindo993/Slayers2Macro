@@ -236,8 +236,16 @@
     {
       "beta": "0.0.32",
       "original": "clear icons and direct inventory rewards",
+      "kind": "git",
+      "tag": "v0.0.32-beta",
+      "published": true,
+      "commit": "0cb0da960e8136a43878e4f29ad94fe49eeaadd0"
+    },
+    {
+      "beta": "0.0.33",
+      "original": "strict item name validation",
       "kind": "current",
-      "tag": "v0.0.32-beta"
+      "tag": "v0.0.33-beta"
     }
   ]
 }

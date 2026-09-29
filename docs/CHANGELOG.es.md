@@ -4,6 +4,18 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.33](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.33-beta)
+
+### Validación más rigurosa de nombres
+
+- Catálogo de nombres observados y correcciones explícitas para variantes de Golden Fish, Clown Fish, Crustadon, Coral, Sea Horse y otros. OuwFish/OuwFwesh y Refinement Ore/Mythic Refinement Ore siguen separados.
+- Fragmentos como Fish, a Fish y Ore, palabras cortadas en el borde y posibles errores cercanos a nombres conocidos quedan como **Nombre no identificado**, conservando la cantidad.
+- Los nombres nuevos requieren lecturas coincidentes y fiables en dos imágenes diferentes. Reprocesar la misma imagen no confirma un nombre nuevo; los errores parecidos a nombres conocidos no se aprenden como especies nuevas.
+- Una lectura posterior contradictoria no sustituye un nombre validado. La identificación tardía no duplica recogidas; la memoria de pendientes está limitada.
+- Nombres pendientes y conflictos registrados. Se conservan archivos antiguos; la validación se aplica a las nuevas entradas.
+- Incluye las miniaturas mejoradas y recompensas directas de Beta 0.0.32.
+- Validación: 107 pruebas, reproducción local de un historial real conservando cantidades y lectura de capturas reales de OuwFish/Metal Scraps. Sin publicar datos personales.
+
 ## [Beta 0.0.32](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.32-beta)
 
 ### Iconos más nítidos y recompensas directas al inventario

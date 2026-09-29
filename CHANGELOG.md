@@ -4,6 +4,18 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.33](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.33-beta)
+
+### Validação rigorosa dos nomes
+
+- Catálogo de nomes observados e correções explícitas para variantes de Golden Fish, Clown Fish, Crustadon, Coral, Sea Horse e outros. Itens diferentes como OuwFish/OuwFwesh e Refinement Ore/Mythic Refinement Ore permanecem separados.
+- Fragmentos como “Fish”, “a Fish” e “Ore”, palavras cortadas na borda e possíveis erros próximos de nomes conhecidos ficam como **Nome não identificado**, preservando a quantidade da recompensa.
+- Nomes novos exigem duas imagens diferentes com leitura concordante e confiança alta. Reprocessar a mesma imagem não confirma um nome novo; erros parecidos com nomes conhecidos não são aprendidos como espécies novas.
+- Uma leitura posterior conflitante não substitui um nome já validado. A identificação pode ser concluída depois sem duplicar a coleta. Pendências de confirmação têm memória limitada.
+- Eventos de nomes pendentes e conflitos ficam no log. Arquivos antigos são preservados; a validação se aplica aos novos registros.
+- Mantém as correções de miniaturas e recompensas diretas da Beta 0.0.32.
+- Validação: 107 testes, reprodução local dos nomes de um histórico real com quantidades preservadas e leitura de OuwFish/Metal Scraps em capturas reais. Dados pessoais não publicados.
+
 ## [Beta 0.0.32](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.32-beta)
 
 ### Ícones nítidos e itens enviados ao inventário
