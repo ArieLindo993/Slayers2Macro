@@ -1,6 +1,25 @@
 # Histórico de versões
 
+**Português** · [English](docs/CHANGELOG.en.md) · [Español](docs/CHANGELOG.es.md)
+
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
+
+## [7.4.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.4.0)
+
+### Idiomas e atalhos
+
+- Interface em português (padrão), inglês e espanhol, selecionável em **Configurar → Idioma e atalhos**. Aplicação imediata ao salvar, sem perder histórico ou contadores.
+- Tradução da tela principal, mensagens da pesca, configurações, histórico, seleção manual e CSV exportado pelo botão. Nomes dos itens permanecem os do jogo; logs e dados automáticos mantêm seu formato técnico estável.
+- Atalhos configuráveis para iniciar/pausar, marcar água, selecionar barra (principal e alternativo) e parar. Padrões preservados: F4, F8, F6, F7 e F10, respectivamente.
+- Teclas F1–F12, letras e números, com T reservado à coleta. Validação contra duplicação e botão para restaurar padrões. Textos da interface acompanham as teclas escolhidas.
+- Configurações pausam a pesca e bloqueiam os atalhos enquanto são editadas. Na seleção manual, a tecla personalizada de parada cancela a seleção; Enter e Esc permanecem disponíveis.
+- Preferências salvas localmente, independentes dos perfis de calibração. Configurações antigas ou inválidas usam os padrões. Nenhuma alteração no controlador, nos tempos ou na tecla T enviada ao jogo.
+- Guias e históricos de versões em três idiomas, com links de escolha no GitHub e nos pacotes. Scripts do atualizador permanecem em português.
+
+### Verificação
+
+- 88 testes automatizados, incluindo traduções, parâmetros das mensagens, atalhos personalizados, rejeição de conflitos, persistência, exportação e preservação do histórico.
+- Testes anteriores de pesca e estabilidade mantidos; inspeção visual das janelas traduzidas.
 
 ## [7.3.1](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.3.1)
 

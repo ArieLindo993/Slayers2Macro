@@ -2,10 +2,11 @@
 import tkinter as tk
 from PIL import Image,ImageTk
 from calibration import selection_roi
+from i18n import LocalizedVar
 
 
 class BarSelection:
-    def __init__(self,parent,rgb,window,on_save,on_close):
+    def __init__(self,parent,rgb,window,on_save,on_close,tr=str,stop_key='F10'):
         self.on_save=on_save;self.on_close=on_close
         self.size=(rgb.shape[1],rgb.shape[0]);self.roi=None;self.start=None;self.rect=None
         self.win=tk.Toplevel(parent);self.win.overrideredirect(True)
@@ -20,15 +21,16 @@ class BarSelection:
         self.canvas.bind('<ButtonRelease-1>',self.release)
         panel=tk.Frame(self.win,bg='#111f27',padx=18,pady=10)
         panel.place(relx=.5,y=14,anchor='n')
-        self.message=tk.StringVar(value='Arraste ao redor da barra inteira, do topo até a base.')
+        self.message=LocalizedVar(tr,value='Arraste ao redor da barra inteira, do topo até a base.')
         tk.Label(panel,textvariable=self.message,bg='#111f27',fg='white',font=('Segoe UI',12)).pack()
         row=tk.Frame(panel,bg='#111f27');row.pack(pady=(8,0))
-        self.button=tk.Button(row,text='Salvar seleção (Enter)',command=self.accept,state='disabled',bg='#226853',fg='#f1fff9',activebackground='#2b8066',activeforeground='white',relief='flat',padx=12,pady=7)
+        self.button=tk.Button(row,text=tr('Salvar seleção (Enter)'),command=self.accept,state='disabled',bg='#226853',fg='#f1fff9',activebackground='#2b8066',activeforeground='white',relief='flat',padx=12,pady=7)
         self.button.pack(side='left',padx=8)
-        tk.Button(row,text='Cancelar (Esc)',command=self.cancel,bg='#192d35',fg='#e8efed',activebackground='#24424b',activeforeground='white',relief='flat',padx=12,pady=7).pack(side='left',padx=8)
+        tk.Button(row,text=tr('Cancelar (Esc)'),command=self.cancel,bg='#192d35',fg='#e8efed',activebackground='#24424b',activeforeground='white',relief='flat',padx=12,pady=7).pack(side='left',padx=8)
         self.win.bind('<Return>',lambda e:self.accept())
         self.win.bind('<Escape>',lambda e:self.cancel())
-        self.win.bind('<F10>',lambda e:self.cancel())
+        self.win.bind('<KeyPress-'+stop_key+'>',lambda e:self.cancel())
+        if len(stop_key)==1:self.win.bind('<KeyPress-'+stop_key.lower()+'>',lambda e:self.cancel())
         self.win.focus_force();self.win.grab_set()
 
     def press(self,event):

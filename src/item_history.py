@@ -122,13 +122,13 @@ class ItemHistory:
             self.export(self.path.with_suffix('.csv'))
         except OSError as exc:self.error=str(exc)
 
-    def export(self,path):
+    def export(self,path,translate=str):
         with open(path,'w',encoding='utf-8-sig',newline='') as stream:
-            writer=csv.writer(stream,delimiter=';');writer.writerow(['Horário','Item','Quantidade','Nome reconhecido'])
+            writer=csv.writer(stream,delimiter=';');writer.writerow([translate(s) for s in ('Horário','Item','Quantidade','Nome reconhecido')])
             for e in self.entries:
-                name=e['name']
+                name=translate(e['name']) if e.get('status')=='unconfirmed' or not e['identified'] else e['name']
                 if name.startswith(('=','+','-','@')):name="'"+name
-                writer.writerow([e['time'],name,e['quantity'] if e['quantity'] is not None else '', 'Sim' if e['identified'] else 'Não'])
+                writer.writerow([e['time'],name,e['quantity'] if e['quantity'] is not None else '', translate('Sim' if e['identified'] else 'Não')])
 
 
 class RewardReader:

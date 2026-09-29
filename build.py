@@ -22,10 +22,14 @@ for name in ('mss','numpy','opencv-python','Pillow','rapidocr-onnxruntime','onnx
             target=notices/name/Path(*f.parts);target.parent.mkdir(parents=True,exist_ok=True)
             shutil.copy2(dist.locate_file(f),target)
 (notices/'dependencies.json').write_text(json.dumps(dependencies,indent=2),encoding='utf-8')
-shutil.copy2(root/'README.md',root/'dist/Slayers2Macro/README.md')
+documentation=['README.md','CHANGELOG.md','docs/README.en.md','docs/README.es.md',
+               'docs/CHANGELOG.en.md','docs/CHANGELOG.es.md','docs/ESTABILIDADE.md']
+for name in documentation:
+    target=root/'dist/Slayers2Macro'/name;target.parent.mkdir(parents=True,exist_ok=True)
+    shutil.copy2(root/name,target)
 archive=Path(shutil.make_archive(str(root/'dist/Slayers2Macro'),'zip',root/'dist/Slayers2Macro'))
 archive.with_suffix('.zip.sha256').write_text(hashlib.sha256(archive.read_bytes()).hexdigest()+'\n',encoding='ascii')
 with zipfile.ZipFile(root/'dist/Atualizador.zip','w',zipfile.ZIP_DEFLATED) as bundle:
-    for name in ('Atualizar.cmd','Atualizar.ps1','Iniciar.cmd','Voltar-versao.cmd','README.md'):
+    for name in ['Atualizar.cmd','Atualizar.ps1','Iniciar.cmd','Voltar-versao.cmd',*documentation]:
         bundle.write(root/name,name)
 print('Build e teste de inicialização concluídos:',archive)

@@ -1,10 +1,12 @@
 # Fishing Macro
 
+**Português** · [English](docs/README.en.md) · [Español](docs/README.es.md)
+
 Macro de pesca para **Slayers 2, no Roblox**, com interface para Windows, calibração automática e histórico dos itens da sessão. O nome do aplicativo é genérico, mas o perfil disponível atualmente é específico para Slayers 2.
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Ver versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Histórico de alterações](CHANGELOG.md)**
 
-**Versão 7.3.1:** correção da contagem quando a leitura da recompensa chega atrasada, incluindo a primeira coleta, e unificação de “Clown”, “Clown F” e “Clown Fish”. Mantém as miniaturas do histórico e as correções de estabilidade da 7.2.2; veja a [investigação e os testes](docs/ESTABILIDADE.md).
+**Versão 7.4.0:** interface em português, inglês e espanhol, com atalhos configuráveis. Idioma e teclas ficam salvos localmente e são preservados nas atualizações. Mantém as correções de contagem da 7.3.1 e de estabilidade da 7.2.2.
 
 ## Interface
 
@@ -45,12 +47,21 @@ O Roblox precisa permanecer visível e em primeiro plano. Ao perder o foco, o ma
 
 ### Atalhos
 
+Estes são os padrões de fábrica. Abra **Configurar → Idioma e atalhos** para escolher **Português**, **English** ou **Español** e personalizar cada tecla. Clique em **Salvar e fechar**: a interface muda sem reiniciar e mantém o histórico da sessão. As instruções passam a mostrar os seus atalhos.
+
+São aceitas F1–F12, letras e números; **T** fica reservado à coleta do jogo. Cada ação precisa de uma tecla diferente. **Restaurar padrões** repõe os atalhos abaixo; salve para aplicar. Enquanto a janela de configurações estiver aberta, os atalhos não iniciam a pesca. As referências a F4/F8/F6/F10 neste guia indicam os padrões: se você os alterou, use suas teclas escolhidas.
+
 | Tecla | Ação |
 | --- | --- |
 | **F8** | Salvar o ponto na água para lançar a vara. |
 | **F4** | Iniciar ou pausar. |
 | **F6** | Abrir a seleção manual da região da barra. |
+| **F7** | Atalho alternativo para a mesma seleção manual, também configurável. |
 | **F10** | Parar e liberar os comandos. |
+
+Na seleção manual, Enter salva e Esc cancela. A tecla configurada para parar também cancela a seleção. O clique do mouse e a tecla T enviados ao jogo mantêm o funcionamento atual.
+
+A tradução abrange menus, mensagens de estado, histórico, seleção manual e CSV exportado pelo botão. Nomes dos itens permanecem como no jogo; JSON, CSV automático e logs técnicos mantêm o formato estável para diagnóstico. O idioma do macro não altera o idioma do Roblox. Os scripts do atualizador mantêm seus nomes e mensagens em português.
 
 ## Calibração e acompanhamento
 

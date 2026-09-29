@@ -38,6 +38,14 @@ def configure_theme(root):
     style.configure('TSpinbox',fieldbackground=PANEL,foreground=INK,arrowcolor=JADE,
                     background=RAISED,bordercolor='#35505a',insertcolor=INK,padding=6)
     style.map('TSpinbox',fieldbackground=[('readonly',PANEL)],foreground=[('disabled',MUTED)])
+    style.configure('TCombobox',fieldbackground=PANEL,background=RAISED,foreground=INK,
+                    arrowcolor=JADE,bordercolor='#35505a',padding=6)
+    style.map('TCombobox',fieldbackground=[('readonly',PANEL)],foreground=[('readonly',INK)],
+              selectbackground=[('readonly',PANEL)],selectforeground=[('readonly',INK)])
+    root.option_add('*TCombobox*Listbox.background',PANEL)
+    root.option_add('*TCombobox*Listbox.foreground',INK)
+    root.option_add('*TCombobox*Listbox.selectBackground','#275647')
+    root.option_add('*TCombobox*Listbox.selectForeground',INK)
     style.configure('Treeview',background=PANEL,fieldbackground=PANEL,foreground=INK,rowheight=30,borderwidth=0,bordercolor=PANEL,lightcolor=PANEL,darkcolor=PANEL)
     style.configure('Treeview.Heading',background=RAISED,foreground=JADE,padding=9,font=('Segoe UI',10,'bold'),bordercolor='#29404a',lightcolor=RAISED,darkcolor=RAISED)
     style.map('Treeview',background=[('selected','#275647')],foreground=[('selected','#ffffff')])
@@ -49,7 +57,7 @@ def configure_theme(root):
     style.configure('TSeparator',background='#29404a')
     return style
 
-def masthead(parent,title,version,profile):
+def masthead(parent,title,version,profile,tr=str):
     canvas=tk.Canvas(parent,height=104,bg=BG,highlightthickness=0)
     canvas.pack(fill='x',pady=(0,18))
     assets=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent))/'assets'
@@ -58,9 +66,9 @@ def masthead(parent,title,version,profile):
     def draw(event):
         canvas.delete('all');w=event.width
         canvas.create_image(0,12,image=canvas.game_icon,anchor='nw')
-        canvas.create_text(78,12,text=profile.upper()+'  /  PESCA',anchor='nw',fill=GOLD,font=('Segoe UI',9,'bold'))
+        canvas.create_text(78,12,text=profile.upper()+'  /  '+tr('PESCA'),anchor='nw',fill=GOLD,font=('Segoe UI',9,'bold'))
         canvas.create_text(76,31,text=title,anchor='nw',fill=INK,font=('Segoe UI',25,'bold'))
-        canvas.create_text(78,72,text='Concentre-se no ritmo da água.',anchor='nw',fill=MUTED,font=('Segoe UI',10))
+        canvas.create_text(78,72,text=tr('Concentre-se no ritmo da água.'),anchor='nw',fill=MUTED,font=('Segoe UI',10))
         canvas.create_text(w-4,83,text='v'+version,anchor='e',fill=MUTED,font=('Segoe UI',9))
         canvas.create_line(0,102,w,102,fill='#28413e')
         canvas.create_line(0,102,64,102,fill=JADE,width=2)

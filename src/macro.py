@@ -26,6 +26,8 @@ from product import APP_NAME,VERSION,GAME_PROFILE,DETECTOR_REVISION
 from local_data import data_directory,migrate_legacy,ProfileStore
 from diagnostics import Diagnostics,TrackingMetrics,annotated_preview,RuntimeJournal
 from session_log import SessionLog
+from preferences import LANGUAGES,DEFAULT_HOTKEYS,KEY_CODES,load_preferences,validate_hotkeys
+from i18n import Translator,LocalizedVar
 from theme import configure_theme,masthead,section,BG
 
 U = C.WinDLL('user32', use_last_error=True)
@@ -126,10 +128,11 @@ class App:
         self.diagnostics=Diagnostics(self.data/'diagnostics');self.last_diagnostic=-float('inf')
         self.diagnostic_worker=BackgroundWorker('diagnostico-local',timeout=10,max_pending=1)
         self.diagnostic_job=None;self.last_live_preview=0
-        self.config=dict(DEFAULTS)
+        self.config=dict(DEFAULTS,**load_preferences({}))
         try:
             saved=json.loads(self.config_path.read_text('utf-8'))
             if not isinstance(saved,dict):raise ValueError()
+            self.config.update(load_preferences(saved))
             self.config['auto_calibrate']=saved.get('auto_calibrate',True) is not False
             self.config['diagnostics_enabled']=saved.get('diagnostics_enabled',True) is not False
             profile=saved.get('calibration_profile')
@@ -153,6 +156,7 @@ class App:
         except (ValueError,TypeError,OSError):pass
         if self.config['auto_calibrate'] and self.config.get('calibration_profile',{}).get('detector_revision')!=DETECTOR_REVISION:
             self.config['roi']=list(DEFAULTS['roi']);self.config['calibration_profile']={}
+        self.tr=Translator(self.config)
         self.calibration=AutoCalibration(self.config.get('calibration_profile'))
         if self.config['auto_calibrate'] and self.calibration.profile.get('roi'):
             self.config['roi']=list(self.calibration.profile['roi'])
@@ -178,9 +182,9 @@ class App:
         self.last_scene=0.;self.last_preview=0.;self.scene={'fishing':False,'loot':None,'reward':False}
         self.settings=None;self.preview=None
         self.dry=tk.BooleanVar(value=False)
-        self.status=tk.StringVar(value='Marque a água com F8 para começar.')
-        self.counter=tk.StringVar(value='0 ciclos   ·   0 coletas confirmadas')
-        self.point_status=tk.StringVar()
+        self.status=LocalizedVar(self.tr,value='Marque a água com F8 para começar.')
+        self.counter=LocalizedVar(self.tr,value='0 ciclos   ·   0 coletas confirmadas')
+        self.point_status=LocalizedVar(self.tr)
         self.build_ui();self.refresh_point()
         self.root.protocol('WM_DELETE_WINDOW',self.close)
         self.root.after(20,self.tick)
@@ -190,69 +194,69 @@ class App:
         main=ttk.Frame(self.root,padding=(26,20));main.pack(side='left',fill='both',expand=True)
         ttk.Separator(self.root,orient='vertical').pack(side='left',fill='y',pady=22)
         vision=ttk.Frame(self.root,padding=(20,24),width=262);vision.pack(side='right',fill='y');vision.pack_propagate(False)
-        ttk.Label(vision,text='LEITURA DA ÁGUA',style='Accent.TLabel').pack(anchor='w')
-        ttk.Label(vision,text='Reconhecimento',font=('Segoe UI',16,'bold')).pack(anchor='w',pady=(4,6))
+        ttk.Label(vision,text=self.tr('LEITURA DA ÁGUA'),style='Accent.TLabel').pack(anchor='w')
+        ttk.Label(vision,text=self.tr('Reconhecimento'),font=('Segoe UI',16,'bold')).pack(anchor='w',pady=(4,6))
         preview_card=ttk.Frame(vision,style='Panel.TFrame',padding=12);preview_card.pack(fill='x')
-        self.live_preview=ttk.Label(preview_card,text='Aguardando a barra',anchor='center',style='PanelMuted.TLabel')
+        self.live_preview=ttk.Label(preview_card,text=self.tr('Aguardando a barra'),anchor='center',style='PanelMuted.TLabel')
         self.live_preview.pack(fill='x',pady=4)
-        ttk.Label(vision,text='Azul · região   Verde · alvo\nRosa · marcador',style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w',pady=(10,0))
-        self.metrics_text=tk.StringVar(value='Qualidade: aguardando leituras')
+        ttk.Label(vision,text=self.tr('Azul · região   Verde · alvo\nRosa · marcador'),style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w',pady=(10,0))
+        self.metrics_text=LocalizedVar(self.tr,value='Qualidade: aguardando leituras')
         ttk.Label(vision,textvariable=self.metrics_text,wraplength=218).pack(anchor='w',pady=10)
-        self.profile_text=tk.StringVar(value='Perfil: aguardando o jogo')
+        self.profile_text=LocalizedVar(self.tr,value='Perfil: aguardando o jogo')
         ttk.Label(vision,textvariable=self.profile_text,wraplength=218,style='Muted.TLabel').pack(anchor='w')
         ttk.Separator(vision).pack(fill='x',pady=10)
-        ttk.Label(vision,text='REGISTROS DA SESSÃO',style='Accent.TLabel').pack(anchor='w',pady=(0,8))
+        ttk.Label(vision,text=self.tr('REGISTROS DA SESSÃO'),style='Accent.TLabel').pack(anchor='w',pady=(0,8))
         self.diagnostic_var=tk.BooleanVar(value=self.config.get('diagnostics_enabled',True))
-        ttk.Checkbutton(vision,text='Salvar recortes',variable=self.diagnostic_var,command=self.toggle_diagnostics).pack(anchor='w')
-        ttk.Label(vision,text='Até 20 recortes, salvos localmente.',style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w',pady=(3,6))
-        ttk.Button(vision,text='Abrir registros',style='Compact.TButton',command=self.open_diagnostics).pack(fill='x')
-        ttk.Button(vision,text='Abrir logs de texto',style='Compact.TButton',command=self.open_logs).pack(fill='x',pady=6)
-        self.log_status=tk.StringVar(value='Log de texto ativo')
+        ttk.Checkbutton(vision,text=self.tr('Salvar recortes'),variable=self.diagnostic_var,command=self.toggle_diagnostics).pack(anchor='w')
+        ttk.Label(vision,text=self.tr('Até 20 recortes, salvos localmente.'),style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w',pady=(3,6))
+        ttk.Button(vision,text=self.tr('Abrir registros'),style='Compact.TButton',command=self.open_diagnostics).pack(fill='x')
+        ttk.Button(vision,text=self.tr('Abrir logs de texto'),style='Compact.TButton',command=self.open_logs).pack(fill='x',pady=6)
+        self.log_status=LocalizedVar(self.tr,value='Log de texto ativo')
         ttk.Label(vision,textvariable=self.log_status,style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w')
-        masthead(main,APP_NAME,VERSION,GAME_PROFILE)
+        masthead(main,APP_NAME,VERSION,GAME_PROFILE,self.tr)
         status_card=ttk.Frame(main,style='Panel.TFrame',padding=18);status_card.pack(fill='x')
-        ttk.Label(status_card,text='SUA PESCARIA',style='PanelMuted.TLabel',font=('Segoe UI',9,'bold')).pack(anchor='w')
+        ttk.Label(status_card,text=self.tr('SUA PESCARIA'),style='PanelMuted.TLabel',font=('Segoe UI',9,'bold')).pack(anchor='w')
         ttk.Label(status_card,textvariable=self.status,font=('Segoe UI',12),style='Panel.TLabel',wraplength=510).pack(anchor='w',fill='x',pady=(9,10))
         ttk.Label(status_card,textvariable=self.counter,style='PanelMuted.TLabel').pack(anchor='w')
-        section(main,'Preparação')
+        section(main,self.tr('Preparação'))
         ttk.Label(main,textvariable=self.point_status,style='Muted.TLabel',wraplength=530).pack(anchor='w',pady=(0,9))
-        ttk.Label(main,text='F8  ·  Marcar a água       F6  ·  Selecionar a barra',style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w')
-        self.bar_status=tk.StringVar(value='Automático: conferir barra em cada pesca' if self.config['auto_calibrate'] else 'Barra: seleção manual salva')
+        ttk.Label(main,text=self.tr('F8  ·  Marcar a água       F6  ·  Selecionar a barra'),style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w')
+        self.bar_status=LocalizedVar(self.tr,value='Automático: conferir barra em cada pesca' if self.config['auto_calibrate'] else 'Barra: seleção manual salva')
         ttk.Label(main,textvariable=self.bar_status,style='Muted.TLabel',wraplength=530).pack(anchor='w',pady=(12,6))
         self.auto_var=tk.BooleanVar(value=self.config['auto_calibrate'])
-        ttk.Checkbutton(main,text='Calibrar automaticamente a cada pesca',variable=self.auto_var,command=self.toggle_auto).pack(anchor='w')
-        ttk.Button(main,text='Selecionar barra com o mouse',command=self.schedule_selection).pack(anchor='w',pady=(10,0))
-        section(main,'Inventário da sessão')
-        self.history_button=ttk.Button(main,text='Itens obtidos · 0',command=self.open_history)
+        ttk.Checkbutton(main,text=self.tr('Calibrar automaticamente a cada pesca'),variable=self.auto_var,command=self.toggle_auto).pack(anchor='w')
+        ttk.Button(main,text=self.tr('Selecionar barra com o mouse'),command=self.schedule_selection).pack(anchor='w',pady=(10,0))
+        section(main,self.tr('Inventário da sessão'))
+        self.history_button=ttk.Button(main,text=self.tr('Itens obtidos · 0'),command=self.open_history)
         self.history_button.pack(fill='x')
         row=ttk.Frame(main);row.pack(fill='x',side='bottom',pady=(18,0))
-        ttk.Label(row,text='F4  iniciar / pausar     ·     F10  parar',style='Muted.TLabel',font=('Segoe UI',9)).pack(side='bottom',pady=(12,0))
-        ttk.Button(row,text='Configurar',command=self.open_settings).pack(side='right')
-        ttk.Button(row,text='Parar',style='Stop.TButton',command=lambda:self.stop('Parado.')).pack(side='right',padx=7)
-        self.start_button=ttk.Button(row,text='Iniciar',style='Go.TButton',command=self.button_start)
+        ttk.Label(row,text=self.tr('F4  iniciar / pausar     ·     F10  parar'),style='Muted.TLabel',font=('Segoe UI',9)).pack(side='bottom',pady=(12,0))
+        ttk.Button(row,text=self.tr('Configurar'),command=self.open_settings).pack(side='right')
+        ttk.Button(row,text=self.tr('Parar'),style='Stop.TButton',command=lambda:self.stop('Parado.')).pack(side='right',padx=7)
+        self.start_button=ttk.Button(row,text=self.tr('Iniciar'),style='Go.TButton',command=self.button_start)
         self.start_button.pack(side='left',fill='x',expand=True,padx=(0,7))
 
     def open_history(self):
         # Abrir a janela pausa normalmente por perda de foco; o histórico é preservado.
         if self.history_window and self.history_window.winfo_exists():self.history_window.lift();return
-        win=self.history_window=tk.Toplevel(self.root);win.title('Itens obtidos nesta sessão')
+        win=self.history_window=tk.Toplevel(self.root);win.title(self.tr('Itens obtidos nesta sessão'))
         win.geometry('660x460');win.minsize(540,360);win.configure(bg=BG)
         frame=ttk.Frame(win,padding=20);frame.pack(fill='both',expand=True)
-        ttk.Label(frame,text='Itens obtidos',font=('Segoe UI',18,'bold')).pack(anchor='w')
-        self.history_info=tk.StringVar()
+        ttk.Label(frame,text=self.tr('Itens obtidos'),font=('Segoe UI',18,'bold')).pack(anchor='w')
+        self.history_info=LocalizedVar(self.tr)
         ttk.Label(frame,textvariable=self.history_info,style='Muted.TLabel',wraplength=610).pack(anchor='w',pady=(5,12))
         footer=ttk.Frame(frame);footer.pack(side='bottom',fill='x',pady=(12,0))
-        ttk.Button(footer,text='Exportar CSV',command=self.export_history).pack(side='right')
-        ttk.Button(footer,text='Limpar lista / nova sessão',command=self.clear_history).pack(side='left')
+        ttk.Button(footer,text=self.tr('Exportar CSV'),command=self.export_history).pack(side='right')
+        ttk.Button(footer,text=self.tr('Limpar lista / nova sessão'),command=self.clear_history).pack(side='left')
         tabs=ttk.Notebook(frame);tabs.pack(fill='both',expand=True)
         self.history_tables=[]
         ttk.Style(self.root).configure('History.Treeview',rowheight=42)
         for title,columns in [('Resumo',('Item','Quantidade')),('Histórico',('Horário','Item','Quantidade'))]:
-            page=ttk.Frame(tabs);tabs.add(page,text=title)
+            page=ttk.Frame(tabs);tabs.add(page,text=self.tr(title))
             table=ttk.Treeview(page,columns=columns,show='tree headings',selectmode='browse',style='History.Treeview')
-            table.heading('#0',text='Ícone');table.column('#0',width=58,minwidth=58,stretch=False,anchor='center')
+            table.heading('#0',text=self.tr('Ícone'));table.column('#0',width=58,minwidth=58,stretch=False,anchor='center')
             for column in columns:
-                table.heading(column,text=column);table.column(column,width=340 if column=='Item' else 100,anchor='w' if column=='Item' else 'center')
+                table.heading(column,text=self.tr(column));table.column(column,width=340 if column=='Item' else 100,anchor='w' if column=='Item' else 'center')
             scroll=ttk.Scrollbar(page,orient='vertical',command=table.yview)
             table.configure(yscrollcommand=scroll.set);scroll.pack(side='right',fill='y');table.pack(fill='both',expand=True)
             self.history_tables.append(table)
@@ -270,7 +274,7 @@ class App:
         self.refresh_history();self.counter.set('0 ciclos · 0 coletas confirmadas')
 
     def refresh_history(self):
-        self.history_button.configure(text=f'Itens obtidos · {self.history.total}')
+        self.history_button.configure(text=self.tr(f'Itens obtidos · {self.history.total}'))
         if not self.history_window or not self.history_window.winfo_exists():return
         unknown=sum(not e['identified'] for e in self.history.entries)
         text=f'Desde {self.history.started:%H:%M:%S} · {self.history.total} itens · {len(self.history.entries)} ciclos registrados'
@@ -283,9 +287,9 @@ class App:
             if children:table.delete(*children)
         for name,qty in sorted(self.history.totals().items(),key=lambda item:item[0].casefold()):
             key=self.history.icons_by_name.get(name.casefold().strip())
-            self.history_tables[0].insert('','end',values=(name,qty),**self.history_icon(key))
+            self.history_tables[0].insert('','end',values=(self.tr(name) if name=='Nome não identificado' else name,qty),**self.history_icon(key))
         for entry in reversed(self.history.entries):
-            self.history_tables[1].insert('','end',values=(datetime.fromisoformat(entry['time']).strftime('%H:%M:%S'),entry['name'],entry['quantity'] if entry['quantity'] is not None else '?'),**self.history_icon(entry.get('icon')))
+            self.history_tables[1].insert('','end',values=(datetime.fromisoformat(entry['time']).strftime('%H:%M:%S'),self.tr(entry['name']) if entry.get('status')=='unconfirmed' or not entry['identified'] else entry['name'],entry['quantity'] if entry['quantity'] is not None else '?'),**self.history_icon(entry.get('icon')))
         self.history_photos={k:v for k,v in self.history_photos.items() if k in self.history.icons}
 
     def history_icon(self,key):
@@ -298,11 +302,11 @@ class App:
         return {'image':self.history_photos[key]}
 
     def export_history(self):
-        path=filedialog.asksaveasfilename(parent=self.history_window,title='Exportar itens',defaultextension='.csv',
+        path=filedialog.asksaveasfilename(parent=self.history_window,title=self.tr('Exportar itens'),defaultextension='.csv',
                initialfile='itens-'+self.history.started.strftime('%Y%m%d-%H%M%S')+'.csv',filetypes=[('CSV','*.csv')])
         if path:
-            try:self.history.export(path)
-            except OSError as exc:messagebox.showerror('Erro ao exportar',str(exc),parent=self.history_window)
+            try:self.history.export(path,translate=self.tr)
+            except OSError as exc:messagebox.showerror(self.tr('Erro ao exportar'),self.tr(str(exc)),parent=self.history_window)
 
     def apply_reward_reading(self,cycle,result):
         entry=self.history.by_cycle.get(cycle)
@@ -348,26 +352,43 @@ class App:
     def open_settings(self):
         self.stop('Ajuste as opções e volte ao jogo para iniciar.')
         if self.settings and self.settings.winfo_exists():self.settings.lift();return
-        self.settings=tk.Toplevel(self.root);self.settings.title('Configurar pesca')
-        self.settings.geometry('540x570');self.settings.resizable(False,False);self.settings.configure(bg=BG)
-        frame=ttk.Frame(self.settings,padding=22);frame.pack(fill='both',expand=True)
-        ttk.Label(frame,text='Ajustes',font=('Segoe UI',18,'bold')).pack(anchor='w',pady=(0,14))
+        self.settings=tk.Toplevel(self.root);self.settings.title(self.tr('Configurar pesca'))
+        self.settings.geometry('640x640');self.settings.resizable(False,False);self.settings.configure(bg=BG)
+        container=ttk.Frame(self.settings,padding=18);container.pack(fill='both',expand=True)
+        ttk.Button(container,text=self.tr('Salvar e fechar'),style='Go.TButton',command=self.apply_settings).pack(fill='x',side='bottom',pady=(12,0))
+        tabs=ttk.Notebook(container);tabs.pack(fill='both',expand=True)
+        frame=ttk.Frame(tabs,padding=16);tabs.add(frame,text=self.tr('Pesca'))
+        preferences=ttk.Frame(tabs,padding=16);tabs.add(preferences,text=self.tr('Idioma e atalhos'))
+        ttk.Label(preferences,text='Idioma / Language / Idioma',font=('Segoe UI',12,'bold')).pack(anchor='w')
+        self.language_var=tk.StringVar(value=LANGUAGES[self.config['language']])
+        ttk.Combobox(preferences,textvariable=self.language_var,values=list(LANGUAGES.values()),state='readonly',width=24).pack(anchor='w',pady=(8,16))
+        ttk.Label(preferences,text=self.tr('Atalhos'),font=('Segoe UI',12,'bold')).pack(anchor='w')
+        self.hotkey_vars={}
+        for action,label in [('toggle','Iniciar / pausar'),('water','Marcar água'),('calibrate','Calibrar / selecionar barra'),('calibrate_alt','Calibrar (atalho alternativo)'),('stop','Parar')]:
+            row=ttk.Frame(preferences);row.pack(fill='x',pady=6)
+            ttk.Label(row,text=self.tr(label)).pack(side='left')
+            var=tk.StringVar(value=self.config['hotkeys'][action]);self.hotkey_vars[action]=var
+            ttk.Combobox(row,textvariable=var,values=list(KEY_CODES),state='readonly',width=7).pack(side='right')
+        ttk.Label(preferences,text=self.tr('Escolha teclas diferentes. T permanece reservado à coleta.'),wraplength=535,style='Muted.TLabel').pack(anchor='w',pady=12)
+        ttk.Button(preferences,text=self.tr('Restaurar padrões'),command=self.reset_hotkey_fields).pack(anchor='w')
         self.fields={}
         for key,label,lo,hi in [('cast_hold','Duração do clique (s)',.08,1),('t_hold','Segurar T (s)',.2,5),
                                ('wait_seconds','Esperar a pesca antes de repetir (s)',10,60),
                                ('result_wait','Esperar item depois da pesca (s)',.5,20)]:
             row=ttk.Frame(frame);row.pack(fill='x',pady=5)
-            ttk.Label(row,text=label).pack(side='left')
+            ttk.Label(row,text=self.tr(label)).pack(side='left')
             var=tk.StringVar(value=str(self.config[key]));self.fields[key]=(var,lo,hi)
             ttk.Spinbox(row,textvariable=var,from_=lo,to=hi,increment=.1,width=7).pack(side='right')
-        ttk.Checkbutton(frame,text='Só observar (não envia comandos)',variable=self.dry,
+        ttk.Checkbutton(frame,text=self.tr('Só observar (não envia comandos)'),variable=self.dry,
                         command=lambda:self.stop('Modo de observação alterado.')).pack(anchor='w',pady=12)
-        ttk.Label(frame,text='Calibrar a barra',font=('Segoe UI',12,'bold')).pack(anchor='w',pady=(4,6))
-        ttk.Label(frame,text='Automático: a barra é conferida em cada pesca.\nManual: F6 congela a imagem; arraste e salve.\nF8 salva o ponto de lançamento na água.',style='Muted.TLabel').pack(anchor='w')
-        ttk.Label(frame,text='3 lançamentos por rodada; recuperação automática. Até 5 coletas.\nT é segurado mesmo se o painel desaparecer.',style='Muted.TLabel').pack(anchor='w',pady=12)
-        self.preview=ttk.Label(frame,text='Prévia aparece no modo de observação',anchor='center')
+        ttk.Label(frame,text=self.tr('Calibrar a barra'),font=('Segoe UI',12,'bold')).pack(anchor='w',pady=(4,6))
+        ttk.Label(frame,text=self.tr('Automático: a barra é conferida em cada pesca.\nManual: F6 congela a imagem; arraste e salve.\nF8 salva o ponto de lançamento na água.'),style='Muted.TLabel').pack(anchor='w')
+        ttk.Label(frame,text=self.tr('3 lançamentos por rodada; recuperação automática. Até 5 coletas.\nT é segurado mesmo se o painel desaparecer.'),style='Muted.TLabel').pack(anchor='w',pady=12)
+        self.preview=ttk.Label(frame,text=self.tr('Prévia aparece no modo de observação'),anchor='center')
         self.preview.pack(fill='x',expand=True)
-        ttk.Button(frame,text='Salvar e fechar',style='Go.TButton',command=self.apply_settings).pack(fill='x',side='bottom')
+
+    def reset_hotkey_fields(self):
+        for action,var in self.hotkey_vars.items():var.set(DEFAULT_HOTKEYS[action])
 
     def apply_settings(self):
         values={}
@@ -377,8 +398,22 @@ class App:
                 if not lo<=value<=hi:raise ValueError()
                 values[key]=value
         except ValueError:
-            messagebox.showerror('Valor inválido','Confira os tempos informados.',parent=self.settings);return
+            messagebox.showerror(self.tr('Valor inválido'),self.tr('Confira os tempos informados.'),parent=self.settings);return
+        try:hotkeys=validate_hotkeys({action:var.get() for action,var in self.hotkey_vars.items()})
+        except ValueError:
+            messagebox.showerror(self.tr('Atalhos inválidos'),self.tr('Escolha uma tecla diferente para cada ação.'),parent=self.settings);return
+        language=next((code for code,label in LANGUAGES.items() if label==self.language_var.get()),'pt')
+        values.update(language=language,hotkeys=hotkeys)
         self.config.update(values);self.save();self.settings.destroy();self.settings=None;self.preview=None
+        # Hotkeys do not fire while editing. Seed held keys so saving cannot start fishing.
+        self.previous_keys={KEY_CODES[key]:bool(U.GetAsyncKeyState(KEY_CODES[key])&0x8000) for key in hotkeys.values()}
+        history_open=bool(self.history_window and self.history_window.winfo_exists())
+        if history_open:self.history_window.destroy()
+        self.history_window=None;self.history_tables=None
+        for child in self.root.winfo_children():child.destroy()
+        self.build_ui();self.refresh_point();self.refresh_history()
+        self.counter.set(f'{self.engine.cycles} ciclos   ·   {self.engine.collected} coletas confirmadas')
+        if history_open:self.open_history()
         self.session_log.event('AJUSTES_SALVOS',**values)
         self.status.set('Ajustes salvos. Use F4 dentro do jogo.')
 
@@ -424,7 +459,7 @@ class App:
         self.pending_selection=None
         if self.active or self.pending_start is not None:self.stop('Pausado.');return
         self.pending_start=time.monotonic()+3
-        self.status.set('Volte ao Roblox. Início em 3 segundos…');self.start_button.configure(text='Cancelar')
+        self.status.set('Volte ao Roblox. Início em 3 segundos…');self.start_button.configure(text=self.tr('Cancelar'))
 
     def mouse(self,down):
         if down and (not self.active or self.dry.get() or game_window()!=self.window):return
@@ -450,7 +485,7 @@ class App:
         # T e mouse são liberados separadamente mesmo se um comando falhar.
         try:self.mouse(False)
         finally:self.key_t(False)
-        self.engine.state='PARADO';self.status.set(reason);self.start_button.configure(text='Iniciar')
+        self.engine.state='PARADO';self.status.set(reason);self.start_button.configure(text=self.tr('Iniciar'))
 
     def start(self,window):
         self.pending_selection=None
@@ -468,21 +503,23 @@ class App:
         self.pending_icons={}
         self.calibration.begin();self.calibration_epoch+=1
         self.last_scene=0.;self.scene={'fishing':False,'loot':None,'reward':False}
-        self.start_button.configure(text='Pausar');self.status.set('Conferindo a tela…')
+        self.start_button.configure(text=self.tr('Pausar'));self.status.set('Conferindo a tela…')
 
     def keys(self):
         if self.selection is not None:return
-        keys={k:bool(U.GetAsyncKeyState(k)&0x8000) for k in (0x73,0x75,0x76,0x77,0x79)}
+        bindings={action:KEY_CODES[key] for action,key in self.config['hotkeys'].items()}
+        keys={k:bool(U.GetAsyncKeyState(k)&0x8000) for k in bindings.values()}
         rising={k for k,v in keys.items() if v and not self.previous_keys.get(k)};self.previous_keys=keys
-        if 0x79 in rising:self.pending_selection=None;self.stop('Parado com F10.');return
+        if self.settings and self.settings.winfo_exists():return
+        if bindings['stop'] in rising:self.pending_selection=None;self.stop('Parado com F10.');return
         window=game_window()
-        if 0x73 in rising:
+        if bindings['toggle'] in rising:
             if self.active or self.pending_start is not None:self.stop('Pausado com F4.')
             else:self.start(window)
         if not window:return
-        if rising.intersection({0x75,0x76}):self.open_selection(window);return
-        if 0x77 in rising:self.stop('Configurando…')
-        if 0x77 in rising:
+        if rising.intersection({bindings['calibrate'],bindings['calibrate_alt']}):self.open_selection(window);return
+        if bindings['water'] in rising:self.stop('Configurando…')
+        if bindings['water'] in rising:
             point=cursor_relative(window)
             if all(0<v<1 for v in point):
                 self.config['cast']=list(point);self.save();self.refresh_point();self.status.set('Água marcada. Pressione F4 para iniciar.')
@@ -506,7 +543,7 @@ class App:
         self.choose_profile(window)
         rgb=self.sample(full=True)
         self.calibration_epoch+=1
-        self.selection=BarSelection(self.root,rgb,window,self.save_selection,self.selection_closed)
+        self.selection=BarSelection(self.root,rgb,window,self.save_selection,self.selection_closed,self.tr,self.config['hotkeys']['stop'])
 
     def save_selection(self,roi):
         self.session_log.event('CALIBRACAO_MANUAL_SALVA',regiao=roi)
@@ -644,7 +681,7 @@ class App:
         else:self.metrics.pause();self.round_metrics.pause()
         if now-self.last_live_preview>=.15:
             self.live_photo=ImageTk.PhotoImage(annotated_preview(rgb,reading))
-            self.live_preview.configure(image=self.live_photo,text='');self.last_live_preview=now
+            self.live_preview.configure(image=self.live_photo,text=self.tr(''));self.last_live_preview=now
             quality=self.metrics.summary();inside=quality['inside_percent']
             self.metrics_text.set(('Dentro da faixa: —' if inside is None else f'Dentro da faixa: {inside:.1f}%')+f'\nLeituras válidas: {quality["valid_percent"]:.1f}%\nTempo medido: {quality["observed_seconds"]:.1f}s')
         if self.diagnostic_job is not None and self.diagnostic_job.done():
@@ -687,7 +724,7 @@ class App:
         now=time.monotonic()
         if self.preview is not None and self.preview.winfo_exists() and now-self.last_preview>.25:
             im=Image.fromarray(rgb);im.thumbnail((70,90));self.photo=ImageTk.PhotoImage(im)
-            self.preview.configure(image=self.photo,text='');self.last_preview=now
+            self.preview.configure(image=self.photo,text=self.tr(''));self.last_preview=now
         if self.dry.get():
             self.status.set('Observando: '+('pesca ativa' if reading or self.scene['fishing'] else 'item para coletar' if self.scene['loot'] else 'sem pesca ou item reconhecido'))
             return
