@@ -2,6 +2,21 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.3.1](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.3.1)
+
+### Contagem e nomes dos itens
+
+- Uma recompensa lida depois do encerramento da coleta agora corrige a linha original e o contador de coletas confirmadas, uma única vez. A demora de inicialização do OCR não invalida mais uma leitura apenas por ultrapassar quatro segundos.
+- Novas tentativas de leitura durante a preparação da próxima pesca também atendem coletas ainda não confirmadas. O desaparecimento do item, sozinho, continua sem ser prova de recompensa.
+- Área de leitura ampliada para evitar cortes no aviso; palavras separadas pelo OCR na mesma linha são reunidas.
+- “Clown”, “Clown F”, “Clown Fi”, “Clown Fis” e “Clown Fish” usam o nome “Clown Fish”, inclusive nos totais e na associação de ícones. Diferenças de maiúsculas também reutilizam a grafia já registrada na sessão. Espécies diferentes não são fundidas por semelhança de nome.
+- Históricos de sessões antigas permanecem preservados; a correção se aplica aos novos registros.
+
+### Verificação
+
+- 81 testes automatizados, incluindo primeira recompensa atrasada, contador sem duplicação, vínculo ao ciclo original, nomes fragmentados e espécies distintas.
+- OCR conferido em quadros reais de OuwFish e Metal Scraps. A notificação específica da primeira descoberta ainda precisa ser conferida no jogo; nenhuma coleta é inventada quando não há evidência legível.
+
 ## [7.3.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.3.0)
 
 ### Ícones dos itens

@@ -8,6 +8,15 @@ import hashlib
 from item_icons import decode_icon,MAX_ICONS
 
 
+def canonical_name(name):
+    name=' '.join(str(name).split())
+    key=re.sub(r'[^a-z0-9]', '',name.casefold())
+    # Apenas aliases conhecidos: prefixos arbitrários podem ser espécies distintas.
+    if key in ('clown','clownf','clownfi','clownfis','clownfish'):return 'Clown Fish'
+    if key=='metalscraps':return 'Metal Scraps'
+    return name
+
+
 def parse_reward(lines):
     if not lines:return None
     names=[];quantities=[]
@@ -19,14 +28,14 @@ def parse_reward(lines):
             qty=int(match[1])
             if 1<=qty<=9999:quantities.append((y,qty,score))
         elif score>=.85 and 2<=len(text)<=90 and re.search(r'[A-Za-zÀ-ÿ]',text):
-            names.append((y,text,score))
+            names.append((y,text,score,min(p[0] for p in box),max(p[1] for p in box)-min(p[1] for p in box)))
     if not quantities or not names:return None
     qty_y,qty,qty_score=max(quantities,key=lambda v:v[2])
     above=[n for n in names if n[0]<qty_y]
     if not above:return None
-    _,name,confidence=max(above,key=lambda v:v[0])
-    # Nome verificado na própria gravação; o OCR por vezes junta o espaço.
-    if name.casefold().replace(' ','')=='metalscraps':name='Metal Scraps'
+    closest=max(above,key=lambda v:v[0])
+    row=sorted((n for n in above if abs(n[0]-closest[0])<=max(3,min(n[4],closest[4])*.4)),key=lambda n:n[3])
+    name=canonical_name(' '.join(n[1] for n in row));confidence=min(n[2] for n in row)
     return {'name':name,'quantity':qty,'confidence':min(confidence,qty_score)}
 
 
@@ -48,10 +57,17 @@ class ItemHistory:
         else:self.save()
         return entry
 
-    def identify(self,cycle,result):
+    def identify(self,cycle,result,*,confirm=False):
         if not result or cycle not in self.by_cycle:return False
         entry=self.by_cycle[cycle]
-        if entry.get('status')=='unconfirmed':return False
+        if entry.get('status')=='unconfirmed':
+            if not confirm:return False
+            entry.pop('status',None)
+            if self.log:self.log.event('COLETA_CONFIRMADA_TARDIA',ciclo=cycle,item=result['name'],quantidade=result['quantity'])
+        result=dict(result,name=canonical_name(result['name']))
+        # Reutiliza grafia da sessão, sem fundir espécies por semelhança.
+        result['name']=next((e['name'] for e in self.entries if e.get('identified') and e.get('status')!='unconfirmed'
+            and e['name'].casefold()==result['name'].casefold()),result['name'])
         changed=not entry['identified'] or entry['name']!=result['name'] or entry['quantity']!=result['quantity']
         entry.update(name=result['name'],quantity=result['quantity'],identified=True)
         self._associate_icon(entry)
@@ -133,5 +149,5 @@ class RewardReader:
         import cv2
         normalized=cv2.resize(rgb,(1920,1080))
         x,y=point if point else (1075.5,596.5)
-        left=max(0,int(x-67.5));top=max(0,int(y-31.5))
-        return normalized[top:min(1080,top+48),left:min(1920,left+352)].copy()
+        left=max(0,int(x-100));top=max(0,int(y-65))
+        return normalized[top:min(1080,top+100),left:min(1920,left+440)].copy()

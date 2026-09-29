@@ -304,12 +304,23 @@ class App:
             try:self.history.export(path)
             except OSError as exc:messagebox.showerror('Erro ao exportar',str(exc),parent=self.history_window)
 
+    def apply_reward_reading(self,cycle,result):
+        entry=self.history.by_cycle.get(cycle)
+        was_unconfirmed=bool(entry and entry.get('status')=='unconfirmed')
+        if not self.history.identify(cycle,result,confirm=True):return
+        if was_unconfirmed:
+            self.engine.collected+=1
+            self.engine.unconfirmed=max(0,self.engine.unconfirmed-1)
+            self.counter.set(f'{self.engine.cycles} ciclos   ·   {self.engine.collected} coletas confirmadas')
+        self.history.set_icon(cycle,self.pending_icons.pop(cycle,None))
+        self.refresh_history()
+
     def poll_ocr(self):
         remaining=[]
         for future,cycle in self.confirmation_jobs:
             if not future.done():remaining.append((future,cycle));continue
             try:
-                if self.history.identify(cycle,future.result()):self.refresh_history()
+                self.apply_reward_reading(cycle,future.result())
             except Exception as exc:
                 self.session_log.event('ERRO_RECONHECIMENTO_ITEM',tipo=type(exc).__name__,ciclo=cycle)
                 self.ocr_error=str(exc);self.refresh_history()
@@ -323,7 +334,7 @@ class App:
             self.ocr_error=str(exc);self.refresh_history();return
         if result:
             self.ocr_results[cycle]=(result,captured)
-            if self.history.identify(cycle,result):self.refresh_history()
+            self.apply_reward_reading(cycle,result)
 
     def submit_ocr(self,crop,now):
         if self.ocr_job is not None:return
@@ -660,7 +671,8 @@ class App:
             if future is not None:self.scene_job=(future,self.scene_epoch,captured,icon_cycle)
             previous=self.cycle_id-1
             entry=self.history.by_cycle.get(previous)
-            if (not self.dry.get() and self.worker.can_submit and self.scene.get('reward') and entry and not entry['identified']
+            if (not self.dry.get() and self.engine.state=='REINICIANDO' and self.worker.can_submit and entry
+                and (not entry['identified'] or entry.get('status')=='unconfirmed')
                 and now-self.last_ocr>=.75 and self.history_retries.get(previous,0)<3
                 and not any(cycle==previous for _,cycle in self.confirmation_jobs)):
                 crop=RewardReader.crop(full,self.scene.get('reward_point'))
@@ -681,7 +693,9 @@ class App:
             return
         previous_cycles=self.engine.cycles;previous_collected=self.engine.collected
         parsed,captured=self.ocr_results.get(self.cycle_id,(None,0))
-        text_reward=parsed is not None and now-captured<4
+        # A leitura pertence ao ciclo capturado. Inicialização do OCR pode demorar
+        # mais que quatro segundos na primeira coleta, sem invalidar a evidência.
+        text_reward=parsed is not None
         previous_state=self.engine.state
         self.tick_stage='controle'
         if (reading is None and now-max(self.scene_time,self.started_at)>5

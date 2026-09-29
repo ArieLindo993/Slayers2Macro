@@ -4,7 +4,7 @@ Macro de pesca para **Slayers 2, no Roblox**, com interface para Windows, calibr
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Ver versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Histórico de alterações](CHANGELOG.md)**
 
-**Versão 7.3.0:** miniaturas dos itens nas abas Resumo e Histórico, capturadas do aviso de recompensa do jogo. Inclui as correções de estabilidade da 7.2.2; veja a [investigação e os testes](docs/ESTABILIDADE.md).
+**Versão 7.3.1:** correção da contagem quando a leitura da recompensa chega atrasada, incluindo a primeira coleta, e unificação de “Clown”, “Clown F” e “Clown Fish”. Mantém as miniaturas do histórico e as correções de estabilidade da 7.2.2; veja a [investigação e os testes](docs/ESTABILIDADE.md).
 
 ## Interface
 
