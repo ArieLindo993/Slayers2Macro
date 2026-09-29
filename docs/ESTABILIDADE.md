@@ -1,4 +1,4 @@
-# Investigação de estabilidade — 7.2.2
+# Investigação de estabilidade — Beta 0.0.27
 
 ## Falha confirmada
 

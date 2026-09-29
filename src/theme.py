@@ -69,7 +69,7 @@ def masthead(parent,title,version,profile,tr=str):
         canvas.create_text(78,12,text=profile.upper()+'  /  '+tr('PESCA'),anchor='nw',fill=GOLD,font=('Segoe UI',9,'bold'))
         canvas.create_text(76,31,text=title,anchor='nw',fill=INK,font=('Segoe UI',25,'bold'))
         canvas.create_text(78,72,text=tr('Concentre-se no ritmo da água.'),anchor='nw',fill=MUTED,font=('Segoe UI',10))
-        canvas.create_text(w-4,83,text='v'+version,anchor='e',fill=MUTED,font=('Segoe UI',9))
+        canvas.create_text(w-4,83,text=version if version.startswith('Beta ') else 'v'+version,anchor='e',fill=MUTED,font=('Segoe UI',9))
         canvas.create_line(0,102,w,102,fill='#28413e')
         canvas.create_line(0,102,64,102,fill=JADE,width=2)
     canvas.bind('<Configure>',draw)

@@ -82,6 +82,22 @@ function Invoke-WebRequest {
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(len(self.downloads.read_text().splitlines()), 2)
 
+    def test_beta_with_lower_version_number_installs_and_preserves_previous(self):
+        self.legacy('999');(self.install/'current.txt').write_text('999')
+        result=self.run_updater(extra=r'''
+function Invoke-RestMethod {
+    param($Uri, $Headers, $TimeoutSec)
+    return [pscustomobject]@{ id = 2; tag_name = 'v0.0.31-beta'; name = 'Fishing Macro Beta 0.0.31'; assets = @(
+        [pscustomobject]@{ name = 'Slayers2Macro.zip'; url = 'local-zip'; size = 100 },
+        [pscustomobject]@{ name = 'Slayers2Macro.zip.sha256'; url = 'local-hash' }
+    ) }
+}
+''')
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertEqual((self.install/'current.txt').read_text().strip(),'2')
+        self.assertTrue((self.install/'999/Slayers2Macro.exe').exists())
+        self.assertIn('Fishing Macro Beta 0.0.31',result.stdout)
+
     def test_interrupted_extraction_preserves_old_install_and_retry_succeeds(self):
         old = self.legacy('1')
         (self.install / 'current.txt').write_text('1')

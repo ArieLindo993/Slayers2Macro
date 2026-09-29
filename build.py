@@ -23,7 +23,8 @@ for name in ('mss','numpy','opencv-python','Pillow','rapidocr-onnxruntime','onnx
             shutil.copy2(dist.locate_file(f),target)
 (notices/'dependencies.json').write_text(json.dumps(dependencies,indent=2),encoding='utf-8')
 documentation=['README.md','CHANGELOG.md','docs/README.en.md','docs/README.es.md',
-               'docs/CHANGELOG.en.md','docs/CHANGELOG.es.md','docs/ESTABILIDADE.md']
+               'docs/CHANGELOG.en.md','docs/CHANGELOG.es.md','docs/ESTABILIDADE.md',
+               'docs/VERSIONAMENTO.md','docs/VERSIONING.en.md','docs/VERSIONING.es.md','docs/versions.json']
 for name in documentation:
     target=root/'dist/Slayers2Macro'/name;target.parent.mkdir(parents=True,exist_ok=True)
     shutil.copy2(root/name,target)

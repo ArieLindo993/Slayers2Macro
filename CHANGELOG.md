@@ -4,7 +4,17 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
-## [7.4.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.4.0)
+## [Beta 0.0.31](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.31-beta)
+
+### Numeração beta desde o início
+
+- Todas as versões são classificadas como beta, de Beta 0.0.0 até a atual Beta 0.0.31. Inclui pacotes pré-Git, variantes intermediárias e o protótipo AutoHotkey.
+- [Tabela de correspondência](docs/VERSIONAMENTO.md) registra identificadores antigos, hashes dos pacotes locais e tags preservadas. Tentativas sem artefato não recebem uma versão inventada.
+- Interface e título exibem Beta 0.0.31; logs identificam 0.0.31-beta. Nomes e descrições das releases anteriores atualizados no GitHub. Os pacotes históricos permanecem originais.
+- Atualizador mostra o nome público da release e continua instalando por ID. Canal de download preservado; sem reset de dados, atalhos ou idioma.
+- Mudança de nomenclatura, documentação e distribuição; mecânicas de pesca mantidas.
+
+## [Beta 0.0.30](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.4.0)
 
 ### Idiomas e atalhos
 
@@ -21,7 +31,7 @@ Alterações verificadas nas tags e no código do repositório. A versão mais r
 - 88 testes automatizados, incluindo traduções, parâmetros das mensagens, atalhos personalizados, rejeição de conflitos, persistência, exportação e preservação do histórico.
 - Testes anteriores de pesca e estabilidade mantidos; inspeção visual das janelas traduzidas.
 
-## [7.3.1](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.3.1)
+## [Beta 0.0.29](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.3.1)
 
 ### Contagem e nomes dos itens
 
@@ -36,7 +46,7 @@ Alterações verificadas nas tags e no código do repositório. A versão mais r
 - 81 testes automatizados, incluindo primeira recompensa atrasada, contador sem duplicação, vínculo ao ciclo original, nomes fragmentados e espécies distintas.
 - OCR conferido em quadros reais de OuwFish e Metal Scraps. A notificação específica da primeira descoberta ainda precisa ser conferida no jogo; nenhuma coleta é inventada quando não há evidência legível.
 
-## [7.3.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.3.0)
+## [Beta 0.0.28](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.3.0)
 
 ### Ícones dos itens
 
@@ -45,14 +55,14 @@ Alterações verificadas nas tags e no código do repositório. A versão mais r
 - Reutilização da miniatura por nome reconhecido e associação posterior quando o OCR identifica o item; coletas não confirmadas não recebem imagem.
 - Ícones persistidos no JSON local do histórico. Exportação CSV permanece compatível e somente textual.
 - Até 256 miniaturas distintas por sessão; ausência de imagem ou limite atingido não impede registrar itens nem pescar.
-- Mantidos controlador do minigame, tempos, atalhos e recuperação da 7.2.2.
+- Mantidos controlador do minigame, tempos, atalhos e recuperação da Beta 0.0.27.
 
 ### Verificação
 
 - 77 testes automatizados, incluindo recorte em resoluções diferentes, identificação tardia, deduplicação, limite de memória, descarte de análise antiga e exibição nas duas tabelas.
 - Inspeção da interface com miniaturas de OuwFish e Metal Scraps extraídas de gravações reais fornecidas. Imagens e históricos pessoais não integram a distribuição.
 
-## [7.2.2](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.2.2)
+## [Beta 0.0.27](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.2.2)
 
 ### Recuperação em sessões longas
 
@@ -79,7 +89,7 @@ Alterações verificadas nas tags e no código do repositório. A versão mais r
 - Autoteste também exercita visão, calibração e OCR em processos separados no executável empacotado.
 - [Relatório da investigação](docs/ESTABILIDADE.md). Simulação e reprodução de falhas não equivalem a uma noite de validação no Roblox ao vivo.
 
-## [7.1.1](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.1.1)
+## [Beta 0.0.24](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.1.1)
 
 ### Cabeçalho
 
@@ -88,7 +98,7 @@ Alterações verificadas nas tags e no código do repositório. A versão mais r
 - Imagem incluída no pacote; não exige conexão para exibir o cabeçalho.
 - Alteração exclusivamente visual, sem mudanças nas mecânicas ou configurações.
 
-## [7.1.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.1.0)
+## [Beta 0.0.23](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.1.0)
 
 ### Renovação visual
 
@@ -104,7 +114,7 @@ Alterações verificadas nas tags e no código do repositório. A versão mais r
 - Nenhuma nova dependência, download de imagens ou migração de dados.
 - Verificação dos callbacks dos controles, testes existentes e inspeção das janelas com dados fictícios.
 
-## [7.0.9](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.9)
+## [Beta 0.0.22](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.9)
 
 ### Verificação de coleta mais rápida
 
@@ -115,7 +125,7 @@ Alterações verificadas nas tags e no código do repositório. A versão mais r
 - Preservados T por 3 segundos, checagem de capturas recentes, confirmação por recompensa e tratamento de item que reaparece. A latência real depende do processamento das capturas.
 - Testes da validação rápida, capturas repetidas e migração única do padrão, além dos testes existentes.
 
-## [7.0.8](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.8)
+## [Beta 0.0.21](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.8)
 
 ### Validação após a coleta
 
@@ -131,7 +141,7 @@ A identificação usa o indicador visual Collect. A ausência desse indicador n�
 
 - Testes com processamento lento entre capturas, duas tentativas sem item, item que reaparece, lacuna longa e falta de novas observações. Ainda é necessária validação no jogo ao vivo.
 
-## [7.0.7](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.7)
+## [Beta 0.0.20](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.7)
 
 ### Recuperação de lançamentos
 
@@ -146,7 +156,7 @@ A identificação usa o indicador visual Collect. A ausência desse indicador n�
 - Testes reproduzem o limite de três lançamentos observado em uma sessão longa, retorno da pesca, presença de item, capturas antigas, pausa manual e cem recuperações sucessivas em tempo simulado.
 - A correção trata a pausa definitiva identificada no log; os registros não determinam por que o jogo deixou de confirmar os lançamentos. Testes simulados não equivalem a uma noite de execução no Roblox.
 
-## [7.0.6](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.6)
+## [Beta 0.0.19](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.6)
 
 ### Log de texto por execução
 
@@ -159,7 +169,7 @@ A identificação usa o indicador visual Collect. A ausência desse indicador n�
 - Cada evento é acrescentado ao arquivo e o arquivo é fechado imediatamente. A interface sinaliza falha de gravação. Uma queda de energia ou encerramento forçado pode impedir o registro do evento final.
 - Testes de horários, persistência, sessões distintas, identificação tardia, falha de escrita e integração com início/pausa.
 
-## [7.0.5](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.5)
+## [Beta 0.0.18](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.5)
 
 ### Calibração e sessões prolongadas
 
@@ -181,22 +191,22 @@ A identificação usa o indicador visual Collect. A ausência desse indicador n�
 - Testes de rejeição de texto, migração de perfis, sinal independente de pesca e persistência dos registros.
 - Comparação com quadros reais do minigame. Ainda é necessária validação em uma sessão longa no Roblox; não há garantia de execução ininterrupta.
 
-## [7.0.4](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.4)
+## [Beta 0.0.17](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.4)
 
 ### Correção de detecção no minigame
 
 - Corrigida a perda de leitura quando o marcador fica fora do alvo e a faixa passa a ficar amarelada/translúcida sobre o cenário azul.
 - O detector reconstrói o interior da faixa a partir das bordas coloridas, exigindo continuidade lateral para não unir linhas desconectadas.
 - Ajustada a identificação do marcador branco quando ele fica azul-acinzentado com brilho reduzido.
-- Mantidos o acompanhamento periódico e a recuperação de localização introduzidos na 7.0.3.
+- Mantidos o acompanhamento periódico e a recuperação de localização introduzidos na Beta 0.0.16.
 
 ### Validação
 
-- Correção comparada com a versão 7.0.3 no mesmo trecho de uma gravação de reprodução da falha, com aumento de 154 para 275 leituras válidas em 310 quadros analisados. O trecho inclui o desaparecimento do minigame; a contagem não é uma taxa de vitória.
+- Correção comparada com a versão Beta 0.0.16 no mesmo trecho de uma gravação de reprodução da falha, com aumento de 154 para 275 leituras válidas em 310 quadros analisados. O trecho inclui o desaparecimento do minigame; a contagem não é uma taxa de vitória.
 - Adicionados testes sintéticos da faixa translúcida, marcador escurecido e rejeição de linhas coloridas desconectadas. A gravação pessoal não faz parte do repositório ou da distribuição.
 - A reprodução em vídeo e os testes automatizados não equivalem a validar uma sessão ao vivo no Roblox.
 
-## [7.0.3](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.3)
+## [Beta 0.0.16](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.3)
 
 ### Minigame
 
@@ -217,7 +227,7 @@ A identificação usa o indicador visual Collect. A ausência desse indicador n�
 
 - Testes de sobreposição, relocalização, retomada do controle, coleta antecipada, item girando e observações antigas. A validação automatizada não substitui uma sessão no jogo ao vivo.
 
-## [7.0.2](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.2)
+## [Beta 0.0.15](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.2)
 
 ### Alterações
 
@@ -226,7 +236,7 @@ A identificação usa o indicador visual Collect. A ausência desse indicador n�
 - Atualizador passou a mostrar mensagens ao preparar, consultar o GitHub, baixar, verificar a integridade e extrair os arquivos.
 - Consulta da versão mais recente passou a ter limite de espera de 30 segundos.
 
-## [7.0.1](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.1)
+## [Beta 0.0.14](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.1)
 
 ### Correções
 
@@ -234,7 +244,7 @@ A identificação usa o indicador visual Collect. A ausência desse indicador n�
 - Cada perfil de tela passou a preservar e restaurar sua escolha entre calibração automática e manual.
 - Trocar de perfil passou a atualizar também a opção correspondente na interface.
 
-## [7.0.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.0)
+## [Beta 0.0.13](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.0.0)
 
 ### Novidades
 
@@ -254,7 +264,7 @@ A identificação usa o indicador visual Collect. A ausência desse indicador n�
 - Inclusão de informações das dependências de terceiros na distribuição.
 - Testes para métricas, perfis, recuperação, diagnósticos, prévia e retorno de versão.
 
-## [6.1.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v6.1.0)
+## [Beta 0.0.12](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v6.1.0)
 
 Primeira versão registrada neste repositório. Os recursos abaixo já estavam presentes nessa base; não é possível atribuir cada um a uma versão anterior usando o histórico Git disponível.
 
@@ -268,9 +278,9 @@ Primeira versão registrada neste repositório. Os recursos abaixo já estavam p
 - Histórico da sessão com leitura de nomes de itens e arquivos JSON/CSV.
 - Executável Windows, compilação automatizada e atualizador apontando para este repositório, com verificação SHA-256 do pacote.
 
-### Distribuição após a tag 6.1.0
+### Distribuição após a tag Beta 0.0.12
 
-- O empacotamento de `Atualizador.zip` foi acrescentado no commit `bd78a01`, entre as tags 6.1.0 e 7.0.0. Ele não representa uma nova versão do motor de pesca.
+- O empacotamento de `Atualizador.zip` foi acrescentado no commit `bd78a01`, entre as tags Beta 0.0.12 e Beta 0.0.13. Ele não representa uma nova versão do motor de pesca.
 
 ## Protótipos anteriores
 

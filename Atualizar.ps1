@@ -95,6 +95,7 @@ try {
     }
     Write-Host 'Consultando a versao mais recente no GitHub...'
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repositorio/releases/latest" -Headers $headers -TimeoutSec 30
+    $releaseName = if ($release.PSObject.Properties['name'] -and $release.name) { [string]$release.name } else { [string]$release.tag_name }
     $asset = @($release.assets | Where-Object name -EQ 'Slayers2Macro.zip')
     $checksum = @($release.assets | Where-Object name -EQ 'Slayers2Macro.zip.sha256')
     if ($asset.Count -ne 1 -or $checksum.Count -ne 1) { throw 'A versao publicada nao possui os arquivos esperados.' }
@@ -111,7 +112,7 @@ try {
         $hashFile = Join-Path $stage 'release.sha256'
         $downloadHeaders = $headers.Clone(); $downloadHeaders.Accept = 'application/octet-stream'
         $sizeMB = [math]::Round($asset[0].size / 1MB, 1)
-        Write-Host "Baixando $($release.tag_name) ($sizeMB MB). Aguarde; esta etapa pode levar alguns minutos."
+        Write-Host "Baixando $releaseName ($sizeMB MB). Aguarde; esta etapa pode levar alguns minutos."
         Invoke-WebRequest -UseBasicParsing -Uri $asset[0].url -Headers $downloadHeaders -OutFile $zip -TimeoutSec 180
         Write-Host 'Download concluido. Verificando a integridade do arquivo...'
         Invoke-WebRequest -UseBasicParsing -Uri $checksum[0].url -Headers $downloadHeaders -OutFile $hashFile -TimeoutSec 60
@@ -172,7 +173,7 @@ try {
         }
     }
     Set-Content -LiteralPath (Join-Path $install 'current.txt') -Value ([string]$release.id) -Encoding ASCII
-    Write-Host "Versao pronta: $($release.tag_name). Feche o macro anterior antes de abrir esta versao."
+    Write-Host "Versao pronta: $releaseName. Feche o macro anterior antes de abrir esta versao."
     if (!$NaoAbrir -and (Read-Host 'Abrir agora? (S/N)') -match '^[sS]$') { Start-Process -FilePath $exe -WindowStyle Hidden }
 } catch {
     Write-Host ('Nao foi possivel atualizar: ' + $_.Exception.Message)

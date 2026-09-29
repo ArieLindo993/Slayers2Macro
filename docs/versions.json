@@ -1,0 +1,235 @@
+{
+  "stage": "beta",
+  "versions": [
+    {
+      "beta": "0.0.0",
+      "original": "MacroPesca-Slayers2.zip",
+      "kind": "prototype",
+      "sha256": "7815b81e76475cf5e6e2d9f40cb65f15a0029aa608e08139b0ee036afe225f7e"
+    },
+    {
+      "beta": "0.0.1",
+      "original": "MacroPesca-Slayers2-v2.zip",
+      "kind": "prototype",
+      "sha256": "4467dbf1d83776e0d7a8b75b7d1104c485cf0b66ffb92c4cb60429d714e28e61"
+    },
+    {
+      "beta": "0.0.2",
+      "original": "MacroPesca-Slayers2-v3.zip",
+      "kind": "prototype",
+      "sha256": "f30e98d9bd283eb32aa9b164a956c80c349b41a8a7228a1975acfcfe3daa9bb2"
+    },
+    {
+      "beta": "0.0.3",
+      "original": "MacroPesca-Slayers2-v4.zip",
+      "kind": "prototype",
+      "sha256": "5a2b5e2a7ac82e961d603d709998f5ea15c3141b889f316a3fa295616df514ab"
+    },
+    {
+      "beta": "0.0.4",
+      "original": "MacroPesca-Slayers2-v4-correcao.zip",
+      "kind": "prototype",
+      "sha256": "daab041b2c8c0361f75051c56f1c1c3b5398e0684fef489cc5ebaf4c6de36150"
+    },
+    {
+      "beta": "0.0.5",
+      "original": "MacroPesca-Slayers2-sem-validacao.zip",
+      "kind": "prototype",
+      "sha256": "b075b15be8b9ea23e24cd5d88359dab93a1e77de8e57171547389bb09feaed33"
+    },
+    {
+      "beta": "0.0.6",
+      "original": "MacroPesca-Slayers2-ajustada.zip",
+      "kind": "prototype",
+      "sha256": "4748963fae45fbe29ad851314b7ac77bd794f4ac0f560125b0e74f4aeb044b4c"
+    },
+    {
+      "beta": "0.0.7",
+      "original": "MacroPesca-Slayers2-fonte-corrigida.zip",
+      "kind": "prototype",
+      "sha256": "faf7aa628a6f56356846debc9c3e2d639bbd19aa67efe29ed69453d41d24fed3"
+    },
+    {
+      "beta": "0.0.8",
+      "original": "MacroPescaSlayers2.ahk",
+      "kind": "prototype",
+      "source": "local file"
+    },
+    {
+      "beta": "0.0.9",
+      "original": "MacroPesca-Slayers2-v5.zip",
+      "kind": "prototype",
+      "sha256": "0d90f25ae8388f6e0ac9cdae6638cc9e02d52c7f843d694517283f256821a2ee"
+    },
+    {
+      "beta": "0.0.10",
+      "original": "MacroPesca-Slayers2-v6.zip",
+      "kind": "prototype",
+      "sha256": "fcf7c24dcae8dd794320847526e4dc5b63ca7119e638c96719930fd2f3d18bbb"
+    },
+    {
+      "beta": "0.0.11",
+      "original": "MacroPesca-Slayers2-v6-1.zip",
+      "kind": "prototype",
+      "sha256": "6b1cbeee31326cc040a4846b60aaa3876ae78c45f8b7763f2c4fad6dd246732e"
+    },
+    {
+      "beta": "0.0.12",
+      "original": "v6.1.0",
+      "kind": "git",
+      "tag": "v6.1.0",
+      "commit": "4f9d5cd1d25bc87c482c2176f99506fd8ac91ca1",
+      "published": true
+    },
+    {
+      "beta": "0.0.13",
+      "original": "v7.0.0",
+      "kind": "git",
+      "tag": "v7.0.0",
+      "commit": "e3db176ba0bd149f51f6b757c749f12cfa3f0f27",
+      "published": true
+    },
+    {
+      "beta": "0.0.14",
+      "original": "v7.0.1",
+      "kind": "git",
+      "tag": "v7.0.1",
+      "commit": "31d06719db0a091178d050eccfa60d89851dfa61",
+      "published": true
+    },
+    {
+      "beta": "0.0.15",
+      "original": "v7.0.2",
+      "kind": "git",
+      "tag": "v7.0.2",
+      "commit": "db9ba1598636829cfd751ccdaa9ad699192c6ce3",
+      "published": true
+    },
+    {
+      "beta": "0.0.16",
+      "original": "v7.0.3",
+      "kind": "git",
+      "tag": "v7.0.3",
+      "commit": "cc8cfb736dcb097901309fd79e5951637a2f8ae6",
+      "published": true
+    },
+    {
+      "beta": "0.0.17",
+      "original": "v7.0.4",
+      "kind": "git",
+      "tag": "v7.0.4",
+      "commit": "a379b5e000d331cfe1d405082fc84b0d21312c88",
+      "published": true
+    },
+    {
+      "beta": "0.0.18",
+      "original": "v7.0.5",
+      "kind": "git",
+      "tag": "v7.0.5",
+      "commit": "2573ba6803408a02792596c3e53c3c39d97c9854",
+      "published": true
+    },
+    {
+      "beta": "0.0.19",
+      "original": "v7.0.6",
+      "kind": "git",
+      "tag": "v7.0.6",
+      "commit": "64369027afd9eb886727aba275a6677bb666dd00",
+      "published": true
+    },
+    {
+      "beta": "0.0.20",
+      "original": "v7.0.7",
+      "kind": "git",
+      "tag": "v7.0.7",
+      "commit": "055ed1e149f483c9fe5c58576d474f31c8c80797",
+      "published": true
+    },
+    {
+      "beta": "0.0.21",
+      "original": "v7.0.8",
+      "kind": "git",
+      "tag": "v7.0.8",
+      "commit": "fac2e3c062c4eb8af09cdf74d71a5105f820f575",
+      "published": true
+    },
+    {
+      "beta": "0.0.22",
+      "original": "v7.0.9",
+      "kind": "git",
+      "tag": "v7.0.9",
+      "commit": "6ea7973cc665094914e80ea008d842e75a59119d",
+      "published": true
+    },
+    {
+      "beta": "0.0.23",
+      "original": "v7.1.0",
+      "kind": "git",
+      "tag": "v7.1.0",
+      "commit": "865297d89627234793bcb7050444af5a500f2370",
+      "published": true
+    },
+    {
+      "beta": "0.0.24",
+      "original": "v7.1.1",
+      "kind": "git",
+      "tag": "v7.1.1",
+      "commit": "f3bada890e0ff70ccd4296f868949142683844e1",
+      "published": true
+    },
+    {
+      "beta": "0.0.25",
+      "original": "v7.2.0",
+      "kind": "git",
+      "tag": "v7.2.0",
+      "commit": "cf45a5c4ce23d3d191690e52880074d89c015499",
+      "published": false
+    },
+    {
+      "beta": "0.0.26",
+      "original": "v7.2.1",
+      "kind": "git",
+      "tag": "v7.2.1",
+      "commit": "e753117c508de3e5373f7489321da9874493912a",
+      "published": false
+    },
+    {
+      "beta": "0.0.27",
+      "original": "v7.2.2",
+      "kind": "git",
+      "tag": "v7.2.2",
+      "commit": "76d4c8767d873e7589018fdf502a52b75ce56ca8",
+      "published": true
+    },
+    {
+      "beta": "0.0.28",
+      "original": "v7.3.0",
+      "kind": "git",
+      "tag": "v7.3.0",
+      "commit": "e0058db93a617c264a114fd33f51d457aa39d09a",
+      "published": true
+    },
+    {
+      "beta": "0.0.29",
+      "original": "v7.3.1",
+      "kind": "git",
+      "tag": "v7.3.1",
+      "commit": "00455c3aa682478b46259a98d38de89d35fd0bc2",
+      "published": true
+    },
+    {
+      "beta": "0.0.30",
+      "original": "v7.4.0",
+      "kind": "git",
+      "tag": "v7.4.0",
+      "commit": "d7439edee20e2518cf9b18b6e162b2a1551e10a6",
+      "published": true
+    },
+    {
+      "beta": "0.0.31",
+      "original": "beta numbering",
+      "kind": "current",
+      "tag": "v0.0.31-beta"
+    }
+  ]
+}

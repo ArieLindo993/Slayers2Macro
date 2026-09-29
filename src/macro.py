@@ -22,7 +22,7 @@ from item_history import ItemHistory, RewardReader
 from item_icons import decode_icon
 from calibration import AutoCalibration,locate_bar,search_bar
 from selection import BarSelection
-from product import APP_NAME,VERSION,GAME_PROFILE,DETECTOR_REVISION
+from product import APP_NAME,VERSION,DISPLAY_VERSION,GAME_PROFILE,DETECTOR_REVISION
 from local_data import data_directory,migrate_legacy,ProfileStore
 from diagnostics import Diagnostics,TrackingMetrics,annotated_preview,RuntimeJournal
 from session_log import SessionLog
@@ -113,7 +113,7 @@ SCENE_MAX_AGE=2.5
 
 class App:
     def __init__(self):
-        self.root=tk.Tk();self.root.title(APP_NAME+' · '+VERSION)
+        self.root=tk.Tk();self.root.title(APP_NAME+' · '+DISPLAY_VERSION)
         self.root.geometry('900x720');self.root.resizable(False,False)
         self.base=Path(sys.executable if getattr(sys,'frozen',False) else __file__).parent
         self.data=data_directory();migrate_legacy(self.base,self.data)
@@ -213,7 +213,7 @@ class App:
         ttk.Button(vision,text=self.tr('Abrir logs de texto'),style='Compact.TButton',command=self.open_logs).pack(fill='x',pady=6)
         self.log_status=LocalizedVar(self.tr,value='Log de texto ativo')
         ttk.Label(vision,textvariable=self.log_status,style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w')
-        masthead(main,APP_NAME,VERSION,GAME_PROFILE,self.tr)
+        masthead(main,APP_NAME,DISPLAY_VERSION,GAME_PROFILE,self.tr)
         status_card=ttk.Frame(main,style='Panel.TFrame',padding=18);status_card.pack(fill='x')
         ttk.Label(status_card,text=self.tr('SUA PESCARIA'),style='PanelMuted.TLabel',font=('Segoe UI',9,'bold')).pack(anchor='w')
         ttk.Label(status_card,textvariable=self.status,font=('Segoe UI',12),style='Panel.TLabel',wraplength=510).pack(anchor='w',fill='x',pady=(9,10))

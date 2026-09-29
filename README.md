@@ -6,11 +6,11 @@ Macro de pesca para **Slayers 2, no Roblox**, com interface para Windows, calibr
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Ver versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Histórico de alterações](CHANGELOG.md)**
 
-**Versão 7.4.0:** interface em português, inglês e espanhol, com atalhos configuráveis. Idioma e teclas ficam salvos localmente e são preservados nas atualizações. Mantém as correções de contagem da 7.3.1 e de estabilidade da 7.2.2.
+**Beta 0.0.31:** toda a história do macro agora usa numeração beta a partir de zero, incluindo os protótipos anteriores ao Git. Consulte a [tabela completa de correspondência](docs/VERSIONAMENTO.md). Recursos, configurações e histórico permanecem preservados.
 
 ## Interface
 
-A interface usa um tema noturno inspirado em pesca e Demon Slayer, com verde-jade e detalhes dourados. Desde a 7.1.1, o cabeçalho exibe o ícone de Slayers 2, sem o padrão xadrez. O painel principal reúne status, preparação e inventário; a lateral mantém reconhecimento e registros. A mudança é visual: atalhos, opções e mecânicas permanecem iguais.
+A interface usa um tema noturno inspirado em pesca e Demon Slayer, com verde-jade e detalhes dourados. Desde a Beta 0.0.24, o cabeçalho exibe o ícone de Slayers 2, sem o padrão xadrez. O painel principal reúne status, preparação e inventário; a lateral mantém reconhecimento e registros. A mudança é visual: atalhos, opções e mecânicas permanecem iguais.
 
 ## Instalação rápida
 
@@ -41,7 +41,7 @@ Mantenha os arquivos do atualizador juntos. Não mova apenas o executável nem a
 4. O macro lança a vara, espera o minigame, controla o marcador e tenta coletar o resultado segurando **T**.
 5. Acompanhe a primeira rodada pela prévia e pelo texto de status. Se precisar interromper, use **F10**.
 
-A sequência considera tentativas sem recompensa e repete a coleta quando necessário. O texto de reconhecimento do item não é requisito para iniciar a tentativa de coleta. Cada rodada tem até três lançamentos e cada sequência de coleta até cinco tentativas. Se nenhum lançamento for confirmado, o macro entra em recuperação e tenta outra rodada após uma espera progressiva de 15 a 60 segundos, com novas leituras de tela. O limite de lançamentos não provoca mais pausa definitiva. A coleta termina antes desse limite ao reconhecer a recompensa ou validar o desaparecimento persistente de um item após T. Sem item identificado nas duas primeiras tentativas, volta a pescar após conferir a ausência. O desaparecimento isolado não é registrado como recompensa confirmada. A presença é estimada pelo aviso Collect, não pelo reconhecimento do objeto 3D. Desde a 7.0.8, pequenas demoras entre capturas não apagam as observações de ausência; sem novas evidências, o macro aguarda antes de gastar outra tentativa, respeitando o limite total da coleta.
+A sequência considera tentativas sem recompensa e repete a coleta quando necessário. O texto de reconhecimento do item não é requisito para iniciar a tentativa de coleta. Cada rodada tem até três lançamentos e cada sequência de coleta até cinco tentativas. Se nenhum lançamento for confirmado, o macro entra em recuperação e tenta outra rodada após uma espera progressiva de 15 a 60 segundos, com novas leituras de tela. O limite de lançamentos não provoca mais pausa definitiva. A coleta termina antes desse limite ao reconhecer a recompensa ou validar o desaparecimento persistente de um item após T. Sem item identificado nas duas primeiras tentativas, volta a pescar após conferir a ausência. O desaparecimento isolado não é registrado como recompensa confirmada. A presença é estimada pelo aviso Collect, não pelo reconhecimento do objeto 3D. Desde a Beta 0.0.21, pequenas demoras entre capturas não apagam as observações de ausência; sem novas evidências, o macro aguarda antes de gastar outra tentativa, respeitando o limite total da coleta.
 
 O Roblox precisa permanecer visível e em primeiro plano. Ao perder o foco, o macro pausa e libera as teclas e o mouse; volte ao jogo e pressione F4 para retomar. O macro usa o mouse e o teclado enquanto está ativo.
 
@@ -65,11 +65,11 @@ A tradução abrange menus, mensagens de estado, histórico, seleção manual e 
 
 ## Calibração e acompanhamento
 
-**Automática:** a barra é conferida a cada pesca. A localização precisa de três capturas consistentes para ser confirmada. Rodadas com leituras confiáveis refinam o perfil; isso não garante melhora em toda tentativa. A posição continua sendo conferida periodicamente mesmo após a confirmação. Quando a localização se perde, a busca passa pela região atual, seus arredores e a tela do jogo. Desde a 7.2.2, 120 segundos sem reencontrar o marcador levam à recuperação automática, em vez de uma pausa definitiva. Leituras válidas não são interrompidas por esse prazo. O candidato da calibração e o sinal independente de pesca são verificados na mesma captura.
+**Automática:** a barra é conferida a cada pesca. A localização precisa de três capturas consistentes para ser confirmada. Rodadas com leituras confiáveis refinam o perfil; isso não garante melhora em toda tentativa. A posição continua sendo conferida periodicamente mesmo após a confirmação. Quando a localização se perde, a busca passa pela região atual, seus arredores e a tela do jogo. Desde a Beta 0.0.27, 120 segundos sem reencontrar o marcador levam à recuperação automática, em vez de uma pausa definitiva. Leituras válidas não são interrompidas por esse prazo. O candidato da calibração e o sinal independente de pesca são verificados na mesma captura.
 
 **Manual:** quando o minigame estiver visível, pressione F6. Na captura congelada, arraste para selecionar a barra inteira e salve. Isso ativa o modo manual. Volte ao Roblox e pressione F4. A opção automática pode ser reativada na interface.
 
-Na atualização para 7.0.5, perfis automáticos antigos são recalibrados para descartar regiões incorretas aprendidas anteriormente. Seleções manuais e demais configurações são preservadas. Uma nova região automática exige a forma do marcador e um sinal independente de minigame ativo.
+Na atualização para Beta 0.0.18, perfis automáticos antigos são recalibrados para descartar regiões incorretas aprendidas anteriormente. Seleções manuais e demais configurações são preservadas. Uma nova região automática exige a forma do marcador e um sinal independente de minigame ativo.
 
 Os perfis são separados pelo tamanho da janela, presença de bordas e escala de exibição do Windows (DPI). Cada perfil guarda sua região, aprendizado e escolha entre modo automático e manual.
 
@@ -86,7 +86,7 @@ Abra as configurações, altere os valores e clique em **Salvar e fechar**.
 | Esperar a pesca antes de repetir | 20 segundos | 10 a 60 segundos |
 | Esperar item depois da pesca | 2 segundos | 0,5 a 20 segundos |
 
-**Atualizações preservam configurações salvas, salvo migrações documentadas.** Na 7.0.9, o antigo padrão de 12 segundos para esperar o item passa uma única vez para 2 segundos. Outros valores dessa espera são preservados. Se você usava 1,5 segundo para T, altere “Segurar T (s)” para 3 manualmente. O novo padrão se aplica a configurações novas ou sem esse valor salvo.
+**Atualizações preservam configurações salvas, salvo migrações documentadas.** Na Beta 0.0.22, o antigo padrão de 12 segundos para esperar o item passa uma única vez para 2 segundos. Outros valores dessa espera são preservados. Se você usava 1,5 segundo para T, altere “Segurar T (s)” para 3 manualmente. O novo padrão se aplica a configurações novas ou sem esse valor salvo.
 
 O modo **Só observar** permite acompanhar a leitura sem enviar comandos ao jogo.
 
@@ -94,7 +94,7 @@ O modo **Só observar** permite acompanhar a leitura sem enviar comandos ao jogo
 
 O botão **Itens obtidos** mostra os registros da sessão. O reconhecimento de nomes usa leitura de texto da tela e pode falhar: “Nome não identificado” não deve ser interpretado como um nome de item confirmado. Histórico e exportações usam JSON e CSV; métricas de acompanhamento por ciclo ficam no JSON.
 
-Desde a 7.3.0, as duas abas mostram a miniatura do item quando o aviso de recompensa é capturado. O recorte vem da mesma imagem que confirmou a recompensa e pode conter o fundo do jogo. Coletas não confirmadas e registros sem imagem mostram um traço. Itens com nome reconhecido reutilizam a miniatura já obtida nesta execução. Não existe download de um catálogo de ícones nem recuperação retroativa de imagens de sessões antigas.
+Desde a Beta 0.0.28, as duas abas mostram a miniatura do item quando o aviso de recompensa é capturado. O recorte vem da mesma imagem que confirmou a recompensa e pode conter o fundo do jogo. Coletas não confirmadas e registros sem imagem mostram um traço. Itens com nome reconhecido reutilizam a miniatura já obtida nesta execução. Não existe download de um catálogo de ícones nem recuperação retroativa de imagens de sessões antigas.
 
 As miniaturas ficam no próprio JSON local do histórico; o CSV continua sendo uma tabela de texto. A sessão mantém até 256 miniaturas distintas para limitar o uso de memória. Esses pequenos recortes são independentes da opção **Salvar recortes** de diagnóstico e não são enviados ao GitHub.
 
@@ -104,13 +104,13 @@ O arquivo local `runtime.json` mantém até 200 eventos de execução e um estad
 
 ### Log completo de eventos em texto
 
-Desde a versão 7.0.6, cada abertura cria um arquivo `sessao-AAAAMMDD-HHMMSS-….txt` em `%LOCALAPPDATA%\FishingMacro\logs`. Clique em **Abrir logs de texto** para encontrar os arquivos e abra o desejado no Bloco de Notas.
+Desde a versão Beta 0.0.19, cada abertura cria um arquivo `sessao-AAAAMMDD-HHMMSS-….txt` em `%LOCALAPPDATA%\FishingMacro\logs`. Clique em **Abrir logs de texto** para encontrar os arquivos e abra o desejado no Bloco de Notas.
 
 Cada linha informa data, horário com milissegundos e fuso local, tipo de evento e seus detalhes. São registrados início/pausa/fechamento, lançamentos, minigames, calibração, perda e recuperação de leitura, tentativas de coleta, comandos T, itens e quantidades reconhecidos, resultados não confirmados e erros. O número do ciclo permite relacionar uma coleta à identificação do item, mesmo quando o nome é lido depois.
 
 O log também salva um estado periódico a cada 30 segundos. Registra eventos e resultados, não um vídeo ou cada quadro capturado. Os arquivos anteriores não são apagados automaticamente e não estão sujeitos ao limite de 200 eventos do registro resumido. Uma interrupção forçada pode deixar apenas os eventos anteriores, sem uma linha de encerramento.
 
-Na 7.2.2, o estado periódico também informa idade e atraso das análises, capturas descartadas, evidências e prazo da recuperação, tarefas pendentes e reinícios dos processos de análise. Falhas de captura e de análise têm eventos próprios; erros internos incluem a etapa e nomes de funções/arquivos, sem caminhos pessoais.
+Na Beta 0.0.27, o estado periódico também informa idade e atraso das análises, capturas descartadas, evidências e prazo da recuperação, tarefas pendentes e reinícios dos processos de análise. Falhas de captura e de análise têm eventos próprios; erros internos incluem a etapa e nomes de funções/arquivos, sem caminhos pessoais.
 
 O processamento de sinais, calibração, nomes de itens e recortes usa processos locais com filas limitadas. Se uma tarefa travar, seu processo é encerrado e a próxima análise inicia outro. A barra continua sendo lida diretamente a cada atualização. Com a mesma janela do Roblox ainda em primeiro plano, mudanças de tamanho ou posição provocam ajuste e recuperação; sair do Roblox continua pausando o macro.
 
@@ -128,13 +128,13 @@ Feche o macro antes de iniciar uma atualização ou trocar de versão.
 
 Para atualizar os próprios atalhos e o script do atualizador, baixe um novo **Atualizador.zip** e extraia na mesma pasta, substituindo os arquivos e preservando `.install`.
 
-O atualizador 7.2.2 extrai e verifica os arquivos antes de substituir a instalação. Uma extração incompleta é baixada novamente, mesmo que já exista um executável nessa pasta. Para receber essa correção no atualizador, substitua os arquivos dele conforme a orientação acima.
+O atualizador Beta 0.0.27 extrai e verifica os arquivos antes de substituir a instalação. Uma extração incompleta é baixada novamente, mesmo que já exista um executável nessa pasta. Para receber essa correção no atualizador, substitua os arquivos dele conforme a orientação acima.
 
 O retorno exige uma versão anterior instalada pelo atualizador. Instalações manuais em outras pastas não são localizadas automaticamente. Depois de voltar, use **Iniciar.cmd**; executar Atualizar novamente procura a versão mais recente.
 
 ### Recuperação após falha de lançamento
 
-Na versão 7.0.7, três lançamentos sem confirmação iniciam uma recuperação automática, registrada no log. T e mouse são liberados durante a espera. A recuperação só relança após leituras recentes; um minigame ou item reconhecido tem prioridade. Os contadores e o histórico são preservados. Pausas manuais e perda de foco continuam exigindo F4 para retomar. A recuperação não reconecta o jogo nem muda o ponto de água salvo.
+Na versão Beta 0.0.20, três lançamentos sem confirmação iniciam uma recuperação automática, registrada no log. T e mouse são liberados durante a espera. A recuperação só relança após leituras recentes; um minigame ou item reconhecido tem prioridade. Os contadores e o histórico são preservados. Pausas manuais e perda de foco continuam exigindo F4 para retomar. A recuperação não reconecta o jogo nem muda o ponto de água salvo.
 
 ## Solução de problemas
 

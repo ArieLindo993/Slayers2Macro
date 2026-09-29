@@ -6,7 +6,7 @@ A Windows fishing macro for **Slayers 2 on Roblox**, with automatic calibration,
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Releases and downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 
-**Version 7.4.0:** Portuguese, English and Spanish interface; configurable shortcuts with the original defaults. Includes the counting and name fixes from 7.3.1 and stability improvements from 7.2.2.
+**Beta 0.0.31:** the entire macro history now uses beta numbering starting at zero, including pre-Git prototypes. See the [complete version mapping](VERSIONING.en.md). Features, settings and history are preserved.
 
 ## Install and start
 
