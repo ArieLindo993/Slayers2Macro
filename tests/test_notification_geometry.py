@@ -24,7 +24,7 @@ class NotificationGeometry(unittest.TestCase):
                 result=self.signals.scan(frame)
                 self.assertTrue(result['reward'])
                 self.assertEqual(result['reward_layout'],'native')
-                self.assertEqual(result['reward_crop'].shape,(220,650,3))
+                self.assertEqual(result['reward_crop'].shape,(420,650,3))
                 full=self.signals.scan(self.notification(1920,1080))
                 np.testing.assert_array_equal(result['reward_crop'],full['reward_crop'])
                 self.assertEqual(result['reward_icon'],full['reward_icon'])
@@ -34,6 +34,17 @@ class NotificationGeometry(unittest.TestCase):
         result=self.signals.scan(frame)
         self.assertTrue(result['reward'])
         self.assertEqual(result['reward_layout'],'scaled')
+
+    def test_compact_notification_above_fullscreen_anchor_is_detected(self):
+        frame=np.zeros((599,800,3),np.uint8)
+        t=self.signals.templates['reward'];h,w=t.shape
+        # In padded 1920x1080 coordinates, center the notice at y=432.
+        x=960-w//2-560;y=432-h//2-240
+        frame[y:y+h,x:x+w]=t[:,:,None]
+        result=self.signals.scan(frame)
+        self.assertTrue(result['reward'])
+        self.assertEqual(result['reward_layout'],'native')
+        self.assertEqual(result['reward_crop'].shape,(420,650,3))
 
     def test_native_collect_maps_click_to_client_coordinates(self):
         frame=np.zeros((599,800,3),np.uint8)

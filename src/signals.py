@@ -34,7 +34,9 @@ class Signals:
             left=(1920-w)//2;top=(1080-h)//2
             reference[top:top+h,left:left+w]=rgb
             reference_gray=cv2.cvtColor(reference,cv2.COLOR_RGB2GRAY)
-            found,point,score=self.match(reference_gray,self.templates['reward'],(820,490,1230,740),.91)
+            # The compact Roblox client can place its reward notice above the
+            # fullscreen anchor. The old y=490 lower bound discarded it.
+            found,point,score=self.match(reference_gray,self.templates['reward'],(600,300,1400,850),.91)
             if found:
                 reward=True;reward_point=point;reward_score=score
                 reward_rgb=reference;reward_gray=reference_gray;reward_layout='native'
@@ -42,7 +44,7 @@ class Signals:
         if not reward:
             th,tw=self.templates['reward'].shape
             scaled_template=cv2.resize(self.templates['reward'],(max(1,round(tw*w/1920)),max(1,round(th*h/1080))),interpolation=cv2.INTER_AREA)
-            search=(round(820*w/1920),round(490*h/1080),round(1230*w/1920),round(740*h/1080))
+            search=(round(.25*w),round(.15*h),round(.75*w),round(.85*h))
             reward,native_point,reward_score=self.match(native_gray,scaled_template,search,.91)
             if reward:reward_point=(native_point[0]*1920/w,native_point[1]*1080/h)
             reward_gray=cv2.resize(native_gray,(1920,1080),interpolation=cv2.INTER_LINEAR)

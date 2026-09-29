@@ -79,6 +79,6 @@ class DirectRewards(unittest.TestCase):
         with patch.object(s,'match',side_effect=[(True,(0,0),1.),(True,(1075.5,596.5),.99)]):
             result=s.scan(frame,fishing_only=True)
         self.assertTrue(result['reward']);self.assertTrue(result['fishing'])
-        self.assertEqual(result['reward_crop'].shape,(220,650,3))
+        self.assertEqual(result['reward_crop'].shape,(420,650,3))
 
 if __name__=='__main__':unittest.main()

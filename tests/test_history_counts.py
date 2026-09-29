@@ -30,7 +30,7 @@ class HistoryCounts(unittest.TestCase):
         frame=np.zeros((1080,1920,3),dtype=np.uint8)
         frame[545:555,1020:1100]=255
         crop=RewardReader.crop(frame)
-        self.assertEqual(crop.shape,(220,650,3));self.assertGreater(crop.sum(),0)
+        self.assertEqual(crop.shape,(420,650,3));self.assertGreater(crop.sum(),0)
 
     def test_late_first_reward_updates_counter_once_and_original_cycle(self):
         import macro

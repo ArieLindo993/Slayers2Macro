@@ -4,6 +4,16 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.36](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.36-beta)
+
+### Reward notices at different positions
+
+- The latest log showed the search starting below the notice in 800×599 windows: 0/10 compact notices and 8/10 fullscreen notices were detected, despite all 20 cycles completing.
+- Expands reward search for both fixed-size and scaled UI layouts.
+- Makes the OCR crop taller so it includes notices above the fullscreen reference position.
+- Adds a regression case for a notice above the old search band.
+- Real-session confirmation at both resolutions is still needed; the geometry fix alone does not prove perfect operation.
+
 ## [Beta 0.0.35](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.35-beta)
 
 ### Small-window collection fix

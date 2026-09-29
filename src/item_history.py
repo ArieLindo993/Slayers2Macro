@@ -215,5 +215,7 @@ class RewardReader:
         x,y=point if point else (1075.5,596.5)
         # The reward banner moves relative to the item prompt at lower window
         # sizes. Include the full banner and both stacked and one-line layouts.
-        left=max(0,min(1920-650,int(x-250)));top=max(0,min(1080-220,int(y-110)))
-        return normalized[top:top+220,left:left+650].copy()
+        # Compact-window notifications can sit well above the fullscreen
+        # anchor; scan a taller central strip so OCR still sees the whole card.
+        left=max(0,min(1920-650,int(x-250)));top=max(0,min(1080-420,int(y-260)))
+        return normalized[top:top+420,left:left+650].copy()

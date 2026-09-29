@@ -4,6 +4,16 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.36](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.36-beta)
+
+### Avisos de recompensa en distintas posiciones
+
+- El último registro mostró que la búsqueda empezaba por debajo del aviso en ventanas 800×599: se detectaron 0/10 avisos compactos y 8/10 a pantalla completa, aunque terminaron los 20 ciclos.
+- Amplía la búsqueda de recompensas para la interfaz fija y la escalada.
+- Hace más alto el recorte OCR para incluir avisos situados por encima de la referencia de pantalla completa.
+- Añade una regresión que reproduce el aviso por encima de la antigua franja de búsqueda.
+- Aún hace falta confirmar en una sesión real con ambas resoluciones; la corrección geométrica no demuestra un funcionamiento perfecto.
+
 ## [Beta 0.0.35](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.35-beta)
 
 ### Corrección de capturas en ventanas pequeñas

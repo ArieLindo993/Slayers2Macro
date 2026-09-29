@@ -260,8 +260,16 @@
     {
       "beta": "0.0.35",
       "original": "compact reward OCR and correct cycle attribution",
+      "kind": "git",
+      "tag": "v0.0.35-beta",
+      "published": true,
+      "commit": "73699efdd2aeea53551d8ed5903cfaa5d485d873"
+    },
+    {
+      "beta": "0.0.36",
+      "original": "reward notice search across vertical positions",
       "kind": "current",
-      "tag": "v0.0.35-beta"
+      "tag": "v0.0.36-beta"
     }
   ]
 }

@@ -6,7 +6,7 @@ A Windows fishing macro for **Slayers 2 on Roblox**, with automatic calibration,
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Releases and downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 
-**Beta 0.0.35:** Fixes reward reading in small windows and prevents stale notices from being assigned to the next cycle.
+**Beta 0.0.36:** Broadens visual search and OCR cropping to find reward notifications at different vertical positions in the Roblox window.
 
 ## Install and start
 

@@ -6,7 +6,7 @@ Macro de pesca para **Slayers 2, no Roblox**, com interface para Windows, calibr
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Ver versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Histórico de alterações](CHANGELOG.md)**
 
-**Beta 0.0.35:** Corrige a leitura de avisos em janelas pequenas e evita atribuir notificações antigas ao ciclo seguinte.
+**Beta 0.0.36:** Amplia a busca visual e o recorte de OCR para encontrar notificações de recompensa em diferentes alturas da janela do Roblox.
 
 ## Interface
 

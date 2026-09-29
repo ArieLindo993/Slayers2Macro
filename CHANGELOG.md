@@ -4,6 +4,16 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.36](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.36-beta)
+
+### Detecção de avisos em posições variáveis
+
+- O último log mostrou que a busca começava abaixo do aviso nas janelas 800×599: 0/10 avisos pequenos e 8/10 em tela cheia foram detectados, apesar dos 20 ciclos concluídos.
+- Amplia a região de busca do aviso tanto na geometria fixa quanto na interface escalada.
+- Aumenta a altura do recorte de OCR para alcançar notificações posicionadas acima da referência de tela cheia.
+- Inclui regressão que reproduz a notificação acima da antiga faixa de busca.
+- Ainda precisa de confirmação em uma sessão real com as duas resoluções; a correção de geometria não permite afirmar funcionamento perfeito.
+
 ## [Beta 0.0.35](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.35-beta)
 
 ### Correção da coleta em janela pequena
