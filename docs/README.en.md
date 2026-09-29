@@ -6,7 +6,7 @@ A Windows fishing macro for **Slayers 2 on Roblox**, with automatic calibration,
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Releases and downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 
-**Beta 0.0.33:** Stricter name validation prevents duplicate entries caused by OCR errors. Includes the clearer icons and direct inventory rewards from Beta 0.0.32.
+**Beta 0.0.34:** Improves reward notice detection across window sizes and OCR for small text.
 
 ## Install and start
 

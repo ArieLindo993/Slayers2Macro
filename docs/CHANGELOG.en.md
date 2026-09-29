@@ -4,6 +4,16 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.34](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.34-beta)
+
+### Notification recovery and OCR
+
+- Detects reward notices with fixed-size UI and UI that scales with the game window, and chooses the matching crop geometry.
+- If the normal read cannot separate small or partly faded text, retries with locally enhanced contrast. Existing name and quantity validation remains in place.
+- Logs the selected geometry, visual match score, and whether OCR found reward text.
+- Local evidence: the previous log recorded 9 cycles with no item indicator or notice, then identified Crustadon x1 when a notice appeared; another notice was detected, but Roblox lost focus before OCR finished.
+- Validation: all 112 tests and packaging audit passed, including 5 geometry checks. A continuous live session still needs confirmation.
+
 ## [Beta 0.0.33](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.33-beta)
 
 ### Stricter item name validation

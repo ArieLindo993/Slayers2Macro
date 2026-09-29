@@ -23,16 +23,39 @@ class Signals:
     def scan(self,rgb,fishing_only=False):
         cv2.setNumThreads(2)
         h,w=rgb.shape[:2]
-        gray=cv2.cvtColor(rgb,cv2.COLOR_RGB2GRAY)
-        # Escala de referência do vídeo, mantendo as coordenadas proporcionais.
-        gray=cv2.resize(gray,(1920,1080),interpolation=cv2.INTER_LINEAR)
+        native_gray=cv2.cvtColor(rgb,cv2.COLOR_RGB2GRAY)
+        # Prefer a centre-anchored, fixed-size notification when its template
+        # matches in the unscaled game image. Scaling first can stretch a
+        # partial match into a false positive and crop the name incorrectly.
+        reward=False;reward_point=None;reward_score=0.
+        reward_rgb=rgb;reward_gray=native_gray;reward_layout='scaled'
+        if (w,h)!=(1920,1080) and w<=1920 and h<=1080:
+            reference=np.zeros((1080,1920,3),dtype=rgb.dtype)
+            left=(1920-w)//2;top=(1080-h)//2
+            reference[top:top+h,left:left+w]=rgb
+            reference_gray=cv2.cvtColor(reference,cv2.COLOR_RGB2GRAY)
+            found,point,score=self.match(reference_gray,self.templates['reward'],(820,490,1230,740),.91)
+            if found:
+                reward=True;reward_point=point;reward_score=score
+                reward_rgb=reference;reward_gray=reference_gray;reward_layout='native'
+        # Keep support for Roblox clients whose UI scales with the window.
+        if not reward:
+            th,tw=self.templates['reward'].shape
+            scaled_template=cv2.resize(self.templates['reward'],(max(1,round(tw*w/1920)),max(1,round(th*h/1080))),interpolation=cv2.INTER_AREA)
+            search=(round(820*w/1920),round(490*h/1080),round(1230*w/1920),round(740*h/1080))
+            reward,native_point,reward_score=self.match(native_gray,scaled_template,search,.91)
+            if reward:reward_point=(native_point[0]*1920/w,native_point[1]*1080/h)
+            reward_gray=cv2.resize(native_gray,(1920,1080),interpolation=cv2.INTER_LINEAR)
+            reward_rgb=rgb;reward_layout='scaled'
+        # Other fishing indicators keep their established proportional search.
+        gray=cv2.resize(native_gray,(1920,1080),interpolation=cv2.INTER_LINEAR)
         fishing,_,exit_score=self.match(gray,self.templates['exit'],(760,950,1170,1080),.83)
-        reward,reward_point,reward_score=self.match(gray,self.templates['reward'],(820,490,1230,740),.91)
         reward_data={'reward':reward,'reward_point':reward_point if reward else None,
-                     'reward_icon':reward_icon(rgb,reward_point) if reward else None,
-                     'reward_crop':RewardReader.crop(rgb,reward_point) if reward else None,
+                     'reward_icon':reward_icon(reward_rgb,reward_point) if reward else None,
+                     'reward_crop':RewardReader.crop(reward_rgb,reward_point) if reward else None,
                      'reward_score':reward_score,
-                     'reward_quality':self.reward_quality(gray,reward_point) if reward else 0.}
+                     'reward_layout':reward_layout,
+                     'reward_quality':self.reward_quality(reward_gray,reward_point) if reward else 0.}
         # Com a barra sendo controlada, o indicador independente basta.
         # Se ele sumir, procure coleta/recompensa já nesta mesma captura.
         if fishing_only and fishing:
@@ -41,6 +64,14 @@ class Signals:
         for template in self.collect_templates:
             results.append(self.match(gray,template,(0,0,1920,1080),.80))
         found,point,score=max(results,key=lambda r:r[2])
+        if not found and (w,h)!=(1920,1080):
+            native_results=[self.match(native_gray,t,(0,0,w,h),.80) for t in self.collect_templates
+                            if t.shape[0]<=h and t.shape[1]<=w]
+            if native_results:
+                native_found,native_point,native_score=max(native_results,key=lambda r:r[2])
+                if native_found:
+                    found=True;score=native_score
+                    point=(native_point[0]*1920/w,native_point[1]*1080/h)
         return {'fishing':fishing,'loot':(point[0]/1920,point[1]/1080) if found else None,
                 'collect_score':score,'exit_score':exit_score,**reward_data}
 

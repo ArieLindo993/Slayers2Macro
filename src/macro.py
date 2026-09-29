@@ -309,6 +309,14 @@ class App:
             except OSError as exc:messagebox.showerror(self.tr('Erro ao exportar'),self.tr(str(exc)),parent=self.history_window)
 
     def apply_reward_reading(self,cycle,result):
+        if result:
+            self.session_log.event('OCR_RECOMPENSA_LIDA',ciclo=cycle,item=result['name'],
+                nome_validado=result.get('name_validated'),confianca=result.get('name_confidence'))
+        else:
+            now=time.monotonic()
+            if now-getattr(self,'last_empty_ocr_log',0)>=3:
+                self.last_empty_ocr_log=now
+                self.session_log.event('OCR_SEM_RECOMPENSA',ciclo=cycle,estado=self.engine.state)
         entry=self.history.by_cycle.get(cycle)
         was_unconfirmed=bool(entry and entry.get('status')=='unconfirmed')
         if not self.history.identify(cycle,result,confirm=True):return
@@ -345,7 +353,7 @@ class App:
             self.ocr_error=str(exc);self.refresh_history();return
         if result:
             self.ocr_results[cycle]=(result,captured)
-            self.apply_reward_reading(cycle,result)
+        self.apply_reward_reading(cycle,result)
 
     def submit_ocr(self,crop,now,cycle=None):
         if self.ocr_job is not None:return
@@ -606,7 +614,7 @@ class App:
                     self.scene=scene;self.scene_time=captured
                     if (not self.dry.get() and scene.get('reward')
                         and icon_cycle is not None and icon_cycle in (self.cycle_id-1,self.cycle_id)):
-                        if not was_reward:self.session_log.event('NOTIFICACAO_RECOMPENSA_DETECTADA',ciclo=icon_cycle,estado=self.engine.state)
+                        if not was_reward:self.session_log.event('NOTIFICACAO_RECOMPENSA_DETECTADA',ciclo=icon_cycle,estado=self.engine.state,geometria=scene.get('reward_layout','scaled'))
                         candidate=self.icon_sampler.observe(icon_cycle,captured,scene.get('reward_icon'),scene.get('reward_quality',0.))
                         if candidate:
                             self.pending_icons[icon_cycle]=candidate
@@ -769,6 +777,8 @@ class App:
             self.last_collect_log_stamp=self.scene_time
             self.session_log.event('VERIFICACAO_ITEM_APOS_T',ciclo=self.cycle_id,
                 indicador_visivel=bool(self.scene.get('loot')),recompensa_visivel=bool(self.scene.get('reward')),
+                similaridade_item=round(self.scene.get('collect_score',0.),3),
+                similaridade_recompensa=round(self.scene.get('reward_score',0.),3),
                 pesca_visivel=bool(self.scene.get('fishing')),leitura_barra=reading is not None,
                 idade_captura=round(now-self.scene_time,3),captura_valida=0<=now-self.scene_time<SCENE_MAX_AGE,
                 capturas_sem_item=self.engine.absent_frames,item_visto_na_coleta=self.engine.loot_seen,

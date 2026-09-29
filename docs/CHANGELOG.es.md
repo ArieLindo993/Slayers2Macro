@@ -4,6 +4,16 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.34](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.34-beta)
+
+### Recuperación de avisos y OCR
+
+- Detecta avisos de recompensa con interfaz fija o escalada según la ventana y selecciona el recorte geométrico correcto.
+- Si la lectura normal no separa texto pequeño o parcialmente desvanecido, vuelve a intentarlo con contraste local mejorado. Se mantiene la validación existente de nombres y cantidades.
+- El registro muestra la geometría elegida, la similitud visual y si OCR encontró texto de recompensa.
+- Evidencia local: el registro anterior anotó 9 ciclos sin indicador ni aviso de objeto; luego identificó Crustadon x1 cuando apareció un aviso. Otro aviso fue detectado, pero Roblox perdió el foco antes de terminar OCR.
+- Validación: pasaron las 112 pruebas y la auditoría de empaquetado, incluidas 5 comprobaciones geométricas. Aún hace falta confirmar una sesión real continua.
+
 ## [Beta 0.0.33](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.33-beta)
 
 ### Validación más rigurosa de nombres

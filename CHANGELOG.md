@@ -4,6 +4,16 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.34](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.34-beta)
+
+### Recuperação de notificações e OCR
+
+- Detecta avisos de recompensa tanto com a interface fixa quanto com a interface que escala com a janela. Escolhe o recorte correspondente à geometria detectada.
+- Se a leitura normal não separar bem o texto pequeno ou parcialmente apagado, tenta também uma imagem com contraste local reforçado. A quantidade e o nome continuam sujeitos à validação existente.
+- Diagnóstico no log mostra a geometria usada, a semelhança visual do aviso e se o OCR encontrou algum texto de recompensa.
+- Evidência local: o log anterior registrou 9 ciclos sem indicador ou aviso de item, depois identificou Crustadon x1 quando a notificação apareceu; outra notificação foi detectada, mas o Roblox perdeu o foco antes da leitura terminar.
+- Validação: 112 testes e auditoria de empacotamento passaram, incluindo 5 verificações de geometria. Ainda precisa de confirmação em uma sessão real contínua.
+
 ## [Beta 0.0.33](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.33-beta)
 
 ### Validação rigorosa dos nomes

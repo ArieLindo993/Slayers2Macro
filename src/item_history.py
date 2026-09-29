@@ -184,9 +184,25 @@ class RewardReader:
         if self.reader is None:
             from rapidocr_onnxruntime import RapidOCR
             self.reader=RapidOCR(intra_op_num_threads=1,inter_op_num_threads=1,det_limit_side_len=320)
-        enlarged=cv2.resize(rgb[:,:,::-1],None,fx=3,fy=3,interpolation=cv2.INTER_CUBIC)
-        result,_=self.reader(enlarged,use_cls=False)
-        parsed=parse_reward(result,width=enlarged.shape[1])
+        bgr=rgb[:,:,::-1]
+        # A notificação pode ficar pequena ou parcialmente transparente. Tente
+        # a imagem original e uma versão ampliada com contraste local reforçado.
+        # Isso só muda como os mesmos pixels são lidos; não relaxa a validação
+        # do nome nem confirma quantidades sem o respectivo texto OCR.
+        enlarged=cv2.resize(bgr,None,fx=3,fy=3,interpolation=cv2.INTER_CUBIC)
+        variants=[enlarged]
+        gray=cv2.cvtColor(bgr,cv2.COLOR_BGR2GRAY)
+        gray=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)).apply(gray)
+        enhanced=cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)
+        variants.append(cv2.resize(enhanced,None,fx=4,fy=4,interpolation=cv2.INTER_CUBIC))
+        parsed=None
+        for variant in variants:
+            result,_=self.reader(variant,use_cls=False)
+            candidate=parse_reward(result,width=variant.shape[1])
+            if candidate and (parsed is None or
+                    (candidate['name_validated'],candidate['name_confidence'],candidate['confidence']) >
+                    (parsed['name_validated'],parsed['name_confidence'],parsed['confidence'])):
+                parsed=candidate
         if parsed:parsed['sample_id']=hashlib.sha256(rgb.tobytes()).hexdigest()
         return parsed
 
