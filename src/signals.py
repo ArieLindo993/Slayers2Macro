@@ -2,6 +2,7 @@
 from pathlib import Path
 import cv2
 import numpy as np
+from item_icons import reward_icon
 
 
 class Signals:
@@ -37,6 +38,7 @@ class Signals:
         reward,reward_point,reward_score=self.match(gray,self.templates['reward'],(820,490,1230,740),.91)
         return {'fishing':fishing,'loot':(point[0]/1920,point[1]/1080) if found else None,
                 'reward':reward,'reward_point':reward_point if reward else None,
+                'reward_icon':reward_icon(rgb,reward_point) if reward else None,
                 'collect_score':score,'exit_score':exit_score,'reward_score':reward_score}
 
     def find_bar(self,rgb,preferred,stage):

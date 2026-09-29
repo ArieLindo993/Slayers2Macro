@@ -19,6 +19,7 @@ from detector import detect
 from engine import Engine
 from signals import Signals
 from item_history import ItemHistory, RewardReader
+from item_icons import decode_icon
 from calibration import AutoCalibration,locate_bar,search_bar
 from selection import BarSelection
 from product import APP_NAME,VERSION,GAME_PROFILE,DETECTOR_REVISION
@@ -168,6 +169,7 @@ class App:
         self.engine=Engine(self.config)
         self.history=ItemHistory(self.data/'historico',log=self.session_log)
         self.history_window=None;self.history_tables=None
+        self.history_photos={};self.pending_icons={}
         self.reader=RewardReader();self.worker=BackgroundWorker('leitura-itens',timeout=30,max_pending=3)
         self.ocr_job=None;self.confirmation_jobs=[];self.history_retries={};self.last_ocr=0.;self.ocr_results={};self.ocr_error=None
         self.cycle_id=0;self.last_reward_crop=None
@@ -244,9 +246,11 @@ class App:
         ttk.Button(footer,text='Limpar lista / nova sessão',command=self.clear_history).pack(side='left')
         tabs=ttk.Notebook(frame);tabs.pack(fill='both',expand=True)
         self.history_tables=[]
+        ttk.Style(self.root).configure('History.Treeview',rowheight=42)
         for title,columns in [('Resumo',('Item','Quantidade')),('Histórico',('Horário','Item','Quantidade'))]:
             page=ttk.Frame(tabs);tabs.add(page,text=title)
-            table=ttk.Treeview(page,columns=columns,show='headings',selectmode='browse')
+            table=ttk.Treeview(page,columns=columns,show='tree headings',selectmode='browse',style='History.Treeview')
+            table.heading('#0',text='Ícone');table.column('#0',width=58,minwidth=58,stretch=False,anchor='center')
             for column in columns:
                 table.heading(column,text=column);table.column(column,width=340 if column=='Item' else 100,anchor='w' if column=='Item' else 'center')
             scroll=ttk.Scrollbar(page,orient='vertical',command=table.yview)
@@ -261,6 +265,7 @@ class App:
         self.history=ItemHistory(self.data/'historico',log=self.session_log);self.metrics.reset();self.round_metrics.reset()
         self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.last_reward_crop=None
         self.history_retries={}
+        self.pending_icons={};self.history_photos={}
         self.engine.reset(time.monotonic());self.engine.state='PARADO';self.paused_state=None
         self.refresh_history();self.counter.set('0 ciclos · 0 coletas confirmadas')
 
@@ -277,9 +282,20 @@ class App:
             children=table.get_children()
             if children:table.delete(*children)
         for name,qty in sorted(self.history.totals().items(),key=lambda item:item[0].casefold()):
-            self.history_tables[0].insert('','end',values=(name,qty))
+            key=self.history.icons_by_name.get(name.casefold().strip())
+            self.history_tables[0].insert('','end',values=(name,qty),**self.history_icon(key))
         for entry in reversed(self.history.entries):
-            self.history_tables[1].insert('','end',values=(datetime.fromisoformat(entry['time']).strftime('%H:%M:%S'),entry['name'],entry['quantity'] if entry['quantity'] is not None else '?'))
+            self.history_tables[1].insert('','end',values=(datetime.fromisoformat(entry['time']).strftime('%H:%M:%S'),entry['name'],entry['quantity'] if entry['quantity'] is not None else '?'),**self.history_icon(entry.get('icon')))
+        self.history_photos={k:v for k,v in self.history_photos.items() if k in self.history.icons}
+
+    def history_icon(self,key):
+        if not key:return {'text':'—'}
+        if key not in self.history_photos:
+            image=decode_icon(self.history.icons.get(key))
+            if image is None:return {'text':'—'}
+            image.thumbnail((32,35),Image.Resampling.LANCZOS)
+            self.history_photos[key]=ImageTk.PhotoImage(image,master=self.root)
+        return {'image':self.history_photos[key]}
 
     def export_history(self):
         path=filedialog.asksaveasfilename(parent=self.history_window,title='Exportar itens',defaultextension='.csv',
@@ -438,6 +454,7 @@ class App:
         if self.paused_state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
             self.engine.state='RESULTADO';self.engine.deadline=time.monotonic()+1
         self.paused_state=None;self.scene_epoch+=1;self.scene_time=0
+        self.pending_icons={}
         self.calibration.begin();self.calibration_epoch+=1
         self.last_scene=0.;self.scene={'fishing':False,'loot':None,'reward':False}
         self.start_button.configure(text='Pausar');self.status.set('Conferindo a tela…')
@@ -523,13 +540,19 @@ class App:
 
     def poll_scene(self,now):
         if self.scene_job is not None and self.scene_job[0].done():
-            future,epoch,captured=self.scene_job;self.scene_job=None
+            job=self.scene_job;future,epoch,captured=job[:3];self.scene_job=None
+            icon_cycle=job[3] if len(job)>3 else None
             try:scene=future.result()
             except Exception as exc:self.background_error('sinais',exc)
             else:
                 self.scene_latency=max(0,now-captured)
                 if epoch==self.scene_epoch and captured>self.scene_time and 0<=now-captured<SCENE_MAX_AGE:
                     self.scene=scene;self.scene_time=captured
+                    if (not self.dry.get() and scene.get('reward') and scene.get('reward_icon')
+                        and icon_cycle is not None and icon_cycle in (self.cycle_id-1,self.cycle_id)):
+                        if icon_cycle in self.history.by_cycle:
+                            if self.history.set_icon(icon_cycle,scene['reward_icon']):self.refresh_history()
+                        else:self.pending_icons[icon_cycle]=scene['reward_icon']
                     visible=bool(scene.get('loot'))
                     if visible!=self.previous_scene_item:
                         self.session_log.event('ITEM_NA_VARA_DETECTADO' if visible else 'ITEM_NA_VARA_NAO_VISIVEL',ciclo=self.cycle_id)
@@ -632,7 +655,9 @@ class App:
             quick=self.engine.state=='PESCANDO' and reading is not None and now-self.full_scene_at<1
             if not quick:self.full_scene_at=now
             future=self.submit_background(self.vision_worker,self.signals.scan,full,quick)
-            if future is not None:self.scene_job=(future,self.scene_epoch,captured)
+            icon_cycle=(self.cycle_id-1 if self.engine.state=='REINICIANDO' else self.cycle_id
+                if self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA') else None)
+            if future is not None:self.scene_job=(future,self.scene_epoch,captured,icon_cycle)
             previous=self.cycle_id-1
             entry=self.history.by_cycle.get(previous)
             if (not self.dry.get() and self.worker.can_submit and self.scene.get('reward') and entry and not entry['identified']
@@ -690,6 +715,7 @@ class App:
         self.tick_stage='historico'
         if self.engine.collected>previous_collected:
             self.history.record(self.cycle_id,parsed if text_reward else None,1 if self.scene.get('reward') else None)
+            self.history.set_icon(self.cycle_id,self.pending_icons.pop(self.cycle_id,None))
             if not text_reward and self.last_reward_crop is not None and self.worker.can_submit:
                 future=self.submit_background(self.worker,self.reader.read,self.last_reward_crop.copy())
                 if future is not None:self.confirmation_jobs.append((future,self.cycle_id))
@@ -711,6 +737,7 @@ class App:
             # Resultados antigos só interessam enquanto resolvem uma linha pendente.
             self.ocr_results={k:v for k,v in self.ocr_results.items() if k>=self.cycle_id-1}
             self.history_retries={k:v for k,v in self.history_retries.items() if k>=self.cycle_id-1}
+            self.pending_icons={k:v for k,v in self.pending_icons.items() if k>=self.cycle_id-1}
         if self.active:self.status.set(self.engine.message)
         self.counter.set(f'{self.engine.cycles} ciclos   ·   {self.engine.collected} coletas confirmadas')
 

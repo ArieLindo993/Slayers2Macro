@@ -4,7 +4,7 @@ Macro de pesca para **Slayers 2, no Roblox**, com interface para Windows, calibr
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Ver versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Histórico de alterações](CHANGELOG.md)**
 
-**Versão 7.2.2:** corrigida a recuperação que podia ficar aguardando indefinidamente durante sessões longas. Análises visuais travadas agora são reiniciadas, e os logs mostram atrasos e recuperações. Veja a [investigação e os testes](docs/ESTABILIDADE.md).
+**Versão 7.3.0:** miniaturas dos itens nas abas Resumo e Histórico, capturadas do aviso de recompensa do jogo. Inclui as correções de estabilidade da 7.2.2; veja a [investigação e os testes](docs/ESTABILIDADE.md).
 
 ## Interface
 
@@ -82,6 +82,10 @@ O modo **Só observar** permite acompanhar a leitura sem enviar comandos ao jogo
 ## Histórico e diagnósticos
 
 O botão **Itens obtidos** mostra os registros da sessão. O reconhecimento de nomes usa leitura de texto da tela e pode falhar: “Nome não identificado” não deve ser interpretado como um nome de item confirmado. Histórico e exportações usam JSON e CSV; métricas de acompanhamento por ciclo ficam no JSON.
+
+Desde a 7.3.0, as duas abas mostram a miniatura do item quando o aviso de recompensa é capturado. O recorte vem da mesma imagem que confirmou a recompensa e pode conter o fundo do jogo. Coletas não confirmadas e registros sem imagem mostram um traço. Itens com nome reconhecido reutilizam a miniatura já obtida nesta execução. Não existe download de um catálogo de ícones nem recuperação retroativa de imagens de sessões antigas.
+
+As miniaturas ficam no próprio JSON local do histórico; o CSV continua sendo uma tabela de texto. A sessão mantém até 256 miniaturas distintas para limitar o uso de memória. Esses pequenos recortes são independentes da opção **Salvar recortes** de diagnóstico e não são enviados ao GitHub.
 
 Os diagnósticos de perda de leitura são locais e limitados a até 20 pares de imagem e registro. A opção **Salvar recortes** permite desativar essas imagens. Eles ajudam a investigar quando e onde a leitura falhou.
 

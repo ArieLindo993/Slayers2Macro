@@ -4,6 +4,8 @@ from pathlib import Path
 import csv
 import json
 import re
+import hashlib
+from item_icons import decode_icon,MAX_ICONS
 
 
 def parse_reward(lines):
@@ -33,6 +35,7 @@ class ItemHistory:
         self.log=log
         self.started=datetime.now().astimezone()
         self.entries=[];self.by_cycle={};self.error=None
+        self.icons={};self.icons_by_name={}
         self.path=Path(directory)/('sessao-'+self.started.strftime('%Y%m%d-%H%M%S-%f')+'.json') if directory else None
 
     def record(self,cycle,result=None,quantity=None):
@@ -51,8 +54,30 @@ class ItemHistory:
         if entry.get('status')=='unconfirmed':return False
         changed=not entry['identified'] or entry['name']!=result['name'] or entry['quantity']!=result['quantity']
         entry.update(name=result['name'],quantity=result['quantity'],identified=True)
+        self._associate_icon(entry)
         if self.log and changed:self.log.event('ITEM_IDENTIFICADO',ciclo=cycle,item=result['name'],quantidade=result['quantity'],confianca=result.get('confidence'))
         self.save();return True
+
+    def _associate_icon(self,entry):
+        if not entry.get('identified') or entry.get('status')=='unconfirmed':return
+        name=entry['name'].casefold().strip();previous=entry.get('icon')
+        known=self.icons_by_name.get(name)
+        if known:
+            entry['icon']=known
+            if previous and previous!=known and not any(e.get('icon')==previous for e in self.entries):
+                self.icons.pop(previous,None)
+        elif previous:self.icons_by_name[name]=previous
+
+    def set_icon(self,cycle,encoded):
+        entry=self.by_cycle.get(cycle)
+        if not entry or entry.get('status')=='unconfirmed' or entry.get('icon'):return False
+        self._associate_icon(entry)
+        if entry.get('icon'):self.save();return True
+        if len(self.icons)>=MAX_ICONS or decode_icon(encoded) is None:return False
+        key=hashlib.sha256(encoded.encode('ascii')).hexdigest()
+        self.icons[key]=encoded;entry['icon']=key
+        self._associate_icon(entry);self.save()
+        return True
 
     def record_outcome(self,cycle,message):
         entry=self.record(cycle,quantity=0)
@@ -76,7 +101,7 @@ class ItemHistory:
         try:
             self.path.parent.mkdir(parents=True,exist_ok=True)
             temporary=self.path.with_suffix('.tmp')
-            temporary.write_text(json.dumps({'started':self.started.isoformat(),'entries':self.entries},ensure_ascii=False,indent=2),encoding='utf-8')
+            temporary.write_text(json.dumps({'started':self.started.isoformat(),'entries':self.entries,'icons':self.icons},ensure_ascii=False,indent=2),encoding='utf-8')
             temporary.replace(self.path);self.error=None
             self.export(self.path.with_suffix('.csv'))
         except OSError as exc:self.error=str(exc)

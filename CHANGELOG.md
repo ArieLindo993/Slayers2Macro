@@ -2,6 +2,22 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [7.3.0](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.3.0)
+
+### Ícones dos itens
+
+- Miniaturas reais do aviso de recompensa nas abas Resumo e Histórico, ao lado do nome do item.
+- Recorte associado à mesma captura que reconheceu a recompensa e ao ciclo de origem, inclusive quando a análise termina depois da coleta.
+- Reutilização da miniatura por nome reconhecido e associação posterior quando o OCR identifica o item; coletas não confirmadas não recebem imagem.
+- Ícones persistidos no JSON local do histórico. Exportação CSV permanece compatível e somente textual.
+- Até 256 miniaturas distintas por sessão; ausência de imagem ou limite atingido não impede registrar itens nem pescar.
+- Mantidos controlador do minigame, tempos, atalhos e recuperação da 7.2.2.
+
+### Verificação
+
+- 77 testes automatizados, incluindo recorte em resoluções diferentes, identificação tardia, deduplicação, limite de memória, descarte de análise antiga e exibição nas duas tabelas.
+- Inspeção da interface com miniaturas de OuwFish e Metal Scraps extraídas de gravações reais fornecidas. Imagens e históricos pessoais não integram a distribuição.
+
 ## [7.2.2](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v7.2.2)
 
 ### Recuperação em sessões longas
