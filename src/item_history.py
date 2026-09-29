@@ -44,7 +44,7 @@ class ItemHistory:
         self.log=log
         self.started=datetime.now().astimezone()
         self.entries=[];self.by_cycle={};self.error=None
-        self.icons={};self.icons_by_name={}
+        self.icons={};self.icons_by_name={};self.icon_quality={}
         self.path=Path(directory)/('sessao-'+self.started.strftime('%Y%m%d-%H%M%S-%f')+'.json') if directory else None
 
     def record(self,cycle,result=None,quantity=None):
@@ -79,19 +79,35 @@ class ItemHistory:
         name=entry['name'].casefold().strip();previous=entry.get('icon')
         known=self.icons_by_name.get(name)
         if known:
+            if previous and self.icon_quality.get(previous,0.)>self.icon_quality.get(known,0.)+.04:
+                for other in self.entries:
+                    if other.get('icon')==known:other['icon']=previous
+                self.icons_by_name[name]=previous
+                self.icons.pop(known,None);self.icon_quality.pop(known,None)
+                return
             entry['icon']=known
             if previous and previous!=known and not any(e.get('icon')==previous for e in self.entries):
                 self.icons.pop(previous,None)
+                self.icon_quality.pop(previous,None)
         elif previous:self.icons_by_name[name]=previous
 
-    def set_icon(self,cycle,encoded):
+    def set_icon(self,cycle,encoded,quality=0.):
         entry=self.by_cycle.get(cycle)
-        if not entry or entry.get('status')=='unconfirmed' or entry.get('icon'):return False
+        if not entry or entry.get('status')=='unconfirmed':return False
         self._associate_icon(entry)
-        if entry.get('icon'):self.save();return True
-        if len(self.icons)>=MAX_ICONS or decode_icon(encoded) is None:return False
+        previous=entry.get('icon')
+        if previous and quality<=self.icon_quality.get(previous,0.)+.04:return False
+        if (not previous and len(self.icons)>=MAX_ICONS) or decode_icon(encoded) is None:return False
         key=hashlib.sha256(encoded.encode('ascii')).hexdigest()
-        self.icons[key]=encoded;entry['icon']=key
+        if key==previous:
+            self.icon_quality[key]=max(quality,self.icon_quality.get(key,0.));return False
+        self.icons[key]=encoded;self.icon_quality[key]=quality;entry['icon']=key
+        if previous:
+            for other in self.entries:
+                if other.get('icon')==previous:other['icon']=key
+            for name,known in list(self.icons_by_name.items()):
+                if known==previous:self.icons_by_name[name]=key
+            self.icons.pop(previous,None);self.icon_quality.pop(previous,None)
         self._associate_icon(entry);self.save()
         return True
 

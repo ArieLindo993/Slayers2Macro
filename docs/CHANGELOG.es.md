@@ -4,6 +4,17 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.32](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.32-beta)
+
+### Iconos más nítidos y recompensas directas al inventario
+
+- Las notificaciones se comprueban también durante la lectura rápida del minijuego. Un aviso nuevo puede confirmar un objeto enviado al inventario sin indicador Collect ni pulsar T.
+- Si el aviso coincide con el último fotograma del minijuego, se conserva hasta terminar la pesca. No se cuentan de nuevo avisos previos o persistentes de la ronda anterior.
+- El lector usa el mismo fotograma y ciclo original de la detección; también empieza a leer cuando desaparece la barra.
+- Miniaturas elegidas entre capturas distintas según contraste del aviso y detalle del icono. Se rechazan cuadros muy tenues y se permite mejorar la imagen sin sustituirla por otra peor al desaparecer. Se actualizan las entradas del mismo objeto en la sesión; los archivos antiguos no se reprocesan. Sin imagen adecuada, queda un guion.
+- Nuevos eventos de notificación y actualización de iconos en el registro.
+- Validación: 99 pruebas automáticas y una secuencia real de recompensa. La recogida directa se simuló y aún necesita validación en el juego.
+
 ## [Beta 0.0.31](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.31-beta)
 
 ### Numeración beta desde el comienzo

@@ -228,8 +228,16 @@
     {
       "beta": "0.0.31",
       "original": "beta numbering",
+      "kind": "git",
+      "tag": "v0.0.31-beta",
+      "published": true,
+      "commit": "63e479f21ca341b9a0d50f98e41728c183b8e8cc"
+    },
+    {
+      "beta": "0.0.32",
+      "original": "clear icons and direct inventory rewards",
       "kind": "current",
-      "tag": "v0.0.31-beta"
+      "tag": "v0.0.32-beta"
     }
   ]
 }

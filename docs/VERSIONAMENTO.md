@@ -38,7 +38,8 @@ Toda a trajetória do produto é classificada como beta, desde os protótipos an
 | Beta 0.0.29 | [v7.3.1](https://github.com/ArieLindo993/Slayers2Macro/tree/v7.3.1) | Tag Git |
 | Beta 0.0.30 | [v7.4.0](https://github.com/ArieLindo993/Slayers2Macro/tree/v7.4.0) | Tag Git |
 | Beta 0.0.31 | [beta numbering](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.31-beta) | Nova nomenclatura |
+| Beta 0.0.32 | [v0.0.32-beta](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.32-beta) | Ícones e recompensas diretas |
 
-As tags, commits, checksums e pacotes antigos são preservados. Os executáveis antigos podem continuar mostrando a numeração com a qual foram compilados; a nova interface exibe **Beta 0.0.31**. O inventário não publica arquivos pessoais nem recompila protótipos. As variantes “ajustada” e “fonte-corrigida” têm o mesmo código Python listado, mas pacotes com hashes diferentes; são registradas como pacotes distintos, sem atribuir uma correção inexistente.
+As tags, commits, checksums e pacotes antigos são preservados. Os executáveis antigos podem continuar mostrando a numeração com a qual foram compilados; a nova interface exibe **Beta 0.0.32**. O inventário não publica arquivos pessoais nem recompila protótipos. As variantes “ajustada” e “fonte-corrigida” têm o mesmo código Python listado, mas pacotes com hashes diferentes; são registradas como pacotes distintos, sem atribuir uma correção inexistente.
 
 **Compatibilidade:** “Beta” indica o estágio do produto. As releases continuam publicadas no canal usado por `/releases/latest`, preservando os atualizadores instalados e os links de download. Não são convertidas para o filtro técnico de prerelease do GitHub, que [fica fora desse canal](https://docs.github.com/en/rest/releases/releases#get-the-latest-release). O atualizador identifica instalações pelo ID da release, e não pela comparação entre 7.x e 0.x. Não há reset das configurações ou dos dados.

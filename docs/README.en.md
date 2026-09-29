@@ -6,7 +6,7 @@ A Windows fishing macro for **Slayers 2 on Roblox**, with automatic calibration,
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Releases and downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 
-**Beta 0.0.31:** the entire macro history now uses beta numbering starting at zero, including pre-Git prototypes. See the [complete version mapping](VERSIONING.en.md). Features, settings and history are preserved.
+**Beta 0.0.32:** Clearer notification thumbnails and recognition of rewards sent directly to inventory, without requiring an item on the rod. [Beta →](VERSIONING.en.md)
 
 ## Install and start
 

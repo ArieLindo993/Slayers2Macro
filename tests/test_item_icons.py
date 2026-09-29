@@ -57,8 +57,10 @@ class ItemIcons(unittest.TestCase):
             for timer in app.root.tk.call('after','info'):app.root.after_cancel(timer)
             try:
                 app.cycle_id=2;app.history.record(1,{'name':'Fish','quantity':1})
-                future=Future();future.set_result({'fishing':False,'loot':None,'reward':True,'reward_icon':icon()})
+                future=Future();future.set_result({'fishing':False,'loot':None,'reward':True,'reward_icon':icon(),'reward_quality':.95})
                 app.scene_job=(future,app.scene_epoch,100,1);app.poll_scene(100.5)
+                self.assertNotIn('icon',app.history.by_cycle[1])
+                app.scene_job=(future,app.scene_epoch,100.6,1);app.poll_scene(100.9)
                 self.assertIn('icon',app.history.by_cycle[1]);self.assertNotIn(2,app.pending_icons)
                 app.history.record_outcome(2,'Sem recompensa');app.open_history();app.root.update_idletasks()
                 summary,rows=app.history_tables

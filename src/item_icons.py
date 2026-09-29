@@ -6,6 +6,23 @@ from PIL import Image
 ICON_SIZE=(44,48)
 MAX_ICONS=256
 
+class IconSampler:
+    """Bounded per-round sampling; don't save the first animation frame."""
+    def __init__(self):self.samples={}
+    def observe(self,cycle,stamp,encoded,quality):
+        if not encoded:return None
+        previous=self.samples.get(cycle)
+        if previous and stamp<=previous['last']:return None
+        if previous is None or stamp-previous['last']>3:
+            previous={'first':stamp,'last':stamp,'count':0,'best':None,'quality':-1.}
+            self.samples[cycle]=previous
+        previous['last']=stamp;previous['count']+=1
+        if quality>previous['quality']:previous.update(best=encoded,quality=quality)
+        if previous['count']>=2 and stamp-previous['first']>=.2 and previous['quality']>=.7:
+            return previous['best'],previous['quality']
+        return None
+    def prune(self,cycle):self.samples={k:v for k,v in self.samples.items() if k>=cycle-1}
+
 def reward_icon(rgb,point):
     if point is None:return None
     # Coordenadas relativas ao indicador x1, na mesma escala do detector.

@@ -4,6 +4,18 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.32](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.32-beta)
+
+### Ícones nítidos e itens enviados ao inventário
+
+- Notificações de recompensa verificadas também durante a leitura rápida do minigame. Um aviso novo pode confirmar um item enviado direto ao inventário, sem indicador Collect e sem exigir T.
+- Se o aviso surge no último quadro do minigame, a evidência fica guardada até a pesca encerrar. Aviso já visível ao iniciar ou persistente da rodada anterior não é contado novamente.
+- OCR recebe o recorte da mesma captura que detectou a notificação, associado ao ciclo original. O caminho de leitura de texto também começa quando a barra desaparece.
+- Miniaturas escolhidas entre capturas distintas, usando contraste da notificação e detalhes do ícone. Quadros muito esmaecidos não são salvos; uma imagem melhor pode substituir a anterior, sem trocar por outra pior durante o desaparecimento.
+- A miniatura melhor é reutilizada nas entradas do mesmo item desta sessão. Registros antigos em disco não são reprocessados; quando não houver quadro adequado, permanece o traço.
+- Eventos de notificação e atualização de ícone registrados no log.
+- Verificação: 99 testes automatizados e seleção do quadro mais nítido em uma sequência real fornecida. A entrada direta no inventário foi testada por simulação; ainda precisa ser acompanhada no jogo.
+
 ## [Beta 0.0.31](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.31-beta)
 
 ### Numeração beta desde o início

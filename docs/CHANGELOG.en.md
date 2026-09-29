@@ -4,6 +4,17 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.32](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.32-beta)
+
+### Clearer icons and direct inventory rewards
+
+- Reward notifications are checked during quick minigame scans too. A new notification can confirm an item sent directly to inventory, without a Collect prompt or pressing T.
+- Notifications overlapping the last minigame frame are retained until fishing ends. Preexisting or lingering previous-round notifications are not counted again.
+- OCR uses the same captured frame and original cycle as notification detection; text reading also starts when the bar disappears.
+- Thumbnails are selected across distinct frames using notification contrast and icon detail. Faint frames are rejected; a better image replaces the earlier thumbnail, without a fade-out downgrade. Shared item thumbnails improve across the current session. Old files are not reprocessed; a dash remains when no suitable frame exists.
+- Notification and icon-update events are logged.
+- Validation: 99 automated tests and a real recorded reward sequence. Direct inventory collection was simulated and still needs live-game confirmation.
+
 ## [Beta 0.0.31](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.31-beta)
 
 ### Beta numbering from the beginning

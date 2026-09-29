@@ -19,7 +19,7 @@ from detector import detect
 from engine import Engine
 from signals import Signals
 from item_history import ItemHistory, RewardReader
-from item_icons import decode_icon
+from item_icons import decode_icon,IconSampler
 from calibration import AutoCalibration,locate_bar,search_bar
 from selection import BarSelection
 from product import APP_NAME,VERSION,DISPLAY_VERSION,GAME_PROFILE,DETECTOR_REVISION
@@ -173,7 +173,7 @@ class App:
         self.engine=Engine(self.config)
         self.history=ItemHistory(self.data/'historico',log=self.session_log)
         self.history_window=None;self.history_tables=None
-        self.history_photos={};self.pending_icons={}
+        self.history_photos={};self.pending_icons={};self.icon_sampler=IconSampler()
         self.reader=RewardReader();self.worker=BackgroundWorker('leitura-itens',timeout=30,max_pending=3)
         self.ocr_job=None;self.confirmation_jobs=[];self.history_retries={};self.last_ocr=0.;self.ocr_results={};self.ocr_error=None
         self.cycle_id=0;self.last_reward_crop=None
@@ -269,7 +269,7 @@ class App:
         self.history=ItemHistory(self.data/'historico',log=self.session_log);self.metrics.reset();self.round_metrics.reset()
         self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.last_reward_crop=None
         self.history_retries={}
-        self.pending_icons={};self.history_photos={}
+        self.pending_icons={};self.history_photos={};self.icon_sampler=IconSampler()
         self.engine.reset(time.monotonic());self.engine.state='PARADO';self.paused_state=None
         self.refresh_history();self.counter.set('0 ciclos · 0 coletas confirmadas')
 
@@ -316,8 +316,15 @@ class App:
             self.engine.collected+=1
             self.engine.unconfirmed=max(0,self.engine.unconfirmed-1)
             self.counter.set(f'{self.engine.cycles} ciclos   ·   {self.engine.collected} coletas confirmadas')
-        self.history.set_icon(cycle,self.pending_icons.pop(cycle,None))
+        self.apply_pending_icon(cycle)
         self.refresh_history()
+
+    def apply_pending_icon(self,cycle):
+        candidate=self.pending_icons.pop(cycle,None)
+        if candidate and self.history.set_icon(cycle,*candidate):
+            self.session_log.event('ICONE_ATUALIZADO',ciclo=cycle,qualidade=round(candidate[1],3))
+            return True
+        return False
 
     def poll_ocr(self):
         remaining=[]
@@ -340,11 +347,11 @@ class App:
             self.ocr_results[cycle]=(result,captured)
             self.apply_reward_reading(cycle,result)
 
-    def submit_ocr(self,crop,now):
+    def submit_ocr(self,crop,now,cycle=None):
         if self.ocr_job is not None:return
         self.last_ocr=now
         future=self.submit_background(self.worker,self.reader.read,crop.copy())
-        if future is not None:self.ocr_job=(future,self.cycle_id,now)
+        if future is not None:self.ocr_job=(future,self.cycle_id if cycle is None else cycle,now)
 
     def refresh_point(self):
         self.point_status.set('Ponto na água salvo · F8 para alterar' if self.config['cast'] else 'Aponte para a água e pressione F8')
@@ -500,7 +507,7 @@ class App:
         if self.paused_state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
             self.engine.state='RESULTADO';self.engine.deadline=time.monotonic()+1
         self.paused_state=None;self.scene_epoch+=1;self.scene_time=0
-        self.pending_icons={}
+        self.pending_icons={};self.icon_sampler=IconSampler()
         self.calibration.begin();self.calibration_epoch+=1
         self.last_scene=0.;self.scene={'fishing':False,'loot':None,'reward':False}
         self.start_button.configure(text=self.tr('Pausar'));self.status.set('Conferindo a tela…')
@@ -595,12 +602,27 @@ class App:
             else:
                 self.scene_latency=max(0,now-captured)
                 if epoch==self.scene_epoch and captured>self.scene_time and 0<=now-captured<SCENE_MAX_AGE:
+                    was_reward=bool(self.scene.get('reward'))
                     self.scene=scene;self.scene_time=captured
-                    if (not self.dry.get() and scene.get('reward') and scene.get('reward_icon')
+                    if (not self.dry.get() and scene.get('reward')
                         and icon_cycle is not None and icon_cycle in (self.cycle_id-1,self.cycle_id)):
-                        if icon_cycle in self.history.by_cycle:
-                            if self.history.set_icon(icon_cycle,scene['reward_icon']):self.refresh_history()
-                        else:self.pending_icons[icon_cycle]=scene['reward_icon']
+                        if not was_reward:self.session_log.event('NOTIFICACAO_RECOMPENSA_DETECTADA',ciclo=icon_cycle,estado=self.engine.state)
+                        candidate=self.icon_sampler.observe(icon_cycle,captured,scene.get('reward_icon'),scene.get('reward_quality',0.))
+                        if candidate:
+                            self.pending_icons[icon_cycle]=candidate
+                            entry=self.history.by_cycle.get(icon_cycle)
+                            if entry and entry.get('status')!='unconfirmed':
+                                if self.apply_pending_icon(icon_cycle):self.refresh_history()
+                        crop=scene.get('reward_crop')
+                        if crop is not None:
+                            if icon_cycle==self.cycle_id:self.last_reward_crop=crop
+                            entry=self.history.by_cycle.get(icon_cycle)
+                            if now-self.last_ocr>=.75 and self.worker.can_submit:
+                                if entry and (not entry['identified'] or entry.get('status')=='unconfirmed'):
+                                    if not any(c==icon_cycle for _,c in self.confirmation_jobs):
+                                        future=self.submit_background(self.worker,self.reader.read,crop)
+                                        if future is not None:self.confirmation_jobs.append((future,icon_cycle));self.last_ocr=now
+                                elif entry is None:self.submit_ocr(crop,captured,icon_cycle)
                     visible=bool(scene.get('loot'))
                     if visible!=self.previous_scene_item:
                         self.session_log.event('ITEM_NA_VARA_DETECTADO' if visible else 'ITEM_NA_VARA_NAO_VISIVEL',ciclo=self.cycle_id)
@@ -704,7 +726,7 @@ class App:
             if not quick:self.full_scene_at=now
             future=self.submit_background(self.vision_worker,self.signals.scan,full,quick)
             icon_cycle=(self.cycle_id-1 if self.engine.state=='REINICIANDO' else self.cycle_id
-                if self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA') else None)
+                if self.engine.state in ('PESCANDO','ESPERANDO','CLIQUE','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA') else None)
             if future is not None:self.scene_job=(future,self.scene_epoch,captured,icon_cycle)
             previous=self.cycle_id-1
             entry=self.history.by_cycle.get(previous)
@@ -716,9 +738,9 @@ class App:
                 future=self.submit_background(self.worker,self.reader.read,crop)
                 if future is not None:self.confirmation_jobs.append((future,previous))
                 self.history_retries[previous]=self.history_retries.get(previous,0)+1;self.last_ocr=now
-            if not self.dry.get() and self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
+            if not self.dry.get() and (self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
+                or (self.engine.state=='PESCANDO' and reading is None)) and not self.scene.get('reward'):
                 crop=RewardReader.crop(full,self.scene.get('reward_point'))
-                if self.scene.get('reward'):self.last_reward_crop=crop
                 if now-self.last_ocr>=.75 and self.worker.can_submit:self.submit_ocr(crop,now)
             self.last_scene=time.monotonic()
         now=time.monotonic()
@@ -765,8 +787,10 @@ class App:
         self.tick_stage='comandos';self.execute(actions)
         self.tick_stage='historico'
         if self.engine.collected>previous_collected:
-            self.history.record(self.cycle_id,parsed if text_reward else None,1 if self.scene.get('reward') else None)
-            self.history.set_icon(self.cycle_id,self.pending_icons.pop(self.cycle_id,None))
+            # The notification may already have vanished after being latched by
+            # the engine. Its x1 evidence still confirms one item pending OCR.
+            self.history.record(self.cycle_id,parsed if text_reward else None,1)
+            self.apply_pending_icon(self.cycle_id)
             if not text_reward and self.last_reward_crop is not None and self.worker.can_submit:
                 future=self.submit_background(self.worker,self.reader.read,self.last_reward_crop.copy())
                 if future is not None:self.confirmation_jobs.append((future,self.cycle_id))
@@ -789,6 +813,7 @@ class App:
             self.ocr_results={k:v for k,v in self.ocr_results.items() if k>=self.cycle_id-1}
             self.history_retries={k:v for k,v in self.history_retries.items() if k>=self.cycle_id-1}
             self.pending_icons={k:v for k,v in self.pending_icons.items() if k>=self.cycle_id-1}
+            self.icon_sampler.prune(self.cycle_id)
         if self.active:self.status.set(self.engine.message)
         self.counter.set(f'{self.engine.cycles} ciclos   ·   {self.engine.collected} coletas confirmadas')
 

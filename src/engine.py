@@ -23,6 +23,7 @@ class Engine:
         self.loot_seen=False;self.absent_since=None
         self.absent_frames=0;self.last_collect_frame=None
         self.collect_started=None;self.reward_was_present=False
+        self.reward_pending=False
         self.last_fishing=now;self.track_started=now
         self.last_marker=now;self.positive=0
         self.positive_time=None;self.signal_stamp=None;self.reading_stamp=None
@@ -37,6 +38,7 @@ class Engine:
         return [('mouse',False),('t',False),('stop',message)]
 
     def cast(self,now):
+        self.reward_pending=False
         self.attempts+=1
         self.state='POSICIONANDO';self.deadline=now+.18
         self.message=f'Lançando a vara · tentativa {self.attempts}/{self.cfg["max_cast"]}'
@@ -114,6 +116,7 @@ class Engine:
         return [('mouse',False),('t',True)]
 
     def finish(self,now,confirmed,reason=None):
+        self.reward_pending=False
         self.outcome=reason or ('Coleta confirmada' if confirmed else ('Coleta não confirmada' if self.loot_seen else 'Sem recompensa detectada'))
         self.cycles+=1
         if confirmed:self.collected+=1
@@ -130,17 +133,22 @@ class Engine:
         fishing,scene_usable,new_scene=self.observe_activity(now,reading,fishing,stamp,scene_valid)
         if not scene_usable:loot=None
         reward_new=reward and not self.reward_was_present
-        self.reward_was_present=reward
+        if reward:self.reward_was_present=True
+        elif scene_usable and new_scene:self.reward_was_present=False
+        # Direct inventory rewards may arrive before RESULTADO or before the
+        # minigame's last frame disappears. Keep the event for this round only.
+        reward_states=('PESCANDO','RESULTADO','CLIQUE','ESPERANDO','TECLA_T','VERIFICANDO_COLETA','MIRANDO_ITEM')
+        if reward_new and self.state in reward_states:self.reward_pending=True
+        if self.reward_pending and self.state in reward_states and not (fishing or reading is not None):
+            return self.finish(now,True)
         # O botão Collect pode aparecer enquanto o marcador ainda está visível.
         # Nesse caso a coleta tem prioridade para não deixar o item girando na vara.
         if loot:self.last_loot=loot
         if loot and not (reading is not None and fishing) and self.state in ('PESCANDO','RESULTADO','ESPERANDO','POSICIONANDO'):
             self.collect_attempts=0 if self.state=='PESCANDO' else self.collect_attempts
             return self.prepare_collect(now,loot)
-        if self.state=='RESULTADO' and reward_new:return self.finish(now,True)
         if self.state in ('TECLA_T','VERIFICANDO_COLETA','MIRANDO_ITEM'):
             if loot:self.loot_seen=True
-            if reward_new and self.collect_attempts>0:return self.finish(now,True)
             if self.collect_started is not None and now-self.collect_started>self.cfg['collect_timeout']:
                 return self.finish(now,False)
         active=fishing or reading is not None
