@@ -24,7 +24,7 @@ Alterações verificadas nas tags e no código do repositório. A versão mais r
 
 ### Validação
 
-- 71 testes automatizados, incluindo oito horas simuladas com capturas lentas, atrasos de até 2,4 segundos, tarefas travadas/encerradas, transmissão interrompida de imagens, falhas de captura, coleta, pausas, calibração e instalação interrompida.
+- 72 testes automatizados, incluindo oito horas simuladas com capturas lentas, atrasos de até 2,4 segundos, tarefas travadas/encerradas, transmissão interrompida de imagens, falhas de captura, coleta, pausas, calibração e instalação interrompida.
 - Verificação local de 28 quadros de gravações fornecidas, reconhecimento de duas recompensas reais e controle simulado; esses arquivos pessoais não integram o pacote.
 - Autoteste também exercita visão, calibração e OCR em processos separados no executável empacotado.
 - [Relatório da investigação](docs/ESTABILIDADE.md). Simulação e reprodução de falhas não equivalem a uma noite de validação no Roblox ao vivo.

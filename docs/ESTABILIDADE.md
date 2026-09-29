@@ -32,7 +32,7 @@ A reprodução com o motor anterior, 400 capturas distintas e intervalos sem lei
 
 ## Verificação reproduzível
 
-Execute `python -m unittest discover -s tests -v` no Windows com as dependências instaladas. A suíte contém 71 testes. Os novos grupos cobrem integração da interface (`test_app_recovery.py`), duração e evidências (`test_engine_endurance.py`), processos (`test_background.py`) e integridade do atualizador (`test_update_integrity.py`).
+Execute `python -m unittest discover -s tests -v` no Windows com as dependências instaladas. A suíte contém 72 testes. Os novos grupos cobrem integração da interface (`test_app_recovery.py`), duração e evidências (`test_engine_endurance.py`), processos (`test_background.py`) e integridade do atualizador (`test_update_integrity.py`).
 
 A simulação de oito horas percorre os estados reais de lançamento, espera e recuperação com leituras atrasadas e intervalos inválidos. Não altera artificialmente o estado para desbloquear uma rodada. Testes separados cobrem retorno ao acompanhamento, coleta, expiração do marcador, pausas manuais e falta de foco.
 

@@ -10,7 +10,9 @@ function Get-InstalledExe([string]$Id, [string]$Base) {
 function Test-CompleteInstall([string]$Directory, [string]$Id) {
     $marker = Join-Path $Directory 'installation.complete'
     if (!(Test-Path -LiteralPath (Join-Path $Directory 'Slayers2Macro.exe') -PathType Leaf) -or !(Test-Path -LiteralPath $marker -PathType Leaf)) { return $false }
-    return (Get-Content -LiteralPath $marker -Raw).Trim() -eq $Id
+    $markerValue = Get-Content -LiteralPath $marker -Raw
+    if ([string]::IsNullOrWhiteSpace($markerValue)) { return $false }
+    return $markerValue.Trim() -eq $Id
 }
 function Assert-InstallChild([string]$Path, [string]$Base) {
     $root = [IO.Path]::GetFullPath($Base).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar

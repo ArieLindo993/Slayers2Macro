@@ -128,6 +128,14 @@ function Expand-Archive {
         self.assertFalse((self.install/'2').exists())
         self.assertEqual((self.install/'current.txt').read_text().strip(),'1')
 
+    def test_empty_completion_marker_is_repaired(self):
+        current=self.legacy('2');(self.install/'current.txt').write_text('2')
+        (current/'installation.complete').write_text('')
+        result=self.run_updater()
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertEqual((current/'installation.complete').read_text().strip(),'2')
+        self.assertEqual((current/'_internal/runtime.dat').read_bytes(),b'complete dependency')
+
     def test_legacy_offline_start_and_rollback_still_work(self):
         self.legacy('1')
         self.legacy('2')
