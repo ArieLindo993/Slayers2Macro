@@ -252,8 +252,16 @@
     {
       "beta": "0.0.34",
       "original": "notification OCR and geometry recovery",
+      "kind": "git",
+      "tag": "v0.0.34-beta",
+      "published": true,
+      "commit": "03fb6854bf65d16b79cec5e87e9ae1ad3bc45ba5"
+    },
+    {
+      "beta": "0.0.35",
+      "original": "compact reward OCR and correct cycle attribution",
       "kind": "current",
-      "tag": "v0.0.34-beta"
+      "tag": "v0.0.35-beta"
     }
   ]
 }

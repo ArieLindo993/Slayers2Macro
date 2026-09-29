@@ -37,6 +37,15 @@ class DirectRewards(unittest.TestCase):
         engine.step(2.2,None,False,None,True)
         self.assertEqual(engine.collected,0)
 
+    def test_lingering_notice_during_wait_is_not_assigned_to_the_next_cast(self):
+        engine=Engine(dict(CONFIG));engine.state='ESPERANDO'
+        engine.step(.1,None,False,None,True)
+        self.assertFalse(engine.reward_pending);self.assertEqual(engine.collected,0)
+        engine.step(.3,None,False,None,False)
+        engine.state='PESCANDO'
+        engine.step(.5,None,False,None,True)
+        self.assertEqual(engine.collected,1)
+
     def test_samples_require_distinct_frames_and_reject_fades(self):
         sampler=IconSampler()
         self.assertIsNone(sampler.observe(0,1,'fade',.3))
@@ -70,6 +79,6 @@ class DirectRewards(unittest.TestCase):
         with patch.object(s,'match',side_effect=[(True,(0,0),1.),(True,(1075.5,596.5),.99)]):
             result=s.scan(frame,fishing_only=True)
         self.assertTrue(result['reward']);self.assertTrue(result['fishing'])
-        self.assertEqual(result['reward_crop'].shape,(100,440,3))
+        self.assertEqual(result['reward_crop'].shape,(220,650,3))
 
 if __name__=='__main__':unittest.main()

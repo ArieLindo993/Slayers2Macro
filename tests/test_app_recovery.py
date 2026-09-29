@@ -129,7 +129,7 @@ class AppRecovery(unittest.TestCase):
 
     def test_direct_notification_ocr_uses_original_frame_and_cycle(self):
         app=self.app;app.engine.track(99)
-        crop=np.full((100,440,3),31,dtype=np.uint8)
+        crop=np.full((220,650,3),31,dtype=np.uint8)
         scene={'fishing':False,'loot':None,'reward':True,'reward_crop':crop}
         app.scene_job=(self.completed(scene),app.scene_epoch,100,0)
         result=Future()
@@ -143,6 +143,21 @@ class AppRecovery(unittest.TestCase):
         result.set_result({'name':'Ore','quantity':1});app.poll_ocr()
         self.assertEqual(app.history.by_cycle[0]['name'],'Ore')
         self.assertEqual(app.engine.collected,1);self.assertNotIn(1,app.history.by_cycle)
+
+    def test_reward_notice_waiting_for_a_new_bite_has_no_cycle_owner(self):
+        self.assertIsNone(macro.reward_cycle_owner('ESPERANDO',12))
+        self.assertEqual(macro.reward_cycle_owner('PESCANDO',12),12)
+        self.assertEqual(macro.reward_cycle_owner('REINICIANDO',12),11)
+
+    def test_early_ocr_is_attached_when_the_collection_row_is_created(self):
+        app=self.app;reading={'name':'Clown Fish','quantity':1,'name_validated':True}
+        app.apply_reward_reading(0,reading)
+        self.assertIn(0,app.pending_reward_readings)
+        app.engine.cycles=1;app.engine.unconfirmed=1
+        app.history.record_outcome(0,'Item desapareceu após T; recompensa não confirmada')
+        app.apply_reward_reading(0,app.pending_reward_readings.pop(0))
+        self.assertEqual(app.history.totals(),{'Clown Fish':1})
+        self.assertEqual(app.engine.collected,1)
 
 
 if __name__=='__main__':unittest.main()

@@ -4,6 +4,16 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.35](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.35-beta)
+
+### Correção da coleta em janela pequena
+
+- Amplia o recorte da notificação para incluir o aviso inteiro em janelas menores e quando o nome e a quantidade aparecem na mesma linha.
+- Um OCR que termina antes de o ciclo entrar no histórico fica guardado e é associado à coleta correta assim que ela for registrada.
+- Avisos que ainda estão na tela durante a espera pela próxima fisgada não são atribuídos ao ciclo novo.
+- Diagnóstico do último log: 10/10 coletas na janela de 800×599 não tiveram aviso reconhecido; em tela cheia, 8/10 tiveram. Os nomes foram lidos nos avisos detectados, mas as demais coletas foram registradas como não confirmadas. A alteração trata as falhas como problema de leitura e de associação de ciclo.
+- Mantém a validação de nomes e a contagem de possíveis pescas vazias.
+
 ## [Beta 0.0.34](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.34-beta)
 
 ### Recuperação de notificações e OCR

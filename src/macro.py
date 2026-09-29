@@ -102,6 +102,12 @@ def cursor_relative(window):
     return ((p.x-window[1])/window[3], (p.y-window[2])/window[4])
 
 
+def reward_cycle_owner(state,cycle):
+    if state=='REINICIANDO':return cycle-1
+    if state in ('PESCANDO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):return cycle
+    return None
+
+
 
 DEFAULTS={'roi':[.733,.289,.034,.369],'cast':None,'anticipation':.10,
           'wait_seconds':20.,'result_wait':2.,'recast_seconds':1.5,
@@ -176,6 +182,7 @@ class App:
         self.history_photos={};self.pending_icons={};self.icon_sampler=IconSampler()
         self.reader=RewardReader();self.worker=BackgroundWorker('leitura-itens',timeout=30,max_pending=3)
         self.ocr_job=None;self.confirmation_jobs=[];self.history_retries={};self.last_ocr=0.;self.ocr_results={};self.ocr_error=None
+        self.pending_reward_readings={};self.empty_ocr_cycles=set()
         self.cycle_id=0;self.last_reward_crop=None
         self.capture=mss.MSS();self.active=False;self.held=False;self.t_down=False
         self.window=None;self.pending_start=None;self.corner=None;self.previous_keys={}
@@ -268,6 +275,7 @@ class App:
         self.session_log.event('NOVA_SESSAO_DE_ITENS')
         self.history=ItemHistory(self.data/'historico',log=self.session_log);self.metrics.reset();self.round_metrics.reset()
         self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.last_reward_crop=None
+        self.pending_reward_readings={};self.empty_ocr_cycles=set()
         self.history_retries={}
         self.pending_icons={};self.history_photos={};self.icon_sampler=IconSampler()
         self.engine.reset(time.monotonic());self.engine.state='PARADO';self.paused_state=None
@@ -309,17 +317,25 @@ class App:
             except OSError as exc:messagebox.showerror(self.tr('Erro ao exportar'),self.tr(str(exc)),parent=self.history_window)
 
     def apply_reward_reading(self,cycle,result):
-        if result:
-            self.session_log.event('OCR_RECOMPENSA_LIDA',ciclo=cycle,item=result['name'],
-                nome_validado=result.get('name_validated'),confianca=result.get('name_confidence'))
-        else:
-            now=time.monotonic()
-            if now-getattr(self,'last_empty_ocr_log',0)>=3:
-                self.last_empty_ocr_log=now
+        if not result:
+            if (cycle not in self.empty_ocr_cycles and self.engine.state in
+                    ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')):
+                self.empty_ocr_cycles.add(cycle)
                 self.session_log.event('OCR_SEM_RECOMPENSA',ciclo=cycle,estado=self.engine.state)
+            return
         entry=self.history.by_cycle.get(cycle)
+        if entry is None:
+            # OCR can finish just before the engine creates this cycle's
+            # history row. Keep it for the imminent confirmation or outcome.
+            self.pending_reward_readings[cycle]=result
+            self.session_log.event('OCR_RECOMPENSA_ANTECIPADA',ciclo=cycle,
+                item=result['name'],nome_validado=result.get('name_validated'))
+            return
         was_unconfirmed=bool(entry and entry.get('status')=='unconfirmed')
         if not self.history.identify(cycle,result,confirm=True):return
+        self.pending_reward_readings.pop(cycle,None)
+        self.session_log.event('OCR_RECOMPENSA_LIDA',ciclo=cycle,item=result['name'],
+            nome_validado=result.get('name_validated'),confianca=result.get('name_confidence'))
         if was_unconfirmed:
             self.engine.collected+=1
             self.engine.unconfirmed=max(0,self.engine.unconfirmed-1)
@@ -733,8 +749,7 @@ class App:
             quick=self.engine.state=='PESCANDO' and reading is not None and now-self.full_scene_at<1
             if not quick:self.full_scene_at=now
             future=self.submit_background(self.vision_worker,self.signals.scan,full,quick)
-            icon_cycle=(self.cycle_id-1 if self.engine.state=='REINICIANDO' else self.cycle_id
-                if self.engine.state in ('PESCANDO','ESPERANDO','CLIQUE','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA') else None)
+            icon_cycle=reward_cycle_owner(self.engine.state,self.cycle_id)
             if future is not None:self.scene_job=(future,self.scene_epoch,captured,icon_cycle)
             previous=self.cycle_id-1
             entry=self.history.by_cycle.get(previous)
@@ -800,6 +815,8 @@ class App:
             # The notification may already have vanished after being latched by
             # the engine. Its x1 evidence still confirms one item pending OCR.
             self.history.record(self.cycle_id,parsed if text_reward else None,1)
+            pending=self.pending_reward_readings.pop(self.cycle_id,None)
+            if pending:self.history.identify(self.cycle_id,pending,confirm=True)
             self.apply_pending_icon(self.cycle_id)
             if not text_reward and self.last_reward_crop is not None and self.worker.can_submit:
                 future=self.submit_background(self.worker,self.reader.read,self.last_reward_crop.copy())
@@ -808,6 +825,8 @@ class App:
         if self.engine.cycles>previous_cycles:
             if self.engine.collected==previous_collected:
                 self.history.record_outcome(self.cycle_id,self.engine.outcome)
+                pending=self.pending_reward_readings.pop(self.cycle_id,None)
+                if pending:self.apply_reward_reading(self.cycle_id,pending)
                 self.refresh_history()
             entry=self.history.by_cycle.get(self.cycle_id)
             if entry:
@@ -821,6 +840,8 @@ class App:
             self.calibration.begin();self.calibration_epoch+=1
             # Resultados antigos só interessam enquanto resolvem uma linha pendente.
             self.ocr_results={k:v for k,v in self.ocr_results.items() if k>=self.cycle_id-1}
+            self.pending_reward_readings={k:v for k,v in self.pending_reward_readings.items() if k>=self.cycle_id-1}
+            self.empty_ocr_cycles={k for k in self.empty_ocr_cycles if k>=self.cycle_id-1}
             self.history_retries={k:v for k,v in self.history_retries.items() if k>=self.cycle_id-1}
             self.pending_icons={k:v for k,v in self.pending_icons.items() if k>=self.cycle_id-1}
             self.icon_sampler.prune(self.cycle_id)

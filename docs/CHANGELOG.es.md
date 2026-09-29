@@ -4,6 +4,16 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.35](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.35-beta)
+
+### Corrección de capturas en ventanas pequeñas
+
+- Amplía el recorte para incluir el aviso completo en ventanas pequeñas y cuando nombre y cantidad comparten línea.
+- Las lecturas OCR que terminan antes de guardar el ciclo se conservan y se asocian a la captura correcta cuando se registra.
+- Los avisos que siguen visibles mientras se espera una nueva picada ya no se asignan al ciclo nuevo.
+- Diagnóstico del último registro: no se detectó ningún aviso en las 10 capturas con ventana de 800×599; en pantalla completa se detectaron 8/10. Los nombres se leyeron en los avisos detectados, pero las demás capturas quedaron sin confirmar. La corrección trata los fallos de lectura y asociación del ciclo.
+- Mantiene la validación de nombres y los casos de pesca vacía.
+
 ## [Beta 0.0.34](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.34-beta)
 
 ### Recuperación de avisos y OCR

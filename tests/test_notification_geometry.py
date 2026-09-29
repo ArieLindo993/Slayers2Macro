@@ -24,7 +24,7 @@ class NotificationGeometry(unittest.TestCase):
                 result=self.signals.scan(frame)
                 self.assertTrue(result['reward'])
                 self.assertEqual(result['reward_layout'],'native')
-                self.assertEqual(result['reward_crop'].shape,(100,440,3))
+                self.assertEqual(result['reward_crop'].shape,(220,650,3))
                 full=self.signals.scan(self.notification(1920,1080))
                 np.testing.assert_array_equal(result['reward_crop'],full['reward_crop'])
                 self.assertEqual(result['reward_icon'],full['reward_icon'])

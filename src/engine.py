@@ -137,7 +137,10 @@ class Engine:
         elif scene_usable and new_scene:self.reward_was_present=False
         # Direct inventory rewards may arrive before RESULTADO or before the
         # minigame's last frame disappears. Keep the event for this round only.
-        reward_states=('PESCANDO','RESULTADO','CLIQUE','ESPERANDO','TECLA_T','VERIFICANDO_COLETA','MIRANDO_ITEM')
+        # Reward prompts belong to a cast only after the minigame has begun.
+        # A fading notice during the next cast's wait phase belongs to the prior
+        # catch and must never confirm a new cycle.
+        reward_states=('PESCANDO','RESULTADO','TECLA_T','VERIFICANDO_COLETA','MIRANDO_ITEM')
         if reward_new and self.state in reward_states:self.reward_pending=True
         if self.reward_pending and self.state in reward_states and not (fishing or reading is not None):
             return self.finish(now,True)

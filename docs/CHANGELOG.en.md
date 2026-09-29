@@ -4,6 +4,16 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.35](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.35-beta)
+
+### Small-window collection fix
+
+- Widens the reward crop to include the full notice in smaller windows and when name and quantity share one line.
+- OCR results that finish before a cycle is written to history are retained and attached to that collection once it is recorded.
+- Notices still on screen while waiting for the next bite are no longer assigned to the new cycle.
+- Latest-log diagnosis: none of the 10 catches in the 800×599 window had a detected notice; 8/10 in fullscreen did. Names were read for detected notices, while the other catches were marked unconfirmed. This addresses missed reading and cycle attribution.
+- Keeps name validation and support for empty catches.
+
 ## [Beta 0.0.34](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.34-beta)
 
 ### Notification recovery and OCR

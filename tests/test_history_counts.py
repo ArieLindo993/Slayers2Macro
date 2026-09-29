@@ -21,12 +21,16 @@ class HistoryCounts(unittest.TestCase):
         self.assertEqual(result['name'],'Clown Fish');self.assertEqual(result['quantity'],1)
         self.assertIsNone(parse_reward([line('Clown Fish',20,25)]))
 
+    def test_compact_reward_name_and_quantity_on_same_baseline(self):
+        result=parse_reward([line('Clown Fish',20,50,110),line('x1',145,50,30)])
+        self.assertEqual(result['name'],'Clown Fish');self.assertEqual(result['quantity'],1)
+
     def test_crop_keeps_taller_first_reward_layout(self):
         import numpy as np
         frame=np.zeros((1080,1920,3),dtype=np.uint8)
         frame[545:555,1020:1100]=255
         crop=RewardReader.crop(frame)
-        self.assertEqual(crop.shape,(100,440,3));self.assertGreater(crop.sum(),0)
+        self.assertEqual(crop.shape,(220,650,3));self.assertGreater(crop.sum(),0)
 
     def test_late_first_reward_updates_counter_once_and_original_cycle(self):
         import macro

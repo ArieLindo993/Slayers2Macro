@@ -23,7 +23,9 @@ def parse_reward(lines,width=None):
             names.append((y,text,score,min(p[0] for p in box),max(p[1] for p in box)-min(p[1] for p in box),max(p[0] for p in box)))
     if not quantities or not names:return None
     qty_y,qty,qty_score=max(quantities,key=lambda v:v[2])
-    above=[n for n in names if n[0]<qty_y]
+    # In the compact client the label and x1 can share a baseline. Keep the
+    # quantity-to-name pairing in the same row as well as the older stacked UI.
+    above=[n for n in names if n[0]<=qty_y]
     if not above:return None
     closest=max(above,key=lambda v:v[0])
     row=sorted((n for n in above if abs(n[0]-closest[0])<=max(3,min(n[4],closest[4])*.4)),key=lambda n:n[3])
@@ -211,5 +213,7 @@ class RewardReader:
         import cv2
         normalized=cv2.resize(rgb,(1920,1080))
         x,y=point if point else (1075.5,596.5)
-        left=max(0,int(x-100));top=max(0,int(y-65))
-        return normalized[top:min(1080,top+100),left:min(1920,left+440)].copy()
+        # The reward banner moves relative to the item prompt at lower window
+        # sizes. Include the full banner and both stacked and one-line layouts.
+        left=max(0,min(1920-650,int(x-250)));top=max(0,min(1080-220,int(y-110)))
+        return normalized[top:top+220,left:left+650].copy()
