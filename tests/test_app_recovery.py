@@ -79,7 +79,10 @@ class AppRecovery(unittest.TestCase):
     def test_same_window_geometry_changes_recover_but_focus_loss_pauses(self):
         app=self.app;app.held=True;app.t_down=True
         with patch.object(macro,'game_window',return_value=(1,20,30,1280,720)):
-            self.assertTrue(app.sync_window())
+            with patch.object(macro.time,'monotonic',return_value=10.):
+                self.assertFalse(app.sync_window())
+            with patch.object(macro.time,'monotonic',return_value=10.3):
+                self.assertTrue(app.sync_window())
         self.assertTrue(app.active)
         self.assertFalse(app.held);self.assertFalse(app.t_down)
         self.assertEqual(app.window[3:],(1280,720))
@@ -88,6 +91,36 @@ class AppRecovery(unittest.TestCase):
             self.assertFalse(app.sync_window())
         self.assertFalse(app.active)
         self.assertEqual(app.engine.state,'PARADO')
+
+    def test_window_origin_move_does_not_restart_fishing(self):
+        app=self.app;app.held=True;app.t_down=True
+        with patch.object(macro,'game_window',return_value=(2,20,30,1920,1080)):
+            self.assertTrue(app.sync_window())
+        self.assertEqual(app.window,(2,20,30,1920,1080))
+        self.assertEqual(app.engine.state,'INICIO')
+        self.assertTrue(app.active)
+
+    def test_resize_stability_ignores_temporary_hwnd_and_origin_changes(self):
+        app=self.app
+        candidates=[(2,20,30,1280,720),(3,85,44,1280,720),(4,90,47,1280,720)]
+        with patch.object(macro,'game_window',side_effect=candidates):
+            with patch.object(macro.time,'monotonic',side_effect=[20.,20.1,20.26]):
+                self.assertFalse(app.sync_window())
+                self.assertFalse(app.sync_window())
+                self.assertTrue(app.sync_window())
+        self.assertEqual(app.window,candidates[-1])
+        self.assertEqual(app.engine.state,'RECUPERANDO')
+
+    def test_transient_window_size_jitter_is_debounced(self):
+        app=self.app
+        with patch.object(macro,'game_window',side_effect=[(1,0,0,1280,720),app.window,(1,0,0,1280,720)]):
+            with patch.object(macro.time,'monotonic',return_value=20.):
+                self.assertFalse(app.sync_window())
+                self.assertTrue(app.sync_window())
+                self.assertFalse(app.sync_window())
+        self.assertEqual(app.window,(1,0,0,1920,1080))
+        self.assertEqual(app.engine.state,'INICIO')
+        self.assertTrue(app.active)
 
     def test_capture_failure_releases_inputs_and_schedules_next_tick(self):
         app=self.app;app.held=True;app.t_down=True

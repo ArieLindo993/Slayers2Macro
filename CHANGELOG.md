@@ -4,6 +4,16 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.37](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.37-beta)
+
+### Varredura do OCR e estabilização da janela
+
+- O log mais recente mostrou seis ciclos concluídos sem recompensa lida; as melhores correspondências do selo ficaram em 0,71–0,77, abaixo do limite de confirmação de 0,91. A busca ampliada da Beta 0.0.36 não cobria a diferença de escala do selo em janelas compactas.
+- Compara o selo em várias escalas que preservam sua proporção. Uma correspondência fraca pode orientar o recorte do OCR, mas não confirma a recompensa nem reduz a validação visual.
+- O mesmo log registrou cerca de 35 recuperações em sequência enquanto a geometria reportada continuava 800×599. Mudanças de posição ou identificador com o mesmo tamanho agora atualizam a janela sem reiniciar o ciclo; uma mudança de resolução precisa permanecer estável por 250 ms e gera uma recuperação única.
+- Os logs de OCR agora registram dimensões do recorte, quantidade de caixas encontradas, melhores confianças numéricas e dados de escala/posição da janela, sem salvar imagens nem o texto bruto do OCR.
+- Testes automatizados cobrem avisos pequenos e fracos, além de oscilações de HWND/posição. Uma nova sessão real ainda é necessária para confirmar a leitura do aviso no Roblox.
+
 ## [Beta 0.0.36](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.36-beta)
 
 ### Detecção de avisos em posições variáveis

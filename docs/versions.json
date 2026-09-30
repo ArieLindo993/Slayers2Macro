@@ -268,8 +268,16 @@
     {
       "beta": "0.0.36",
       "original": "reward notice search across vertical positions",
+      "kind": "git",
+      "tag": "v0.0.36-beta",
+      "published": true,
+      "commit": "291b8d3336010fc0a6fbe288536ccaac01a6fffc"
+    },
+    {
+      "beta": "0.0.37",
+      "original": "OCR badge scale search and window stabilization",
       "kind": "current",
-      "tag": "v0.0.36-beta"
+      "tag": "v0.0.37-beta"
     }
   ]
 }

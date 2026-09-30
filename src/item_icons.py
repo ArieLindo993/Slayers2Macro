@@ -23,13 +23,14 @@ class IconSampler:
         return None
     def prune(self,cycle):self.samples={k:v for k,v in self.samples.items() if k>=cycle-1}
 
-def reward_icon(rgb,point):
+def reward_icon(rgb,point,scale_x=1.,scale_y=1.):
     if point is None:return None
     # Coordenadas relativas ao indicador x1, na mesma escala do detector.
-    x,y=point;left=round(x-99.5);top=round(y-42.5)
-    if left<0 or top<0 or left+44>1920 or top+48>1080:return None
+    x,y=point;left=round(x-99.5*scale_x);top=round(y-42.5*scale_y)
+    width=max(1,round(44*scale_x));height=max(1,round(48*scale_y))
+    if left<0 or top<0 or left+width>1920 or top+height>1080:return None
     image=Image.fromarray(rgb).resize((1920,1080),Image.Resampling.BILINEAR)
-    crop=image.crop((left,top,left+44,top+48))
+    crop=image.crop((left,top,left+width,top+height)).resize(ICON_SIZE,Image.Resampling.LANCZOS)
     stream=io.BytesIO();crop.save(stream,format='PNG')
     return base64.b64encode(stream.getvalue()).decode('ascii')
 

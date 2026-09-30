@@ -182,6 +182,9 @@ class RewardReader:
     def __init__(self):self.reader=None
 
     def read(self,rgb):
+        return self.read_with_diagnostics(rgb)['reading']
+
+    def read_with_diagnostics(self,rgb):
         import cv2
         if self.reader is None:
             from rapidocr_onnxruntime import RapidOCR
@@ -197,16 +200,28 @@ class RewardReader:
         gray=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)).apply(gray)
         enhanced=cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)
         variants.append(cv2.resize(enhanced,None,fx=4,fy=4,interpolation=cv2.INTER_CUBIC))
-        parsed=None
+        parsed=None;ocr_boxes=0;name_boxes=0;quantity_boxes=0;best_name_score=0.;best_quantity_score=0.
         for variant in variants:
             result,_=self.reader(variant,use_cls=False)
+            for box,text,score in result or []:
+                text=' '.join(str(text).split());score=float(score)
+                ocr_boxes+=1
+                if re.fullmatch(r'[xX×]\s*\d{1,4}',text):
+                    quantity_boxes+=1;best_quantity_score=max(best_quantity_score,score)
+                elif score>=.65 and 2<=len(text)<=90 and re.search(r'[A-Za-zÀ-ÿ]',text):
+                    name_boxes+=1;best_name_score=max(best_name_score,score)
             candidate=parse_reward(result,width=variant.shape[1])
             if candidate and (parsed is None or
                     (candidate['name_validated'],candidate['name_confidence'],candidate['confidence']) >
                     (parsed['name_validated'],parsed['name_confidence'],parsed['confidence'])):
                 parsed=candidate
         if parsed:parsed['sample_id']=hashlib.sha256(rgb.tobytes()).hexdigest()
-        return parsed
+        return {'reading':parsed,'__ocr_debug__':{
+            'recorte_largura':int(rgb.shape[1]),'recorte_altura':int(rgb.shape[0]),
+            'variantes_ocr':len(variants),'caixas_ocr':ocr_boxes,
+            'candidatos_nome':name_boxes,'candidatos_quantidade':quantity_boxes,
+            'melhor_confianca_nome':round(best_name_score,3),
+            'melhor_confianca_quantidade':round(best_quantity_score,3)}}
 
     @staticmethod
     def crop(rgb,point=None):

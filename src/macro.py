@@ -116,6 +116,7 @@ DEFAULTS={'roi':[.733,.289,.034,.369],'cast':None,'anticipation':.10,
 # Observações lentas continuam úteis por um intervalo limitado. A barra usa
 # capturas próprias em cada tick; nunca usa imagens atrasadas para mover o mouse.
 SCENE_MAX_AGE=2.5
+WINDOW_STABLE_SECONDS=.25
 
 class App:
     def __init__(self):
@@ -185,7 +186,8 @@ class App:
         self.pending_reward_readings={};self.empty_ocr_cycles=set()
         self.cycle_id=0;self.last_reward_crop=None
         self.capture=mss.MSS();self.active=False;self.held=False;self.t_down=False
-        self.window=None;self.pending_start=None;self.corner=None;self.previous_keys={}
+        self.window=None;self.pending_window=None;self.pending_window_since=0.;self.window_change_logged=False
+        self.pending_start=None;self.corner=None;self.previous_keys={}
         self.last_scene=0.;self.last_preview=0.;self.scene={'fishing':False,'loot':None,'reward':False}
         self.settings=None;self.preview=None
         self.dry=tk.BooleanVar(value=False)
@@ -316,12 +318,28 @@ class App:
             try:self.history.export(path,translate=self.tr)
             except OSError as exc:messagebox.showerror(self.tr('Erro ao exportar'),self.tr(str(exc)),parent=self.history_window)
 
-    def apply_reward_reading(self,cycle,result):
+    @staticmethod
+    def unpack_ocr_payload(payload):
+        if isinstance(payload,dict) and '__ocr_debug__' in payload:
+            return payload.get('reading'),payload.get('__ocr_debug__')
+        return payload,None
+
+    def apply_reward_reading(self,cycle,result,ocr_debug=None):
+        evidence={
+            'aviso_localizado':bool(self.scene.get('reward') or
+                self.scene.get('reward_candidate_point') is not None),
+            'pontuacao_selo':round(float(self.scene.get('reward_score') or 0.),3),
+            'escala_selo':self.scene.get('reward_scale'),
+            'layout_selo':self.scene.get('reward_layout'),
+            'largura_janela':self.window[3] if self.window else None,
+            'altura_janela':self.window[4] if self.window else None,
+            **(ocr_debug or {})}
         if not result:
             if (cycle not in self.empty_ocr_cycles and self.engine.state in
                     ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')):
                 self.empty_ocr_cycles.add(cycle)
-                self.session_log.event('OCR_SEM_RECOMPENSA',ciclo=cycle,estado=self.engine.state)
+                self.session_log.event('OCR_SEM_RECOMPENSA',ciclo=cycle,estado=self.engine.state,
+                    **evidence)
             return
         entry=self.history.by_cycle.get(cycle)
         if entry is None:
@@ -329,13 +347,14 @@ class App:
             # history row. Keep it for the imminent confirmation or outcome.
             self.pending_reward_readings[cycle]=result
             self.session_log.event('OCR_RECOMPENSA_ANTECIPADA',ciclo=cycle,
-                item=result['name'],nome_validado=result.get('name_validated'))
+                item=result['name'],nome_validado=result.get('name_validated'),**evidence)
             return
         was_unconfirmed=bool(entry and entry.get('status')=='unconfirmed')
         if not self.history.identify(cycle,result,confirm=True):return
         self.pending_reward_readings.pop(cycle,None)
         self.session_log.event('OCR_RECOMPENSA_LIDA',ciclo=cycle,item=result['name'],
-            nome_validado=result.get('name_validated'),confianca=result.get('name_confidence'))
+            nome_validado=result.get('name_validated'),confianca=result.get('name_confidence'),
+            **evidence)
         if was_unconfirmed:
             self.engine.collected+=1
             self.engine.unconfirmed=max(0,self.engine.unconfirmed-1)
@@ -355,7 +374,8 @@ class App:
         for future,cycle in self.confirmation_jobs:
             if not future.done():remaining.append((future,cycle));continue
             try:
-                self.apply_reward_reading(cycle,future.result())
+                payload=future.result();result,debug=self.unpack_ocr_payload(payload)
+                self.apply_reward_reading(cycle,result,debug)
             except Exception as exc:
                 self.session_log.event('ERRO_RECONHECIMENTO_ITEM',tipo=type(exc).__name__,ciclo=cycle)
                 self.ocr_error=str(exc);self.refresh_history()
@@ -363,18 +383,18 @@ class App:
         if self.ocr_job is None or not self.ocr_job[0].done():return
         future,cycle,captured=self.ocr_job;self.ocr_job=None
         try:
-            result=future.result();self.ocr_error=None
+            payload=future.result();result,debug=self.unpack_ocr_payload(payload);self.ocr_error=None
         except Exception as exc:
             self.session_log.event('ERRO_RECONHECIMENTO_ITEM',tipo=type(exc).__name__,ciclo=cycle)
             self.ocr_error=str(exc);self.refresh_history();return
         if result:
             self.ocr_results[cycle]=(result,captured)
-        self.apply_reward_reading(cycle,result)
+        self.apply_reward_reading(cycle,result,debug)
 
     def submit_ocr(self,crop,now,cycle=None):
         if self.ocr_job is not None:return
         self.last_ocr=now
-        future=self.submit_background(self.worker,self.reader.read,crop.copy())
+        future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop.copy())
         if future is not None:self.ocr_job=(future,self.cycle_id if cycle is None else cycle,now)
 
     def refresh_point(self):
@@ -524,7 +544,8 @@ class App:
         if not window:self.stop('Volte ao Roblox e pressione F4.');return
         self.choose_profile(window)
         if not self.config['cast'] and not self.dry.get():self.stop('Marque um ponto na água com F8.');return
-        self.window=window;self.engine.reset(time.monotonic(),preserve_counts=True);self.active=True
+        self.window=window;self.pending_window=None;self.window_change_logged=False
+        self.engine.reset(time.monotonic(),preserve_counts=True);self.active=True
         self.started_at=time.monotonic();self.capture_retry_at=0.;self.capture_failures=0
         self.session_log.event('MACRO_INICIADO',ciclo=self.cycle_id,modo='observação' if self.dry.get() else 'pesca',calibracao='automática' if self.config['auto_calibrate'] else 'manual',segurar_T=self.config['t_hold'],perfil=self.profile_key)
         self.journal.record('started',self.engine.state,active=True,cycles=self.engine.cycles)
@@ -628,23 +649,28 @@ class App:
                 if epoch==self.scene_epoch and captured>self.scene_time and 0<=now-captured<SCENE_MAX_AGE:
                     was_reward=bool(self.scene.get('reward'))
                     self.scene=scene;self.scene_time=captured
-                    if (not self.dry.get() and scene.get('reward')
+                    has_reward_evidence=bool(scene.get('reward') or scene.get('reward_crop_candidate') is not None)
+                    if (not self.dry.get() and has_reward_evidence
                         and icon_cycle is not None and icon_cycle in (self.cycle_id-1,self.cycle_id)):
-                        if not was_reward:self.session_log.event('NOTIFICACAO_RECOMPENSA_DETECTADA',ciclo=icon_cycle,estado=self.engine.state,geometria=scene.get('reward_layout','scaled'))
-                        candidate=self.icon_sampler.observe(icon_cycle,captured,scene.get('reward_icon'),scene.get('reward_quality',0.))
-                        if candidate:
-                            self.pending_icons[icon_cycle]=candidate
-                            entry=self.history.by_cycle.get(icon_cycle)
-                            if entry and entry.get('status')!='unconfirmed':
-                                if self.apply_pending_icon(icon_cycle):self.refresh_history()
+                        if scene.get('reward'):
+                            if not was_reward:self.session_log.event('NOTIFICACAO_RECOMPENSA_DETECTADA',
+                                ciclo=icon_cycle,estado=self.engine.state,geometria=scene.get('reward_layout','scaled'),
+                                similaridade=round(scene.get('reward_score',0.),3),escala=scene.get('reward_scale'))
+                            candidate=self.icon_sampler.observe(icon_cycle,captured,scene.get('reward_icon'),scene.get('reward_quality',0.))
+                            if candidate:
+                                self.pending_icons[icon_cycle]=candidate
+                                entry=self.history.by_cycle.get(icon_cycle)
+                                if entry and entry.get('status')!='unconfirmed':
+                                    if self.apply_pending_icon(icon_cycle):self.refresh_history()
                         crop=scene.get('reward_crop')
+                        if crop is None:crop=scene.get('reward_crop_candidate')
                         if crop is not None:
                             if icon_cycle==self.cycle_id:self.last_reward_crop=crop
                             entry=self.history.by_cycle.get(icon_cycle)
                             if now-self.last_ocr>=.75 and self.worker.can_submit:
                                 if entry and (not entry['identified'] or entry.get('status')=='unconfirmed'):
                                     if not any(c==icon_cycle for _,c in self.confirmation_jobs):
-                                        future=self.submit_background(self.worker,self.reader.read,crop)
+                                        future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop)
                                         if future is not None:self.confirmation_jobs.append((future,icon_cycle));self.last_ocr=now
                                 elif entry is None:self.submit_ocr(crop,captured,icon_cycle)
                     visible=bool(scene.get('loot'))
@@ -662,17 +688,44 @@ class App:
 
     def sync_window(self):
         current=game_window()
-        if not current or not self.window or current[0]!=self.window[0]:
+        if not current or not self.window:
+            self.pending_window=None;self.window_change_logged=False
             self.stop('Pausado: o Roblox perdeu o foco. Volte ao jogo e use F4.');return False
-        if current!=self.window:
-            # A mesma janela continua em primeiro plano: ajuste as coordenadas,
-            # invalide capturas antigas e solte comandos antes de observar de novo.
-            self.mouse(False);self.key_t(False)
-            self.window=current;self.choose_profile(current)
+        # Coordinates and HWND can flicker while Roblox switches surfaces.
+        # The client dimensions determine capture scaling; equal dimensions
+        # need no recovery, even when the active Roblox HWND changes.
+        if current[3:]==self.window[3:]:
+            self.window=current;self.pending_window=None;self.window_change_logged=False
+            return True
+        now=time.monotonic()
+        # Debounce only the dimensions. Changes to origin or HWND during a
+        # resize must not restart the stability timer.
+        if self.pending_window is None or current[3:]!=self.pending_window[3:]:
+            self.pending_window=current;self.pending_window_since=now
+            if not self.window_change_logged:
+                self.session_log.event('JANELA_GEOMETRIA_PENDENTE',largura=current[3],altura=current[4],
+                    mesmo_identificador=current[0]==self.window[0],ciclo=self.cycle_id)
+                self.window_change_logged=True
+            return False
+        self.pending_window=current
+        if now-self.pending_window_since<WINDOW_STABLE_SECONDS:return False
+        previous=self.window
+        size_changed=current[3:]!=previous[3:]
+        handle_changed=current[0]!=previous[0]
+        self.pending_window=None;self.window_change_logged=False
+        # Adopt only after the new client geometry remains stable. This avoids
+        # cycling recovery when Roblox briefly exposes alternate foreground
+        # surfaces while switching between windowed and fullscreen modes.
+        self.mouse(False);self.key_t(False)
+        self.window=current;self.choose_profile(current)
+        if size_changed:
             self.scene_epoch+=1;self.scene_time=0.;self.scene={'fishing':False,'loot':None,'reward':False}
             self.calibration.begin();self.calibration_epoch+=1
-            self.session_log.event('JANELA_REDIMENSIONADA',largura=current[3],altura=current[4],ciclo=self.cycle_id)
-            self.execute(self.engine.recover(time.monotonic(),reason='vision_unavailable'))
+            self.session_log.event('JANELA_REDIMENSIONADA',largura=current[3],altura=current[4],
+                hwnd_alterado=handle_changed,ciclo=self.cycle_id)
+            self.execute(self.engine.recover(now,reason='vision_unavailable'))
+        elif handle_changed:
+            self.session_log.event('JANELA_ROBLOX_ATUALIZADA',largura=current[3],altura=current[4],ciclo=self.cycle_id)
         return True
 
     def sample(self,full=False):
@@ -757,13 +810,15 @@ class App:
                 and (not entry['identified'] or entry.get('status')=='unconfirmed')
                 and now-self.last_ocr>=.75 and self.history_retries.get(previous,0)<3
                 and not any(cycle==previous for _,cycle in self.confirmation_jobs)):
-                crop=RewardReader.crop(full,self.scene.get('reward_point'))
-                future=self.submit_background(self.worker,self.reader.read,crop)
+                point=self.scene.get('reward_point') or self.scene.get('reward_candidate_point')
+                crop=RewardReader.crop(full,point)
+                future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop)
                 if future is not None:self.confirmation_jobs.append((future,previous))
                 self.history_retries[previous]=self.history_retries.get(previous,0)+1;self.last_ocr=now
             if not self.dry.get() and (self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
                 or (self.engine.state=='PESCANDO' and reading is None)) and not self.scene.get('reward'):
-                crop=RewardReader.crop(full,self.scene.get('reward_point'))
+                point=self.scene.get('reward_point') or self.scene.get('reward_candidate_point')
+                crop=RewardReader.crop(full,point)
                 if now-self.last_ocr>=.75 and self.worker.can_submit:self.submit_ocr(crop,now)
             self.last_scene=time.monotonic()
         now=time.monotonic()
@@ -819,7 +874,7 @@ class App:
             if pending:self.history.identify(self.cycle_id,pending,confirm=True)
             self.apply_pending_icon(self.cycle_id)
             if not text_reward and self.last_reward_crop is not None and self.worker.can_submit:
-                future=self.submit_background(self.worker,self.reader.read,self.last_reward_crop.copy())
+                future=self.submit_background(self.worker,self.reader.read_with_diagnostics,self.last_reward_crop.copy())
                 if future is not None:self.confirmation_jobs.append((future,self.cycle_id))
             self.refresh_history()
         if self.engine.cycles>previous_cycles:

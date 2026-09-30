@@ -4,6 +4,16 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.37](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.37-beta)
+
+### OCR scan and window stabilization
+
+- The latest log showed six completed cycles without a reward reading; the best badge matches scored 0.71–0.77, below the 0.91 confirmation threshold. Beta 0.0.36's wider search did not account for the badge scaling down in compact windows.
+- Matches the badge at multiple aspect-preserving scales. A weak match can guide the OCR crop, but it cannot confirm a reward or lower visual validation.
+- The same log recorded about 35 consecutive recoveries while the reported geometry remained 800×599. Position or HWND changes at the same size now update the active window without restarting the cycle; an actual resolution change must stay stable for 250 ms and triggers one recovery.
+- OCR logs now include crop dimensions, OCR box counts, best numeric confidence values and window scale/position data, without saving screenshots or raw OCR text.
+- Automated tests cover small and weak notices, plus HWND/position fluctuations. A new live Roblox session is still needed to confirm reward reading.
+
 ## [Beta 0.0.36](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.36-beta)
 
 ### Reward notices at different positions

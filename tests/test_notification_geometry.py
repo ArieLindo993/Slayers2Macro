@@ -46,6 +46,30 @@ class NotificationGeometry(unittest.TestCase):
         self.assertEqual(result['reward_layout'],'native')
         self.assertEqual(result['reward_crop'].shape,(420,650,3))
 
+    def test_small_ui_scaled_reward_badge_is_found_without_distorting_it(self):
+        frame=np.full((599,800,3),52,np.uint8)
+        template=self.signals.templates['reward']
+        small=cv2.resize(template,(9,7),interpolation=cv2.INTER_AREA)
+        frame[188:195,395:404]=small[:,:,None]
+        result=self.signals.scan(frame)
+        self.assertTrue(result['reward'])
+        self.assertEqual(result['reward_layout'],'scaled')
+        self.assertAlmostEqual(result['reward_scale'],.5,delta=.08)
+
+    def test_weak_badge_candidate_exposes_ocr_anchor_without_confirming_reward(self):
+        frame=np.full((599,800,3),52,np.uint8)
+        template=self.signals.templates['reward']
+        small=cv2.resize(template,(9,7),interpolation=cv2.INTER_AREA).astype(float)
+        noise=np.random.default_rng(0).normal(0,35,small.shape)
+        frame[188:195,395:404]=np.clip(small+noise,0,255).astype(np.uint8)[:,:,None]
+        result=self.signals.scan(frame)
+        self.assertFalse(result['reward'])
+        self.assertIsNotNone(result['reward_candidate_point'])
+        self.assertIsNotNone(result['reward_crop_candidate'])
+        self.assertGreaterEqual(result['reward_candidate_score'],.70)
+        self.assertLess(result['reward_candidate_score'],.91)
+        self.assertEqual(result['reward_crop_candidate'].shape,(420,650,3))
+
     def test_native_collect_maps_click_to_client_coordinates(self):
         frame=np.zeros((599,800,3),np.uint8)
         t=self.signals.templates['collect'];h,w=t.shape

@@ -4,6 +4,16 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.37](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.37-beta)
+
+### Análisis OCR y estabilización de ventana
+
+- El último registro mostró seis ciclos completados sin leer recompensas; las mejores coincidencias del distintivo puntuaron 0,71–0,77, por debajo del límite de confirmación de 0,91. La búsqueda ampliada de Beta 0.0.36 no contemplaba que el distintivo se reduce en ventanas compactas.
+- Compara el distintivo en varias escalas que conservan la proporción. Una coincidencia débil puede orientar el recorte OCR, pero no confirma una recompensa ni reduce la validación visual.
+- El mismo registro mostró unas 35 recuperaciones seguidas mientras la geometría seguía en 800×599. Los cambios de posición o HWND con el mismo tamaño ahora actualizan la ventana sin reiniciar el ciclo; un cambio real de resolución debe permanecer estable 250 ms y genera una sola recuperación.
+- Los registros OCR ahora incluyen dimensiones del recorte, cantidad de cuadros OCR, mejores confianzas numéricas y datos de escala/posición de ventana, sin guardar imágenes ni el texto OCR original.
+- Las pruebas automáticas cubren avisos pequeños y débiles, además de fluctuaciones de HWND/posición. Se necesita otra sesión real en Roblox para confirmar la lectura de recompensas.
+
 ## [Beta 0.0.36](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.36-beta)
 
 ### Avisos de recompensa en distintas posiciones
