@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from signals import Signals
-from item_history import ItemHistory,parse_reward
+from item_history import ItemHistory,RewardReader,parse_reward
 
 class NotificationGeometry(unittest.TestCase):
     def setUp(self):
@@ -69,6 +69,15 @@ class NotificationGeometry(unittest.TestCase):
         self.assertGreaterEqual(result['reward_candidate_score'],.70)
         self.assertLess(result['reward_candidate_score'],.91)
         self.assertEqual(result['reward_crop_candidate'].shape,(420,650,3))
+        self.assertIsNotNone(result['reward_crop_fallback'])
+        self.assertEqual(result['reward_crop_fallback'].shape,(420,650,3))
+        self.assertFalse(np.array_equal(result['reward_crop_candidate'],result['reward_crop_fallback']))
+
+    def test_compact_ocr_crop_preserves_captured_ui_scale(self):
+        compact=np.full((599,800,3),37,dtype=np.uint8)
+        expected=np.zeros((1080,1920,3),dtype=np.uint8)
+        expected[240:839,560:1360]=compact
+        np.testing.assert_array_equal(RewardReader.crop(compact),RewardReader.crop(expected))
 
     def test_native_collect_maps_click_to_client_coordinates(self):
         frame=np.zeros((599,800,3),np.uint8)

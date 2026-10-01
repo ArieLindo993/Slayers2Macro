@@ -5,6 +5,7 @@ import csv
 import json
 import re
 import hashlib
+import numpy as np
 from item_icons import decode_icon,MAX_ICONS
 from item_names import canonical_name,name_evidence,key as name_key,resembles_known
 
@@ -184,41 +185,50 @@ class RewardReader:
     def read(self,rgb):
         return self.read_with_diagnostics(rgb)['reading']
 
-    def read_with_diagnostics(self,rgb):
+    def read_with_diagnostics(self,rgb,*alternate_crops):
         import cv2
         if self.reader is None:
             from rapidocr_onnxruntime import RapidOCR
             self.reader=RapidOCR(intra_op_num_threads=1,inter_op_num_threads=1,det_limit_side_len=320)
-        bgr=rgb[:,:,::-1]
-        # A notificação pode ficar pequena ou parcialmente transparente. Tente
-        # a imagem original e uma versão ampliada com contraste local reforçado.
-        # Isso só muda como os mesmos pixels são lidos; não relaxa a validação
-        # do nome nem confirma quantidades sem o respectivo texto OCR.
-        enlarged=cv2.resize(bgr,None,fx=3,fy=3,interpolation=cv2.INTER_CUBIC)
-        variants=[enlarged]
-        gray=cv2.cvtColor(bgr,cv2.COLOR_BGR2GRAY)
-        gray=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)).apply(gray)
-        enhanced=cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)
-        variants.append(cv2.resize(enhanced,None,fx=4,fy=4,interpolation=cv2.INTER_CUBIC))
+        crops=[];seen=set()
+        for crop in (rgb,*alternate_crops):
+            if crop is None or getattr(crop,'size',0)==0:continue
+            fingerprint=(crop.shape,hashlib.sha256(crop.tobytes()).digest())
+            if fingerprint in seen:continue
+            seen.add(fingerprint);crops.append(crop)
         parsed=None;ocr_boxes=0;name_boxes=0;quantity_boxes=0;best_name_score=0.;best_quantity_score=0.
-        for variant in variants:
-            result,_=self.reader(variant,use_cls=False)
-            for box,text,score in result or []:
-                text=' '.join(str(text).split());score=float(score)
-                ocr_boxes+=1
-                if re.fullmatch(r'[xX×]\s*\d{1,4}',text):
-                    quantity_boxes+=1;best_quantity_score=max(best_quantity_score,score)
-                elif score>=.65 and 2<=len(text)<=90 and re.search(r'[A-Za-zÀ-ÿ]',text):
-                    name_boxes+=1;best_name_score=max(best_name_score,score)
-            candidate=parse_reward(result,width=variant.shape[1])
-            if candidate and (parsed is None or
-                    (candidate['name_validated'],candidate['name_confidence'],candidate['confidence']) >
-                    (parsed['name_validated'],parsed['name_confidence'],parsed['confidence'])):
-                parsed=candidate
+        variant_count=0;crop_diagnostics=[]
+        for crop in crops:
+            bgr=crop[:,:,::-1]
+            # Run OCR on each independent anchor. A weak badge match must not
+            # suppress the fixed compact-window fallback crop.
+            enlarged=cv2.resize(bgr,None,fx=3,fy=3,interpolation=cv2.INTER_CUBIC)
+            gray=cv2.cvtColor(bgr,cv2.COLOR_BGR2GRAY)
+            gray=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)).apply(gray)
+            enhanced=cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)
+            variants=(enlarged,cv2.resize(enhanced,None,fx=4,fy=4,interpolation=cv2.INTER_CUBIC))
+            crop_boxes=crop_names=crop_quantities=0
+            for variant in variants:
+                variant_count+=1
+                result,_=self.reader(variant,use_cls=False)
+                for box,text,score in result or []:
+                    text=' '.join(str(text).split());score=float(score)
+                    ocr_boxes+=1;crop_boxes+=1
+                    if re.fullmatch(r'[xX×]\s*\d{1,4}',text):
+                        quantity_boxes+=1;crop_quantities+=1;best_quantity_score=max(best_quantity_score,score)
+                    elif score>=.65 and 2<=len(text)<=90 and re.search(r'[A-Za-zÀ-ÿ]',text):
+                        name_boxes+=1;crop_names+=1;best_name_score=max(best_name_score,score)
+                candidate=parse_reward(result,width=variant.shape[1])
+                if candidate and (parsed is None or
+                        (candidate['name_validated'],candidate['name_confidence'],candidate['confidence']) >
+                        (parsed['name_validated'],parsed['name_confidence'],parsed['confidence'])):
+                    parsed=candidate
+            crop_diagnostics.append({'largura':int(crop.shape[1]),'altura':int(crop.shape[0]),
+                                     'caixas':crop_boxes,'nomes':crop_names,'quantidades':crop_quantities})
         if parsed:parsed['sample_id']=hashlib.sha256(rgb.tobytes()).hexdigest()
         return {'reading':parsed,'__ocr_debug__':{
             'recorte_largura':int(rgb.shape[1]),'recorte_altura':int(rgb.shape[0]),
-            'variantes_ocr':len(variants),'caixas_ocr':ocr_boxes,
+            'recortes_ocr':crop_diagnostics,'variantes_ocr':variant_count,'caixas_ocr':ocr_boxes,
             'candidatos_nome':name_boxes,'candidatos_quantidade':quantity_boxes,
             'melhor_confianca_nome':round(best_name_score,3),
             'melhor_confianca_quantidade':round(best_quantity_score,3)}}
@@ -226,7 +236,15 @@ class RewardReader:
     @staticmethod
     def crop(rgb,point=None):
         import cv2
-        normalized=cv2.resize(rgb,(1920,1080))
+        # Preserve the captured UI scale. Stretching an 800x599 Roblox client
+        # to 1920x1080 distorts the notification text and degrades OCR.
+        h,w=rgb.shape[:2]
+        normalized=np.zeros((1080,1920,3),dtype=rgb.dtype)
+        if w<=1920 and h<=1080:
+            left=(1920-w)//2;top=(1080-h)//2
+            normalized[top:top+h,left:left+w]=rgb
+        else:
+            normalized=cv2.resize(rgb,(1920,1080))
         x,y=point if point else (1075.5,596.5)
         # The reward banner moves relative to the item prompt at lower window
         # sizes. Include the full banner and both stacked and one-line layouts.
@@ -234,3 +252,13 @@ class RewardReader:
         # anchor; scan a taller central strip so OCR still sees the whole card.
         left=max(0,min(1920-650,int(x-250)));top=max(0,min(1080-420,int(y-260)))
         return normalized[top:top+420,left:left+650].copy()
+
+    @staticmethod
+    def fallback_crop(rgb):
+        """Independent compact-client anchor used when the badge match is weak."""
+        h,w=rgb.shape[:2]
+        if (w,h)==(1920,1080) or w>1920 or h>1080:return None
+        normalized=np.zeros((1080,1920,3),dtype=rgb.dtype)
+        left=(1920-w)//2;top=(1080-h)//2
+        normalized[top:top+h,left:left+w]=rgb
+        return RewardReader.crop(normalized,(960.,430.))

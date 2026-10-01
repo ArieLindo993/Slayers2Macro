@@ -31,10 +31,14 @@ class Signals:
         candidate_rgb=rgb;quality_point=None
         reward_rgb=rgb;reward_gray=native_gray;reward_template=self.templates['reward']
         reward_layout='scaled';scale_x=scale_y=1.
-        if (w,h)!=(1920,1080) and w<=1920 and h<=1080:
-            reference=np.zeros((1080,1920,3),dtype=rgb.dtype)
+        compact_client=(w,h)!=(1920,1080) and w<=1920 and h<=1080
+        ocr_source=rgb
+        if compact_client:
+            ocr_source=np.zeros((1080,1920,3),dtype=rgb.dtype)
             left=(1920-w)//2;top=(1080-h)//2
-            reference[top:top+h,left:left+w]=rgb
+            ocr_source[top:top+h,left:left+w]=rgb
+        if (w,h)!=(1920,1080) and w<=1920 and h<=1080:
+            reference=ocr_source
             reference_gray=cv2.cvtColor(reference,cv2.COLOR_RGB2GRAY)
             # The compact client can move the notice above its fullscreen
             # anchor. The search now covers the central game area vertically.
@@ -64,7 +68,7 @@ class Signals:
                 found,point,score=self.match(native_gray,scaled_template,search,.91)
                 if score>candidate_score:
                     candidate_point=(point[0]*1920/w,point[1]*1080/h)
-                    candidate_score=score;candidate_scale=scale;candidate_rgb=rgb
+                    candidate_score=score;candidate_scale=scale;candidate_rgb=ocr_source
                 if found and (not reward or score>reward_score):
                     reward=True;reward_score=score;reward_scale=scale
                     reward_point=(point[0]*1920/w,point[1]*1080/h)
@@ -86,9 +90,10 @@ class Signals:
                      'reward_candidate_score':candidate_score,
                      'reward_candidate_scale':candidate_scale,
                      'reward_icon':reward_icon(reward_rgb,reward_point,scale_x,scale_y) if reward else None,
-                     'reward_crop':RewardReader.crop(reward_rgb,reward_point) if reward else None,
-                     'reward_crop_candidate':RewardReader.crop(candidate_rgb,candidate_point)
+                     'reward_crop':RewardReader.crop(ocr_source,reward_point) if reward else None,
+                     'reward_crop_candidate':RewardReader.crop(ocr_source,candidate_point)
                          if not reward and candidate_point is not None and candidate_score>=.70 else None,
+                     'reward_crop_fallback':RewardReader.crop(ocr_source,(960.,430.)) if compact_client else None,
                      'reward_score':reward_score if reward else candidate_score,
                      'reward_scale':reward_scale if reward else candidate_scale,
                      'reward_layout':reward_layout,

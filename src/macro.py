@@ -184,7 +184,7 @@ class App:
         self.reader=RewardReader();self.worker=BackgroundWorker('leitura-itens',timeout=30,max_pending=3)
         self.ocr_job=None;self.confirmation_jobs=[];self.history_retries={};self.last_ocr=0.;self.ocr_results={};self.ocr_error=None
         self.pending_reward_readings={};self.empty_ocr_cycles=set()
-        self.cycle_id=0;self.last_reward_crop=None
+        self.cycle_id=0;self.last_reward_crop=None;self.last_reward_crops=()
         self.capture=mss.MSS();self.active=False;self.held=False;self.t_down=False
         self.window=None;self.pending_window=None;self.pending_window_since=0.;self.window_change_logged=False
         self.pending_start=None;self.corner=None;self.previous_keys={}
@@ -276,7 +276,7 @@ class App:
         self.history.save()
         self.session_log.event('NOVA_SESSAO_DE_ITENS')
         self.history=ItemHistory(self.data/'historico',log=self.session_log);self.metrics.reset();self.round_metrics.reset()
-        self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.last_reward_crop=None
+        self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.last_reward_crop=None;self.last_reward_crops=()
         self.pending_reward_readings={};self.empty_ocr_cycles=set()
         self.history_retries={}
         self.pending_icons={};self.history_photos={};self.icon_sampler=IconSampler()
@@ -391,10 +391,11 @@ class App:
             self.ocr_results[cycle]=(result,captured)
         self.apply_reward_reading(cycle,result,debug)
 
-    def submit_ocr(self,crop,now,cycle=None):
+    def submit_ocr(self,crop,now,cycle=None,alternate_crops=()):
         if self.ocr_job is not None:return
         self.last_ocr=now
-        future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop.copy())
+        alternatives=tuple(item.copy() for item in alternate_crops if item is not None)
+        future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop.copy(),*alternatives)
         if future is not None:self.ocr_job=(future,self.cycle_id if cycle is None else cycle,now)
 
     def refresh_point(self):
@@ -665,14 +666,17 @@ class App:
                         crop=scene.get('reward_crop')
                         if crop is None:crop=scene.get('reward_crop_candidate')
                         if crop is not None:
-                            if icon_cycle==self.cycle_id:self.last_reward_crop=crop
+                            fallback=scene.get('reward_crop_fallback')
+                            alternatives=(fallback,) if fallback is not None else ()
+                            if icon_cycle==self.cycle_id:
+                                self.last_reward_crop=crop;self.last_reward_crops=tuple([crop,*alternatives])
                             entry=self.history.by_cycle.get(icon_cycle)
                             if now-self.last_ocr>=.75 and self.worker.can_submit:
                                 if entry and (not entry['identified'] or entry.get('status')=='unconfirmed'):
                                     if not any(c==icon_cycle for _,c in self.confirmation_jobs):
-                                        future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop)
+                                        future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop,*alternatives)
                                         if future is not None:self.confirmation_jobs.append((future,icon_cycle));self.last_ocr=now
-                                elif entry is None:self.submit_ocr(crop,captured,icon_cycle)
+                                elif entry is None:self.submit_ocr(crop,captured,icon_cycle,alternatives)
                     visible=bool(scene.get('loot'))
                     if visible!=self.previous_scene_item:
                         self.session_log.event('ITEM_NA_VARA_DETECTADO' if visible else 'ITEM_NA_VARA_NAO_VISIVEL',ciclo=self.cycle_id)
@@ -812,14 +816,17 @@ class App:
                 and not any(cycle==previous for _,cycle in self.confirmation_jobs)):
                 point=self.scene.get('reward_point') or self.scene.get('reward_candidate_point')
                 crop=RewardReader.crop(full,point)
-                future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop)
+                fallback=RewardReader.fallback_crop(full)
+                future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop,*((fallback,) if fallback is not None else ()))
                 if future is not None:self.confirmation_jobs.append((future,previous))
                 self.history_retries[previous]=self.history_retries.get(previous,0)+1;self.last_ocr=now
             if not self.dry.get() and (self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
                 or (self.engine.state=='PESCANDO' and reading is None)) and not self.scene.get('reward'):
                 point=self.scene.get('reward_point') or self.scene.get('reward_candidate_point')
                 crop=RewardReader.crop(full,point)
-                if now-self.last_ocr>=.75 and self.worker.can_submit:self.submit_ocr(crop,now)
+                fallback=RewardReader.fallback_crop(full)
+                if now-self.last_ocr>=.75 and self.worker.can_submit:
+                    self.submit_ocr(crop,now,alternate_crops=((fallback,) if fallback is not None else ()))
             self.last_scene=time.monotonic()
         now=time.monotonic()
         if self.preview is not None and self.preview.winfo_exists() and now-self.last_preview>.25:
@@ -874,7 +881,9 @@ class App:
             if pending:self.history.identify(self.cycle_id,pending,confirm=True)
             self.apply_pending_icon(self.cycle_id)
             if not text_reward and self.last_reward_crop is not None and self.worker.can_submit:
-                future=self.submit_background(self.worker,self.reader.read_with_diagnostics,self.last_reward_crop.copy())
+                crops=self.last_reward_crops or (self.last_reward_crop,)
+                future=self.submit_background(self.worker,self.reader.read_with_diagnostics,
+                    crops[0].copy(),*(crop.copy() for crop in crops[1:]))
                 if future is not None:self.confirmation_jobs.append((future,self.cycle_id))
             self.refresh_history()
         if self.engine.cycles>previous_cycles:
@@ -891,7 +900,7 @@ class App:
                 self.history.save()
             self.session_log.event('CICLO_CONCLUIDO',ciclo=self.cycle_id,resultado=self.engine.outcome,leituras_validas=self.round_metrics.summary()['valid_percent'],tempo_na_faixa=self.round_metrics.summary()['inside_percent'])
             self.round_metrics.reset()
-            self.cycle_id+=1;self.last_reward_crop=None
+            self.cycle_id+=1;self.last_reward_crop=None;self.last_reward_crops=()
             self.calibration.begin();self.calibration_epoch+=1
             # Resultados antigos só interessam enquanto resolvem uma linha pendente.
             self.ocr_results={k:v for k,v in self.ocr_results.items() if k>=self.cycle_id-1}

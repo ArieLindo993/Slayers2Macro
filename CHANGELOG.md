@@ -4,6 +4,15 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.38](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.38-beta)
+
+### Leitura de recompensa em janela pequena
+
+- No ciclo compacto do log enviado, o macro detectou o minigame, detectou o item na vara, pressionou T e viu o aviso desaparecer, mas o OCR não encontrou nome nem quantidade. A sessão passou para tela cheia depois desse único ciclo compacto; ela não comprova uma falha em todos os ciclos pequenos.
+- As capturas compactas agora mantêm a escala original em vez de esticar a imagem até 1920×1080 antes do OCR. O reconhecimento tenta também um segundo recorte independente na região central superior, mesmo que a detecção fraca do selo tenha apontado para outro lugar.
+- A validação continua exigindo texto de nome e quantidade. O desaparecimento do item sozinho não vira uma coleta confirmada.
+- 125 testes automatizados cobrem geometria compacta, recorte alternativo, atribuição de ciclo e recuperação. Eles confirmam a lógica com imagens e OCR simulados; falta uma nova sessão real em 800×599 para validar o resultado dentro do Roblox.
+
 ## [Beta 0.0.37](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.37-beta)
 
 ### Varredura do OCR e estabilização da janela

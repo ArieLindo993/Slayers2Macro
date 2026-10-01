@@ -4,6 +4,15 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.38](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.38-beta)
+
+### Reward reading in small windows
+
+- In the compact cycle from the supplied log, the macro detected the minigame and rod item, pressed T, and saw the notice disappear, but OCR found neither a name nor a quantity. The session then switched to fullscreen after that single compact cycle; it does not show repeated failures across compact cycles.
+- Compact captures now preserve their original scale instead of stretching to 1920×1080 before OCR. Recognition also tries an independent crop in the upper central area, even if a weak badge match points elsewhere.
+- Validation still requires both an item name and a quantity. Item disappearance alone does not count as a confirmed catch.
+- 125 automated tests cover compact geometry, fallback crops, cycle attribution and recovery. They verify logic with simulated OCR; another live 800×599 Roblox session is still needed to verify the result in-game.
+
 ## [Beta 0.0.37](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.37-beta)
 
 ### OCR scan and window stabilization

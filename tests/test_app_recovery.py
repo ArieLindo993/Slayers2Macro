@@ -163,12 +163,15 @@ class AppRecovery(unittest.TestCase):
     def test_direct_notification_ocr_uses_original_frame_and_cycle(self):
         app=self.app;app.engine.track(99)
         crop=np.full((220,650,3),31,dtype=np.uint8)
-        scene={'fishing':False,'loot':None,'reward':True,'reward_crop':crop}
+        fallback=np.full((420,650,3),91,dtype=np.uint8)
+        scene={'fishing':False,'loot':None,'reward':True,'reward_crop':crop,
+               'reward_crop_fallback':fallback}
         app.scene_job=(self.completed(scene),app.scene_epoch,100,0)
         result=Future()
         with patch.object(app,'submit_background',return_value=result) as submit:
             app.poll_scene(100.2)
         np.testing.assert_array_equal(submit.call_args.args[2],crop)
+        np.testing.assert_array_equal(submit.call_args.args[3],fallback)
         self.assertEqual(app.ocr_job[1:],(0,100))
         # A result arriving after the round stays with its original collection.
         app.cycle_id=1;app.engine.cycles=1;app.engine.unconfirmed=1

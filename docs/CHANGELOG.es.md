@@ -4,6 +4,15 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.38](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.38-beta)
+
+### Lectura de recompensas en ventanas pequeñas
+
+- En el ciclo compacto del registro enviado, el macro detectó el minijuego y el objeto en la caña, pulsó T y vio desaparecer el aviso, pero el OCR no encontró nombre ni cantidad. La sesión pasó a pantalla completa después de ese único ciclo compacto; no demuestra fallos repetidos en todas las capturas pequeñas.
+- Las capturas compactas conservan su escala original en vez de estirarse a 1920×1080 antes del OCR. El reconocimiento también prueba un recorte independiente en la zona central superior, aunque una coincidencia débil del distintivo apunte a otro lugar.
+- La validación sigue exigiendo nombre y cantidad. La desaparición del objeto por sí sola no cuenta como captura confirmada.
+- 125 pruebas automatizadas cubren geometría compacta, recortes alternativos, atribución del ciclo y recuperación. Comprueban la lógica con OCR simulado; hace falta otra sesión real de Roblox a 800×599 para verificar el resultado dentro del juego.
+
 ## [Beta 0.0.37](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.37-beta)
 
 ### Análisis OCR y estabilización de ventana
