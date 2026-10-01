@@ -4,6 +4,16 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.39](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.39-beta)
+
+### Compact resolution, collection and tracking over green scenery
+
+- The 800×599 log completed 16 cycles without a confirmed catch. The review found a coordinate mismatch: the badge was located in Roblox client coordinates, while OCR cropped a centered 1920×1080 canvas; the old conversion shifted the crop, especially vertically. OCR now uses the client position plus its canvas offset, separate from the scaled coordinates used for item icons.
+- A weak badge match can guide another OCR attempt from a score of 0.50. It cannot confirm a reward: the existing item-name and quantity checks still apply. The compact fallback crop now comes from the center of the captured game view.
+- Collection and fishing indicators are matched at scales proportional to the current Roblox window. The side panel explicitly displays the active resolution.
+- The green target is first located by its paired yellow edges, independent of fill color. This keeps tracking alive when a green map area merges with the target, including narrow crops from small windows. The detector revision changes so old automatic profiles are recalibrated.
+- All 129 automated tests cover collection and fishing indicators at 800×599/1280×720, centered-canvas crop coordinates, blank-frame rejection and a yellow target over green scenery. The diagnostic captures that failed now produce valid readings; a fresh live Roblox session is still needed to confirm gameplay behavior.
+
 ## [Beta 0.0.38](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.38-beta)
 
 ### Reward reading in small windows

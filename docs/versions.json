@@ -288,6 +288,13 @@
       "tag": "v0.0.38-beta",
       "published": true,
       "commit": "83afff64742b2ca9669021b583c724658d663197"
+    },
+    {
+      "beta": "0.0.39",
+      "original": "compact-window reward coordinates and yellow-outline tracking over green scenery",
+      "kind": "git",
+      "tag": "v0.0.39-beta",
+      "published": false
     }
   ]
 }

@@ -27,6 +27,10 @@ class Preferences(unittest.TestCase):
                 self.assertNotEqual(tr(source),source)
             self.assertIn('F9',tr('Volte ao Roblox e pressione F4.'))
             self.assertIn('F4',tr('Aponte para a água e pressione F8'))
+            self.assertEqual(tr('Resolução Roblox: 800 × 599'),
+                'Roblox resolution: 800 × 599' if language=='en' else 'Resolución de Roblox: 800 × 599')
+            self.assertEqual(tr('Perfil: Janela · escala 100%'),
+                'Profile: Window · scale 100%' if language=='en' else 'Perfil: Ventana · escala 100%')
             self.assertEqual(tr('Clown Fish'),'Clown Fish')
         self.assertEqual(Translator({'language':'pt'})('Iniciar'),'Iniciar')
 

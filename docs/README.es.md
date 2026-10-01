@@ -6,7 +6,7 @@ Macro de pesca para **Slayers 2 en Roblox**, para Windows, con calibración auto
 
 **[Descargar actualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Versiones y descargas](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Historial de cambios](CHANGELOG.es.md)**
 
-**Beta 0.0.38:** Conserva la escala de la interfaz en ventanas pequeñas y prueba un segundo recorte independiente cuando el distintivo de recompensa no permite una lectura OCR confiable.
+**Beta 0.0.39:** Corrige las coordenadas OCR en ventanas compactas, adapta los indicadores a la resolución de Roblox y sigue el objetivo por su borde amarillo sobre el escenario verde. La interfaz muestra la resolución activa.
 
 ## Instalar e iniciar
 

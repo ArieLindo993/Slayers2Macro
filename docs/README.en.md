@@ -6,7 +6,7 @@ A Windows fishing macro for **Slayers 2 on Roblox**, with automatic calibration,
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Releases and downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 
-**Beta 0.0.38:** Preserves the UI scale in small windows and tries an independent second crop when the reward badge does not provide a reliable OCR read.
+**Beta 0.0.39:** Corrects OCR coordinates in compact windows, scales indicator detection to the Roblox resolution and tracks the target by its yellow outline over green scenery. The active resolution is shown in the interface.
 
 ## Install and start
 

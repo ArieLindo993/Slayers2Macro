@@ -4,6 +4,16 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.39](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.39-beta)
+
+### Resolução compacta, coleta e rastreamento em fundos verdes
+
+- O log de 800×599 concluiu 16 ciclos sem uma coleta confirmada. A varredura encontrou um erro geométrico: o selo era localizado em coordenadas do cliente Roblox, mas o recorte de OCR usava uma imagem centralizada em 1920×1080; a conversão anterior deslocava o recorte, especialmente na vertical. Agora a posição do OCR inclui a moldura da janela e a posição usada para o ícone fica separada.
+- Uma correspondência fraca do selo pode orientar uma tentativa adicional de OCR a partir de 0,50. Ela não confirma uma recompensa: nome e quantidade continuam passando pela validação existente. O recorte alternativo compacto agora parte do centro da imagem do jogo.
+- Os modelos de aviso de coleta e de pesca são comparados em escalas proporcionais ao tamanho atual do Roblox. A lateral da interface mostra explicitamente a resolução ativa.
+- O alvo verde agora é localizado primeiro por suas duas bordas amarelas, independente da cor do preenchimento. Isso recupera a barra quando uma área verde do mapa se funde com o alvo, inclusive em recortes estreitos de janela pequena. A revisão do detector é atualizada para reiniciar apenas perfis automáticos antigos.
+- Os 129 testes automatizados cobrem aviso e pesca em 800×599/1280×720, coordenadas do recorte centralizado, ausência de falsos avisos e alvo amarelo sobre mapa verde. As capturas diagnósticas que falhavam agora produzem leituras válidas; uma sessão nova no Roblox ainda precisa confirmar o comportamento ao vivo.
+
 ## [Beta 0.0.38](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.38-beta)
 
 ### Leitura de recompensa em janela pequena

@@ -109,8 +109,10 @@ class Features(unittest.TestCase):
                 w=(1,0,0,800,500)
                 with patch.object(macro,'game_window',return_value=w):
                     app.config['cast']=[.5,.5];app.start(w)
+                    self.assertEqual(app.resolution_text.raw,'Resolução Roblox: 800 × 500')
                     first=app.profile_key
                     app.save_selection([.72,.19,.065,.62]);app.choose_profile((1,0,0,1280,720))
+                    self.assertEqual(app.resolution_text.raw,'Resolução Roblox: 1280 × 720')
                     self.assertNotEqual(first,app.profile_key)
                     self.assertTrue(app.config['auto_calibrate'])
                     self.assertNotEqual(app.config['roi'],[.72,.19,.065,.62])

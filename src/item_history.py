@@ -255,10 +255,12 @@ class RewardReader:
 
     @staticmethod
     def fallback_crop(rgb):
-        """Independent compact-client anchor used when the badge match is weak."""
+        """Capture the game's center at its native scale when badge matching is weak."""
         h,w=rgb.shape[:2]
-        if (w,h)==(1920,1080) or w>1920 or h>1080:return None
+        if w>1920 or h>1080:return RewardReader.crop(rgb,(1075.5,596.5))
         normalized=np.zeros((1080,1920,3),dtype=rgb.dtype)
         left=(1920-w)//2;top=(1080-h)//2
         normalized[top:top+h,left:left+w]=rgb
-        return RewardReader.crop(normalized,(960.,430.))
+        if (w,h)==(1920,1080):point=(1075.5,596.5)
+        else:point=(left+w/2,top+h/2)
+        return RewardReader.crop(normalized,point)

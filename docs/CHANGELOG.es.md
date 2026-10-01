@@ -4,6 +4,16 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.39](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.39-beta)
+
+### Resolución compacta, recogida y seguimiento sobre fondos verdes
+
+- El registro de 800×599 completó 16 ciclos sin confirmar ninguna captura. La revisión encontró un error de coordenadas: el distintivo se localizaba en las coordenadas del cliente de Roblox, pero el OCR recortaba un lienzo centrado de 1920×1080; la conversión anterior desplazaba el recorte, sobre todo en vertical. Ahora el OCR usa la posición del cliente más el margen del lienzo y separa las coordenadas escaladas para los iconos.
+- Una coincidencia débil del distintivo puede orientar otro intento OCR desde 0,50. No confirma una recompensa: siguen aplicándose las validaciones existentes del nombre y la cantidad. El recorte alternativo compacto ahora parte del centro de la imagen capturada del juego.
+- Los modelos de recogida y pesca se comparan con escalas proporcionales al tamaño actual de Roblox. El panel lateral muestra explícitamente la resolución activa.
+- El objetivo verde se localiza primero mediante sus dos bordes amarillos, sin depender del color del relleno. El seguimiento continúa cuando una zona verde del mapa se fusiona con el objetivo, también en recortes estrechos de ventanas pequeñas. Cambia la revisión del detector para recalibrar los perfiles automáticos antiguos.
+- Las 129 pruebas automatizadas cubren los indicadores de recogida y pesca en 800×599/1280×720, las coordenadas del recorte en el lienzo centrado, el rechazo de cuadros vacíos y un objetivo amarillo sobre fondo verde. Las capturas diagnósticas que fallaban ahora producen lecturas válidas; hace falta otra sesión real de Roblox para confirmar el comportamiento en el juego.
+
 ## [Beta 0.0.38](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.38-beta)
 
 ### Lectura de recompensas en ventanas pequeñas

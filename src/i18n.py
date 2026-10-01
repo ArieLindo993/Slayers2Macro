@@ -10,6 +10,11 @@ Aguardando a barra|Waiting for the bar|Esperando la barra
 Azul · região   Verde · alvo\nRosa · marcador|Blue · area   Green · target\nPink · marker|Azul · área   Verde · objetivo\nRosa · marcador
 Qualidade: aguardando leituras|Quality: waiting for readings|Calidad: esperando lecturas
 Perfil: aguardando o jogo|Profile: waiting for the game|Perfil: esperando el juego
+Resolução Roblox: aguardando|Roblox resolution: waiting|Resolución de Roblox: esperando
+Resolução Roblox: {width} × {height}|Roblox resolution: {width} × {height}|Resolución de Roblox: {width} × {height}
+Perfil: {mode} · escala {dpi}%|Profile: {mode} · scale {dpi}%|Perfil: {mode} · escala {dpi}%
+Janela|Window|Ventana
+Sem bordas / tela cheia|Borderless / fullscreen|Sin bordes / pantalla completa
 REGISTROS DA SESSÃO|SESSION RECORDS|REGISTROS DE LA SESIÓN
 Salvar recortes|Save snapshots|Guardar capturas
 Até 20 recortes, salvos localmente.|Up to 20 snapshots, stored locally.|Hasta 20 capturas, guardadas localmente.

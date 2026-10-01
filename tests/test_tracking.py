@@ -2,6 +2,7 @@ import sys,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 import numpy as np
+import cv2
 from detector import detect,Reading
 from calibration import AutoCalibration
 from engine import Engine
@@ -81,6 +82,21 @@ class TrackingRecovery(unittest.TestCase):
         self.assertAlmostEqual(reading.target,154.5/300)
         self.assertAlmostEqual(reading.marker,152.5/300)
         self.assertAlmostEqual(reading.band,50/300)
+
+    def test_yellow_target_outline_survives_green_map_and_compact_roi(self):
+        # At the captured compact resolution the green map texture covers the
+        # whole crop, merging the translucent target into the background.
+        image=np.zeros((221,27,3),np.uint8)
+        image[:]=(82,170,48)
+        image[100:101,3:24]=(225,218,64)
+        image[117:118,3:24]=(225,218,64)
+        image[150:160,6:21]=(235,235,235)
+        for candidate in (image,cv2.resize(image,(14,111),interpolation=cv2.INTER_AREA)):
+            reading=detect(candidate,require_marker_shape=True)
+            self.assertIsNotNone(reading)
+            self.assertAlmostEqual(reading.target,.493,delta=.015)
+            self.assertAlmostEqual(reading.marker,.70,delta=.025)
+            self.assertGreater(reading.band,0)
 
     def test_large_white_distraction_does_not_hide_marker(self):
         image=np.zeros((300,50,3),np.uint8)

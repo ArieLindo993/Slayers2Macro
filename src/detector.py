@@ -24,6 +24,36 @@ def longest_run(mask, minimum, maximum=None):
     return float((run[0] + run[-1]) / 2), len(run)
 
 
+def outlined_target(rgb, margin, minimum, maximum):
+    """Find the two yellow horizontal edges of the target independently of its fill."""
+    a=rgb.astype(np.int16)
+    r,g,b=a[...,0],a[...,1],a[...,2]
+    # The red/green balance distinguishes the yellow edge from a green map
+    # even after a one-pixel outline is blended into nearby scenery.
+    yellow=(r>100)&(g>110)&(b<165)&(r>g*.55)&(r>b*1.7)&(g>b*1.3)
+    central=yellow[:,margin:rgb.shape[1]-margin]
+    if central.shape[1]<1:return None
+    # Scale the coverage threshold for narrow ROIs: four continuous pixels are
+    # enough to keep the same visual test at compact Roblox resolutions.
+    coverage=central.mean(axis=1)
+    rows=coverage>=max(.30,min(.55,4/central.shape[1]))
+    indices=np.flatnonzero(rows)
+    if not len(indices):return None
+    groups=np.split(indices,np.flatnonzero(np.diff(indices)>1)+1)
+    lines=[group for group in groups if len(group)<=max(3,int(rgb.shape[0]*.025))]
+    pairs=[]
+    for i,top in enumerate(lines):
+        for bottom in lines[i+1:]:
+            size=int(bottom[-1]-top[0]+1)
+            if not minimum<=size<=maximum:continue
+            strength=min(float(coverage[top].mean()),float(coverage[bottom].mean()))
+            center=(float(top[0])+float(bottom[-1]))/2
+            pairs.append((strength,center,size))
+    if not pairs:return None
+    _,center,size=max(pairs,key=lambda item:(item[0],-item[2]))
+    return center,size
+
+
 def detect(rgb,require_marker_shape=False):
     h, w = rgb.shape[:2]
     if h < 60 or w < 12:
@@ -60,7 +90,13 @@ def detect(rgb,require_marker_shape=False):
         start=int(round(marker[0]-(marker[1]-1)/2));end=start+marker[1]
         if start>0 and end<h and green_rows[start-1] and green_rows[end]:
             green_rows[start:end]=True
-    target = longest_run(green_rows, max(5, int(h*.035)), h*.25)
+    minimum=max(5,int(h*.035));maximum=h*.25
+    # The translucent fill can inherit a green map texture and become
+    # indistinguishable from the scenery. The target's thin yellow frame stays
+    # visible in that case, so prefer its paired horizontal edges.
+    target=outlined_target(rgb,margin,minimum,maximum)
+    if target is None:
+        target = longest_run(green_rows, minimum, maximum)
     if marker is None or target is None:
         return None
     if require_marker_shape:

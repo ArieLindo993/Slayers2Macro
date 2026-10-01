@@ -55,6 +55,13 @@ class NotificationGeometry(unittest.TestCase):
         self.assertTrue(result['reward'])
         self.assertEqual(result['reward_layout'],'scaled')
         self.assertAlmostEqual(result['reward_scale'],.5,delta=.08)
+        expected_point=((1920-800)//2+395+9/2,(1080-599)//2+188+7/2)
+        self.assertAlmostEqual(result['reward_point'][0],expected_point[0],delta=2)
+        self.assertAlmostEqual(result['reward_point'][1],expected_point[1],delta=2)
+        padded=np.zeros((1080,1920,3),np.uint8)
+        padded[240:839,560:1360]=frame
+        np.testing.assert_array_equal(result['reward_crop'],RewardReader.crop(padded,expected_point))
+        self.assertIsNotNone(result['reward_icon'])
 
     def test_weak_badge_candidate_exposes_ocr_anchor_without_confirming_reward(self):
         frame=np.full((599,800,3),52,np.uint8)
@@ -73,6 +80,15 @@ class NotificationGeometry(unittest.TestCase):
         self.assertEqual(result['reward_crop_fallback'].shape,(420,650,3))
         self.assertFalse(np.array_equal(result['reward_crop_candidate'],result['reward_crop_fallback']))
 
+    def test_compact_fallback_is_centered_on_the_captured_game_view(self):
+        frame=np.zeros((599,800,3),np.uint8)
+        frame[240:360,300:500]=(70,130,200)
+        crop=RewardReader.fallback_crop(frame)
+        # The central in-game area lands near the center of the OCR crop;
+        # compact captures are no longer anchored above the client window.
+        self.assertEqual(crop.shape,(420,650,3))
+        self.assertGreater(crop[170:300,200:450].mean(),0)
+
     def test_compact_ocr_crop_preserves_captured_ui_scale(self):
         compact=np.full((599,800,3),37,dtype=np.uint8)
         expected=np.zeros((1080,1920,3),dtype=np.uint8)
@@ -87,6 +103,34 @@ class NotificationGeometry(unittest.TestCase):
         self.assertIsNotNone(result['loot'])
         self.assertAlmostEqual(result['loot'][0],(220+w/2)/800,places=2)
         self.assertAlmostEqual(result['loot'][1],(180+h/2)/599,places=2)
+
+    def test_collect_prompt_scales_with_compact_roblox_resolution(self):
+        for w,h,scale in ((800,599,800/1920),(1280,720,1280/1920)):
+            with self.subTest(size=(w,h)):
+                frame=np.full((h,w,3),45,np.uint8)
+                source=self.signals.templates['collect']
+                sh,sw=source.shape
+                size=(round(sw*scale),round(sh*scale))
+                prompt=cv2.resize(source,size,interpolation=cv2.INTER_AREA)
+                x,y=round(w*.62),round(h*.28)
+                frame[y:y+size[1],x:x+size[0]]=prompt[:,:,None]
+                result=self.signals.scan(frame)
+                self.assertIsNotNone(result['loot'])
+                self.assertAlmostEqual(result['loot'][0],(x+size[0]/2)/w,delta=.025)
+                self.assertAlmostEqual(result['loot'][1],(y+size[1]/2)/h,delta=.025)
+
+    def test_fishing_indicator_scales_with_compact_roblox_resolution(self):
+        w,h=800,599;scale=w/1920
+        source=self.signals.templates['exit'];sh,sw=source.shape
+        size=(round(sw*scale),round(sh*scale))
+        marker=cv2.resize(source,size,interpolation=cv2.INTER_AREA)
+        frame=np.full((h,w,3),45,np.uint8)
+        x=round((760+1170)/2*w/1920-size[0]/2)
+        y=round(970*h/1080-size[1]/2)
+        frame[y:y+size[1],x:x+size[0]]=marker[:,:,None]
+        result=self.signals.scan(frame,fishing_only=True)
+        self.assertTrue(result['fishing'])
+        self.assertFalse(self.signals.scan(np.full_like(frame,45),fishing_only=True)['fishing'])
 
     def test_empty_frames_do_not_confirm_rewards(self):
         for w,h in ((800,599),(1920,1009)):

@@ -212,6 +212,8 @@ class App:
         self.metrics_text=LocalizedVar(self.tr,value='Qualidade: aguardando leituras')
         ttk.Label(vision,textvariable=self.metrics_text,wraplength=218).pack(anchor='w',pady=10)
         self.profile_text=LocalizedVar(self.tr,value='Perfil: aguardando o jogo')
+        self.resolution_text=LocalizedVar(self.tr,value='Resolução Roblox: aguardando')
+        ttk.Label(vision,textvariable=self.resolution_text,wraplength=218,style='Muted.TLabel').pack(anchor='w',pady=(0,3))
         ttk.Label(vision,textvariable=self.profile_text,wraplength=218,style='Muted.TLabel').pack(anchor='w')
         ttk.Separator(vision).pack(fill='x',pady=10)
         ttk.Label(vision,text=self.tr('REGISTROS DA SESSÃO'),style='Accent.TLabel').pack(anchor='w',pady=(0,8))
@@ -505,7 +507,8 @@ class App:
             self.config['calibration_profile']=learned;self.calibration=AutoCalibration(learned)
             self.calibration_epoch+=1;self.save()
             self.bar_status.set('Perfil automático: aguardando a barra' if automatic else 'Perfil manual: região salva')
-        self.profile_text.set(f'Perfil: {window[3]} × {window[4]}\n'+('Janela' if mode=='window' else 'Sem bordas / tela cheia')+f' · {round(dpi/96*100)}%')
+        self.resolution_text.set(f'Resolução Roblox: {window[3]} × {window[4]}')
+        self.profile_text.set(f'Perfil: {"Janela" if mode=="window" else "Sem bordas / tela cheia"} · escala {round(dpi/96*100)}%')
 
     def button_start(self):
         self.pending_selection=None
