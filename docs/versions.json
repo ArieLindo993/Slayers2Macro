@@ -284,8 +284,10 @@
     {
       "beta": "0.0.38",
       "original": "aspect-preserving compact-window reward OCR with independent fallback crop",
-      "kind": "current",
-      "tag": "v0.0.38-beta"
+      "kind": "git",
+      "tag": "v0.0.38-beta",
+      "published": true,
+      "commit": "83afff64742b2ca9669021b583c724658d663197"
     }
   ]
 }
