@@ -294,7 +294,8 @@
       "original": "compact-window reward coordinates and yellow-outline tracking over green scenery",
       "kind": "git",
       "tag": "v0.0.39-beta",
-      "published": false
+      "published": true,
+      "commit": "50f09f18ebe816c823e94a5ef818a0c0658bb34d"
     }
   ]
 }
