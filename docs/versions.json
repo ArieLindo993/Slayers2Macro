@@ -310,7 +310,8 @@
       "original": "continuous capture, bounded reward OCR, first-acquisition badge and complete rail calibration",
       "kind": "git",
       "tag": "v0.0.41-beta",
-      "published": false
+      "published": true,
+      "commit": "a74b1ff7b587a3322b53737758409f33c42ce7d0"
     }
   ]
 }
