@@ -4,6 +4,15 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.40](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.40-beta)
+
+### Rastreamento compacto e leitura da recompensa sobre o personagem
+
+- A gravação em 800×599 revelou que o botão “Exit” do minigame marcava 0,823, abaixo do limite 0,83. O detector agora aceita o sinal a partir de 0,78, preservando a confirmação por quadros distintos do fluxo existente.
+- Sobre a ilha verde, o contorno do alvo fica verde-limão em alguns quadros, e não amarelo. O detector agora pareia os dois contornos saturados (amarelo ou verde-limão), sem confundir a grande área verde do mapa com a faixa.
+- O item obtido aparece como uma etiqueta pequena sobre o personagem. Na captura real, o OCR leu “OuwFish” e “X” porque o `1` de `x1` é pequeno. O leitor agora aceita esse caso apenas quando o X está alinhado junto a um nome conhecido; um X solto não confirma item.
+- Os quadros reais enviados agora recuperam leituras da barra em cinco momentos consecutivos sobre a ilha, e o OCR lê “OuwFish × 1” no quadro compacto. Testes também verificam a margem de detecção do botão e rejeitam falsos positivos sem faixa ou sem nome alinhado.
+
 ## [Beta 0.0.39](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.39-beta)
 
 ### Resolução compacta, coleta e rastreamento em fundos verdes

@@ -25,13 +25,19 @@ def longest_run(mask, minimum, maximum=None):
 
 
 def outlined_target(rgb, margin, minimum, maximum):
-    """Find the two yellow horizontal edges of the target independently of its fill."""
+    """Find paired yellow or neon-green target edges independently of the fill."""
     a=rgb.astype(np.int16)
     r,g,b=a[...,0],a[...,1],a[...,2]
     # The red/green balance distinguishes the yellow edge from a green map
     # even after a one-pixel outline is blended into nearby scenery.
     yellow=(r>100)&(g>110)&(b<165)&(r>g*.55)&(r>b*1.7)&(g>b*1.3)
-    central=yellow[:,margin:rgb.shape[1]-margin]
+    # Slayers 2 renders the same outline as lime green on some frames. When
+    # the target crosses a green island its translucent fill merges with the
+    # scenery, but the saturated, bright frame remains visible. Pairing its
+    # two short horizontal edges avoids treating the island itself as a band.
+    lime=(g>170)&((g-r)>50)&((g-b)>50)
+    edge=yellow|lime
+    central=edge[:,margin:rgb.shape[1]-margin]
     if central.shape[1]<1:return None
     # Scale the coverage threshold for narrow ROIs: four continuous pixels are
     # enough to keep the same visual test at compact Roblox resolutions.

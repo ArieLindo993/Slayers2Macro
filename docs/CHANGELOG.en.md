@@ -4,6 +4,15 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.40](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.40-beta)
+
+### Compact tracking and reward labels over the character
+
+- The 800×599 recording showed the minigame’s “Exit” button scoring 0.823, below the 0.83 cutoff. Detection now accepts it from 0.78 while retaining the existing distinct-frame confirmation.
+- Over the green island, the target outline turns lime green in some frames instead of yellow. Detection now pairs the two saturated outlines (yellow or lime green) without treating the large green map area as the target band.
+- The obtained item appears as a small label over the character. In the real capture OCR read “OuwFish” and “X” because the `1` in `x1` is tiny. The reader accepts that case only when X aligns with a known item name; a lone X cannot confirm an item.
+- The supplied frames now recover bar readings in five consecutive moments over the island, and OCR reads “OuwFish × 1” from the compact frame. Tests also cover the exit-button margin and reject frames without a bar or an aligned item name.
+
 ## [Beta 0.0.39](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.39-beta)
 
 ### Compact resolution, collection and tracking over green scenery

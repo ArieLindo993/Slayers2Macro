@@ -98,6 +98,18 @@ class TrackingRecovery(unittest.TestCase):
             self.assertAlmostEqual(reading.marker,.70,delta=.025)
             self.assertGreater(reading.band,0)
 
+    def test_lime_target_outline_survives_island_filling_the_compact_roi(self):
+        # The live 800x599 capture renders the outline lime-green while the
+        # island behind the transparent target fills the entire narrow crop.
+        image=np.zeros((160,32,3),np.uint8)
+        image[:]=(24,150,8)
+        cv2.rectangle(image,(4,70),(27,88),(24,245,0),2)
+        image[112:124,9:23]=(235,235,235)
+        reading=detect(image,require_marker_shape=True)
+        self.assertIsNotNone(reading)
+        self.assertAlmostEqual(reading.target,79/160,delta=.02)
+        self.assertAlmostEqual(reading.marker,117.5/160,delta=.02)
+
     def test_large_white_distraction_does_not_hide_marker(self):
         image=np.zeros((300,50,3),np.uint8)
         image[10:90,:]=(235,235,235)

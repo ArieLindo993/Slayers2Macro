@@ -4,6 +4,15 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.40](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.40-beta)
+
+### Seguimiento compacto y etiquetas de recompensa sobre el personaje
+
+- La grabación a 800×599 mostró que el botón “Exit” del minijuego obtenía 0,823, por debajo del límite 0,83. La detección ahora lo acepta desde 0,78 y conserva la confirmación con fotogramas distintos.
+- Sobre la isla verde, el borde del objetivo se vuelve verde lima en algunos fotogramas en vez de amarillo. La detección ahora empareja ambos contornos saturados (amarillo o verde lima) sin confundir la gran zona verde del mapa con la franja.
+- El objeto obtenido aparece como una etiqueta pequeña sobre el personaje. En la captura real, el OCR leyó “OuwFish” y “X” porque el `1` de `x1` es diminuto. El lector acepta ese caso solo si X está alineada con un nombre de objeto conocido; una X aislada no confirma nada.
+- Los fotogramas enviados ahora recuperan lecturas de la barra en cinco momentos consecutivos sobre la isla, y el OCR lee “OuwFish × 1” en la captura compacta. Las pruebas también cubren el margen del botón y rechazan falsos positivos sin barra o sin nombre alineado.
+
 ## [Beta 0.0.39](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.39-beta)
 
 ### Resolución compacta, recogida y seguimiento sobre fondos verdes

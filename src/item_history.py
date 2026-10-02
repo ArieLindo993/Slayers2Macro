@@ -10,20 +10,53 @@ from item_icons import decode_icon,MAX_ICONS
 from item_names import canonical_name,name_evidence,key as name_key,resembles_known
 
 
+def quantity_reading(text):
+    """Read an item count, including the compact HUD's OCR form of ``x1``."""
+    value=''.join(str(text).split()).casefold().replace('×','x').replace('\uff01','!')
+    match=re.fullmatch(r'x\s*(\d{1,4})',value)
+    if match:
+        quantity=int(match[1])
+        return (quantity,False) if 1<=quantity<=9999 else (None,False)
+    # At 800x599 the in-world reward tag makes RapidOCR read its tiny ``1``
+    # as punctuation or omit it, leaving a lone X. It is accepted only when
+    # tightly aligned with a known item name below.
+    if value in {'x','x!','x|','xi','xl','xı'}:return 1,True
+    return None,False
+
+
 def parse_reward(lines,width=None):
     if not lines:return None
-    names=[];quantities=[]
+    names=[];quantities=[];uncertain_quantities=[]
     for box,text,score in lines:
         text=' '.join(str(text).split())
         y=sum(p[1] for p in box)/len(box)
-        match=re.fullmatch(r'[xX×]\s*(\d{1,4})',text)
-        if match and score>=.65:
-            qty=int(match[1])
-            if 1<=qty<=9999:quantities.append((y,qty,score))
+        quantity,uncertain=quantity_reading(text)
+        if quantity is not None and score>=(.60 if uncertain else .65):
+            xs=[p[0] for p in box];ys=[p[1] for p in box]
+            item=(y,quantity,score,min(xs),max(xs),max(ys)-min(ys))
+            (uncertain_quantities if uncertain else quantities).append(item)
         elif score>=.85 and 2<=len(text)<=90 and re.search(r'[A-Za-zÀ-ÿ]',text):
-            names.append((y,text,score,min(p[0] for p in box),max(p[1] for p in box)-min(p[1] for p in box),max(p[0] for p in box)))
+            xs=[p[0] for p in box];ys=[p[1] for p in box]
+            names.append((y,text,score,min(xs),max(ys)-min(ys),max(xs)))
+    if not quantities and uncertain_quantities:
+        aligned=[]
+        for qty in uncertain_quantities:
+            qy,_,qscore,qleft,qright,qheight=qty
+            qcenter=(qleft+qright)/2
+            for name in names:
+                ny,ntext,nscore,nleft,nheight,nright=name
+                canonical,known,fragment=name_evidence(ntext)
+                if not known or fragment or ny>qy:continue
+                if qy-ny>max(qheight,nheight)*1.5:continue
+                if not nleft-nheight*.5<=qcenter<=nright+nheight*.5:continue
+                aligned.append((qty,name))
+        if aligned:
+            # Prefer the nearest strong item label, not unrelated HUD text.
+            qty,name=min(aligned,key=lambda pair:(pair[0][0]-pair[1][0],-pair[1][2]))
+            quantities=[qty]
+            names=[name]
     if not quantities or not names:return None
-    qty_y,qty,qty_score=max(quantities,key=lambda v:v[2])
+    qty_y,qty,qty_score,_,_,_=max(quantities,key=lambda v:v[2])
     # In the compact client the label and x1 can share a baseline. Keep the
     # quantity-to-name pairing in the same row as well as the older stacked UI.
     above=[n for n in names if n[0]<=qty_y]
@@ -214,7 +247,8 @@ class RewardReader:
                 for box,text,score in result or []:
                     text=' '.join(str(text).split());score=float(score)
                     ocr_boxes+=1;crop_boxes+=1
-                    if re.fullmatch(r'[xX×]\s*\d{1,4}',text):
+                    quantity,uncertain=quantity_reading(text)
+                    if quantity is not None:
                         quantity_boxes+=1;crop_quantities+=1;best_quantity_score=max(best_quantity_score,score)
                     elif score>=.65 and 2<=len(text)<=90 and re.search(r'[A-Za-zÀ-ÿ]',text):
                         name_boxes+=1;crop_names+=1;best_name_score=max(best_name_score,score)

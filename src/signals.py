@@ -7,6 +7,8 @@ from item_history import RewardReader
 
 
 class Signals:
+    EXIT_THRESHOLD=.78
+
     def __init__(self, assets):
         self.templates={}
         cv2.setNumThreads(2)
@@ -45,7 +47,7 @@ class Signals:
         h,w=gray.shape[:2]
         box=(max(0,round(760*w/1920)),max(0,round(950*h/1080)),
              min(w,round(1170*w/1920)),h)
-        return self.match_scaled(gray,'exit',box,.83)
+        return self.match_scaled(gray,'exit',box,self.EXIT_THRESHOLD)
 
     def scan(self,rgb,fishing_only=False):
         cv2.setNumThreads(2)
@@ -113,7 +115,7 @@ class Signals:
         gray=cv2.resize(native_gray,(1920,1080),interpolation=cv2.INTER_LINEAR)
         fishing,_,exit_score,_,_=self.exit_indicator(native_gray)
         if not fishing:
-            fishing,_,legacy_score=self.match(gray,self.templates['exit'],(760,950,1170,1080),.83)
+            fishing,_,legacy_score=self.match(gray,self.templates['exit'],(760,950,1170,1080),self.EXIT_THRESHOLD)
             exit_score=max(exit_score,legacy_score)
         quality=(self.reward_quality(reward_gray,quality_point,reward_template,reward_scale)
                  if reward else 0.)
@@ -186,7 +188,7 @@ class Signals:
         fishing,_,_,_,_=self.exit_indicator(gray)
         if not fishing:
             full=cv2.resize(gray,(1920,1080))
-            fishing,_,_=self.match(full,self.templates['exit'],(760,950,1170,1080),.83)
+            fishing,_,_=self.match(full,self.templates['exit'],(760,950,1170,1080),self.EXIT_THRESHOLD)
         return {'fishing':fishing,'candidate':search_bar(rgb,preferred,stage) if fishing else None}
 
     @staticmethod

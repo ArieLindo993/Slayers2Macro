@@ -2,6 +2,7 @@ import sys,unittest
 from pathlib import Path
 import cv2
 import numpy as np
+from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from signals import Signals
 from item_history import ItemHistory,RewardReader,parse_reward
@@ -132,6 +133,16 @@ class NotificationGeometry(unittest.TestCase):
         self.assertTrue(result['fishing'])
         self.assertFalse(self.signals.scan(np.full_like(frame,45),fishing_only=True)['fishing'])
 
+    def test_compact_exit_indicator_accepts_the_live_compressed_score(self):
+        # The user's 800x599 recording scores 0.823 on a clearly visible Exit
+        # button. A .83 cutoff discarded those frames and interrupted tracking.
+        with patch.object(self.signals,'match',side_effect=lambda gray,template,box,threshold:
+                          (threshold<=.82,(400.,580.),.82)):
+            self.assertTrue(self.signals.exit_indicator(np.zeros((599,800),np.uint8))[0])
+        with patch.object(self.signals,'match',side_effect=lambda gray,template,box,threshold:
+                          (threshold<=.77,(400.,580.),.77)):
+            self.assertFalse(self.signals.exit_indicator(np.zeros((599,800),np.uint8))[0])
+
     def test_empty_frames_do_not_confirm_rewards(self):
         for w,h in ((800,599),(1920,1009)):
             result=self.signals.scan(np.zeros((h,w,3),np.uint8))
@@ -145,5 +156,20 @@ class NotificationGeometry(unittest.TestCase):
         history=ItemHistory();history.record(0,result)
         self.assertEqual(history.totals(),{'Crustadon':1})
         self.assertTrue(history.by_cycle[0]['identified'])
+
+    def test_compact_world_reward_accepts_ocr_x_confusion_only_beside_known_name(self):
+        # In the live compact capture, RapidOCR sees the floating reward tag as
+        # `OuwFish` followed by `X`; the tiny 1 is rendered as punctuation.
+        result=parse_reward([
+            ([[270,280],[371,280],[371,309],[270,309]],'OuwFish',.977),
+            ([[280,310],[330,310],[330,329],[280,329]],'X',.80)],width=1950)
+        self.assertEqual(result['name'],'OuwFish')
+        self.assertEqual(result['quantity'],1)
+        self.assertTrue(result['name_validated'])
+
+    def test_compact_reward_does_not_treat_unrelated_x_as_quantity(self):
+        self.assertIsNone(parse_reward([
+            ([[20,20],[120,20],[120,50],[20,50]],'OuwFish',.977),
+            ([[300,100],[330,100],[330,120],[300,120]],'X',.80)],width=650))
 
 if __name__=='__main__':unittest.main()
