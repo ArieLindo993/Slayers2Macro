@@ -4,6 +4,18 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## [Beta 0.0.41](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.41-beta)
+
+### Captura contínua, primeira recompensa e calibração completa
+
+- Corrige um bloqueio no agendamento: a captura de notificações e a recalibração agora continuam enquanto a análise anterior da cena está ocupada. Uma fila limitada guarda as imagens com o horário e o ciclo originais; resultados atrasados atualizam a coleta certa, sem duplicar a contagem.
+- O OCR amplia pequenas regiões de texto, em vez de ampliar todo o cenário quatro vezes. Encerra a busca quando reconhece nome e recompensa válidos. Nos quadros compactos testados, Metal Scraps, Crustadon, Krathulon e OuwFish foram reconhecidos; o tempo varia conforme o quadro e a carga do computador.
+- A primeira aquisição pode mostrar um selo amarelo NEW! em vez de ×1. O leitor aceita esse selo somente junto de um nome conhecido e alinhado. Collect e nomes isolados continuam sem confirmar uma coleta.
+- A calibração rejeita alvos cortados pela borda do recorte e prefere o trilho completo aos contornos internos. Com a pesca confirmada pelo indicador independente, a sobreposição do marcador com o cenário não aciona o filtro mais restrito usado para localizar uma nova barra.
+- Acrescenta uma referência nativa do texto Collect compacto, mantendo o limite de aceitação em 0,80. A revisão do detector passa a 5 e renova perfis automáticos antigos; configurações manuais são preservadas.
+- O log passa a registrar cada resultado do OCR, incluindo idade da imagem, tamanho da fila, caixas e quantidades encontradas. Nova sessão descarta imagens pendentes da anterior.
+- Validação: testes automatizados, replay de quadros locais em 800×599 e teste do executável compilado. O replay verifica as imagens gravadas; não equivale a uma sessão longa controlando o Roblox ao vivo. `tools/replay_video.py` permite repetir a análise com gravações locais, sem publicá-las.
+
 ## [Beta 0.0.40](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.40-beta)
 
 ### Rastreamento compacto e leitura da recompensa sobre o personagem

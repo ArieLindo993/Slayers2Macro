@@ -20,7 +20,7 @@ def quantity_reading(text):
     # At 800x599 the in-world reward tag makes RapidOCR read its tiny ``1``
     # as punctuation or omit it, leaving a lone X. It is accepted only when
     # tightly aligned with a known item name below.
-    if value in {'x','x!','x|','xi','xl','xı'}:return 1,True
+    if value in {'x','x!','x|','xi','xl','xı','new','new!'}:return 1,True
     return None,False
 
 
@@ -213,10 +213,61 @@ class ItemHistory:
 
 class RewardReader:
     """Inicializado e usado apenas na thread de leitura; não bloqueia o mouse."""
-    def __init__(self):self.reader=None
+    def __init__(self):self.reader=None;self.new_template=None
 
     def read(self,rgb):
         return self.read_with_diagnostics(rgb)['reading']
+
+    def new_reward_line(self,rgb,scale):
+        """The first acquisition uses a yellow NEW badge instead of x1."""
+        import cv2
+        a=rgb.astype(np.int16)
+        yellow=(a[:,:,0]>150)&(a[:,:,1]>125)&(a[:,:,2]<115)&(a[:,:,0]>a[:,:,2]*1.5)
+        if int(yellow.sum())<12:return None
+        if self.new_template is None:
+            raw=np.fromfile(Path(__file__).parent/'assets'/'new_reward.png',np.uint8)
+            self.new_template=cv2.imdecode(raw,cv2.IMREAD_GRAYSCALE)
+        gray=cv2.cvtColor(rgb,cv2.COLOR_RGB2GRAY);best=None
+        for factor in (1.,.8,1.2,1.5,2.,2.4,3.):
+            template=cv2.resize(self.new_template,None,fx=factor,fy=factor,interpolation=cv2.INTER_CUBIC)
+            h,w=template.shape
+            if h>gray.shape[0] or w>gray.shape[1]:continue
+            _,score,_,(x,y)=cv2.minMaxLoc(cv2.matchTemplate(gray,template,cv2.TM_CCOEFF_NORMED))
+            if score<.88 or yellow[y:y+h,x:x+w].mean()<.25:continue
+            if best is None or score>best[0]:best=(score,x,y,w,h)
+        if best is None:return None
+        score,x,y,w,h=best
+        return ([[x*scale,y*scale],[(x+w)*scale,y*scale],
+                 [(x+w)*scale,(y+h)*scale],[x*scale,(y+h)*scale]],'NEW!',float(score))
+
+    @staticmethod
+    def text_regions(rgb):
+        """Keep small text and its count together without enlarging the scenery."""
+        import cv2
+        a=rgb.astype(np.int16)
+        mask=((a.min(axis=2)>135)&(a.max(axis=2)-a.min(axis=2)<80)).astype(np.uint8)
+        linked=cv2.morphologyEx(mask,cv2.MORPH_CLOSE,np.ones((3,9),np.uint8))
+        _,_,stats,_=cv2.connectedComponentsWithStats(linked,8)
+        height,width=rgb.shape[:2];boxes=[]
+        for x,y,w,h,area in stats[1:]:
+            if not 12<=w<=min(540,width*.9) or not 4<=h<=84 or area/(w*h)<.12:continue
+            boxes.append((max(0,int(x)-24),max(0,int(y)-12),
+                          min(width,int(x+w)+24),min(height,int(y+h)+24)))
+        merged=[]
+        for box in boxes:
+            x,y,x2,y2=box
+            # Transitive merging preserves quantity lines split by an icon or
+            # sword; all work remains in native pixels until the small crop.
+            changed=True
+            while changed:
+                changed=False
+                for i,(a,b,c,d) in enumerate(merged):
+                    if x<c and x2>a and y<d and y2>b:
+                        x,y,x2,y2=min(x,a),min(y,b),max(x2,c),max(y2,d)
+                        merged.pop(i);changed=True;break
+            merged.append((x,y,x2,y2))
+        merged.sort(key=lambda b:((b[0]+b[2])/2-width/2)**2+((b[1]+b[3])/2-height/2)**2)
+        return [rgb[y:y2,x:x2] for x,y,x2,y2 in merged[:8]]
 
     def read_with_diagnostics(self,rgb,*alternate_crops):
         import cv2
@@ -230,35 +281,56 @@ class RewardReader:
             if fingerprint in seen:continue
             seen.add(fingerprint);crops.append(crop)
         parsed=None;ocr_boxes=0;name_boxes=0;quantity_boxes=0;best_name_score=0.;best_quantity_score=0.
-        variant_count=0;crop_diagnostics=[]
+        variant_count=0;crop_diagnostics=[];seen_regions=set()
         for crop in crops:
-            bgr=crop[:,:,::-1]
-            # Run OCR on each independent anchor. A weak badge match must not
-            # suppress the fixed compact-window fallback crop.
-            enlarged=cv2.resize(bgr,None,fx=3,fy=3,interpolation=cv2.INTER_CUBIC)
-            gray=cv2.cvtColor(bgr,cv2.COLOR_BGR2GRAY)
-            gray=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)).apply(gray)
-            enhanced=cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)
-            variants=(enlarged,cv2.resize(enhanced,None,fx=4,fy=4,interpolation=cv2.INTER_CUBIC))
             crop_boxes=crop_names=crop_quantities=0
-            for variant in variants:
-                variant_count+=1
-                result,_=self.reader(variant,use_cls=False)
-                for box,text,score in result or []:
-                    text=' '.join(str(text).split());score=float(score)
-                    ocr_boxes+=1;crop_boxes+=1
-                    quantity,uncertain=quantity_reading(text)
-                    if quantity is not None:
-                        quantity_boxes+=1;crop_quantities+=1;best_quantity_score=max(best_quantity_score,score)
-                    elif score>=.65 and 2<=len(text)<=90 and re.search(r'[A-Za-zÀ-ÿ]',text):
-                        name_boxes+=1;crop_names+=1;best_name_score=max(best_name_score,score)
-                candidate=parse_reward(result,width=variant.shape[1])
-                if candidate and (parsed is None or
-                        (candidate['name_validated'],candidate['name_confidence'],candidate['confidence']) >
-                        (parsed['name_validated'],parsed['name_confidence'],parsed['confidence'])):
-                    parsed=candidate
+            regions=self.text_regions(crop)
+            # A dim/unusual label still gets a whole-crop pass. Normal labels
+            # get 4x glyphs with far fewer pixels than the old 4x full scenery.
+            scale=4 if regions else 2
+            for region in regions or [crop]:
+                fingerprint=(region.shape,hashlib.sha256(region.tobytes()).digest())
+                if fingerprint in seen_regions:continue
+                seen_regions.add(fingerprint)
+                bgr=region[:,:,::-1]
+                variants=[cv2.resize(bgr,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)]
+                for variant in variants:
+                    variant_count+=1
+                    result,_=self.reader(variant,use_cls=False)
+                    # This visual evidence still goes through parse_reward's
+                    # known-name/alignment checks; a yellow badge alone never
+                    # confirms or names an item.
+                    if any(name_evidence(str(line[1]))[1] for line in result or []):
+                        badge=self.new_reward_line(region,scale)
+                        if badge is not None:result=list(result or [])+[badge]
+                    plausible=False
+                    for box,text,score in result or []:
+                        text=' '.join(str(text).split());score=float(score)
+                        ocr_boxes+=1;crop_boxes+=1
+                        quantity,uncertain=quantity_reading(text)
+                        if quantity is not None:
+                            quantity_boxes+=1;crop_quantities+=1;best_quantity_score=max(best_quantity_score,score)
+                            plausible=True
+                        elif score>=.65 and 2<=len(text)<=90 and re.search(r'[A-Za-zÀ-ÿ]',text):
+                            name_boxes+=1;crop_names+=1;best_name_score=max(best_name_score,score)
+                            plausible|=name_evidence(text)[1]
+                    candidate=parse_reward(result,width=variant.shape[1])
+                    if candidate and (parsed is None or
+                            (candidate['name_validated'],candidate['name_confidence'],candidate['confidence']) >
+                            (parsed['name_validated'],parsed['name_confidence'],parsed['confidence'])):
+                        parsed=candidate
+                    if parsed and parsed['name_validated']:break
+                    # Contrast retries apply to possible reward text, not every
+                    # empty map, nameplate or piece of scenery in both anchors.
+                    if plausible and len(variants)==1:
+                        gray=cv2.cvtColor(bgr,cv2.COLOR_BGR2GRAY)
+                        gray=cv2.createCLAHE(clipLimit=2.,tileGridSize=(8,8)).apply(gray)
+                        variants.append(cv2.resize(cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR),None,
+                            fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC))
+                if parsed and parsed['name_validated']:break
             crop_diagnostics.append({'largura':int(crop.shape[1]),'altura':int(crop.shape[0]),
                                      'caixas':crop_boxes,'nomes':crop_names,'quantidades':crop_quantities})
+            if parsed and parsed['name_validated']:break
         if parsed:parsed['sample_id']=hashlib.sha256(rgb.tobytes()).hexdigest()
         return {'reading':parsed,'__ocr_debug__':{
             'recorte_largura':int(rgb.shape[1]),'recorte_altura':int(rgb.shape[0]),

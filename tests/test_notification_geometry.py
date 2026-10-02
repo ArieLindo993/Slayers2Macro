@@ -172,4 +172,15 @@ class NotificationGeometry(unittest.TestCase):
             ([[20,20],[120,20],[120,50],[20,50]],'OuwFish',.977),
             ([[300,100],[330,100],[330,120],[300,120]],'X',.80)],width=650))
 
+    def test_first_acquisition_new_badge_requires_an_aligned_known_name(self):
+        name=([[20,20],[150,20],[150,40],[20,40]],'Krathulon',.99)
+        badge=([[55,42],[115,42],[115,60],[55,60]],'NEW!',.96)
+        result=parse_reward([name,badge],width=300)
+        self.assertEqual((result['name'],result['quantity']),('Krathulon',1))
+        history=ItemHistory();history.record(0,result);history.record(0,result)
+        self.assertEqual(history.totals(),{'Krathulon':1})
+        self.assertIsNone(parse_reward([badge],width=300))
+        self.assertIsNone(parse_reward([name,
+            ([[220,80],[290,80],[290,100],[220,100]],'NEW!',.99)],width=300))
+
 if __name__=='__main__':unittest.main()

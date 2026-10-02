@@ -5,7 +5,7 @@ import numpy as np
 from detector import Reading
 from diagnostics import Diagnostics,TrackingMetrics,annotated_preview
 from local_data import ProfileStore,data_directory,migrate_legacy
-from calibration import AutoCalibration,search_bar
+from calibration import AutoCalibration,search_bar,locate_bar
 
 def frame(x=580,y=100):
     import cv2
@@ -56,9 +56,9 @@ class Features(unittest.TestCase):
 
     def test_staged_search_and_recovery(self):
         a=AutoCalibration();self.assertEqual(a.search_stage,'current')
-        for _ in range(2):a.observe(None)
+        a.observe(None)
         self.assertEqual(a.search_stage,'nearby')
-        for _ in range(2):a.observe(None)
+        a.observe(None)
         self.assertEqual(a.search_stage,'screen')
         roi=[.72,.19,.065,.62];im=frame()
         for stage in ('current','nearby','screen'):
@@ -73,6 +73,17 @@ class Features(unittest.TestCase):
     def test_preview_contains_annotations(self):
         im=annotated_preview(np.zeros((300,60,3),np.uint8),Reading(.5,.7,.1))
         colors=set(map(tuple,np.array(im).reshape(-1,3)));self.assertIn((18,237,140),colors);self.assertIn((255,102,210),colors)
+
+    def test_calibration_keeps_complete_rail_with_an_inner_contour(self):
+        import cv2
+        image=np.zeros((599,800,3),np.uint8)
+        cv2.rectangle(image,(586,188),(610,353),(140,140,140),1)
+        cv2.rectangle(image,(587,190),(609,325),(190,190,190),1)
+        cv2.rectangle(image,(588,329),(608,347),(24,245,0),2)
+        image[310:320,592:604]=(235,235,235)
+        candidate=locate_bar(image,[.733,.289,.034,.369])
+        self.assertIsNotNone(candidate)
+        self.assertGreater(candidate['roi'][3]*599,160)
 
     def test_offline_rollback_preserves_data(self):
         if sys.platform!='win32':self.skipTest('Windows updater')

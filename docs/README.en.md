@@ -6,7 +6,7 @@ A Windows fishing macro for **Slayers 2 on Roblox**, with automatic calibration,
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Releases and downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 
-**Beta 0.0.40:** Detects the minigame in compact windows, follows the target’s lime outline over green islands and reads the `item × 1` label over the character. The active resolution is shown in the interface.
+**Beta 0.0.41:** Buffers notification frames while the reader is busy, reduces compact-window OCR cost and recognizes the first-acquisition `NEW!` badge. Calibration runs independently of item analysis and rejects incomplete bar crops. The active resolution remains visible in the interface.
 
 ## Install and start
 

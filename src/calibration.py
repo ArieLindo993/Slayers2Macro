@@ -37,6 +37,10 @@ def locate_bar(rgb,preferred=None,search_box=None):
         crop=view[top:bottom,left:right]
         reading=detect(crop,require_marker_shape=True)
         if reading is None:continue
+        # A short inner contour can cut the target in half and still resemble
+        # a rail. Do not teach a crop whose target touches its cut edge.
+        if (reading.target-reading.band/2)*crop.shape[0]<1:continue
+        if (reading.target+reading.band/2)*crop.shape[0]>crop.shape[0]-1:continue
         # Bordas externas têm que atravessar boa parte do trilho.
         side1=np.any(edges[y:y+bh,max(0,x-2):x+4]>0,axis=1).mean()
         side2=np.any(edges[y:y+bh,max(0,x+bw-4):min(w,x+bw+2)]>0,axis=1).mean()
@@ -46,6 +50,15 @@ def locate_bar(rgb,preferred=None,search_box=None):
         distance=sum(abs(a-b) for a,b in zip(roi,preferred)) if preferred else 0
         candidates.append((confidence+(.12 if index<complete_count else 0)-min(.15,distance*.1),roi))
     if not candidates:return None
+    # Prefer the enclosing rail to a high-contrast partial contour on the same
+    # track. Unrelated taller map edges cannot replace it merely by height.
+    candidates=[(score,roi) for score,roi in candidates if not any(
+        other is not roi and other_score>=score-.20
+        and 1.08*roi[3]<=other[3]<=1.6*roi[3]
+        and abs((roi[0]+roi[2]/2)-(other[0]+other[2]/2))<4/w
+        and .7*roi[2]<=other[2]<=1.6*roi[2]
+        and other[1]<=roi[1]+2/h and other[1]+other[3]>=roi[1]+roi[3]-2/h
+        for other_score,other in candidates)]
     score,roi=max(candidates,key=lambda a:a[0])
     return {'roi':roi,'confidence':min(1.,float(score))}
 
@@ -82,7 +95,7 @@ class AutoCalibration:
     def observe(self,candidate):
         if not candidate or candidate['confidence']<.45:
             self.pending=[];self.search_misses+=1
-            if self.search_misses>=2:
+            if self.search_misses>=1:
                 self.search_stage={'current':'nearby','nearby':'screen','screen':'screen'}[self.search_stage]
                 self.search_misses=0
             return None
@@ -90,8 +103,9 @@ class AutoCalibration:
         if self.pending and max(abs(a-b) for a,b in zip(roi,self.pending[-1]))>.015:
             self.pending=[]
         self.pending.append(roi)
-        if len(self.pending)<3:return None
-        roi=np.median(self.pending[-3:],axis=0).tolist()
+        required=3
+        if len(self.pending)<required:return None
+        roi=np.median(self.pending[-required:],axis=0).tolist()
         self.pending=[];self.search_misses=0;self.search_stage='current'
         # Conferências periódicas não devem zerar o controlador se nada mudou.
         if self.locked and self.roi and max(abs(a-b) for a,b in zip(roi,self.roi))<.005:return None

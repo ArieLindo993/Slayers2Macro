@@ -4,6 +4,18 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## [Beta 0.0.41](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.41-beta)
+
+### Captura continua, primeras recompensas y calibración completa
+
+- La captura de notificaciones y la calibración continúan mientras el análisis anterior de la escena está ocupado. Una cola limitada conserva las imágenes, sus tiempos y sus ciclos; los resultados tardíos actualizan la captura correcta sin duplicarla.
+- El OCR amplía pequeñas regiones de texto y termina al reconocer una recompensa válida. En fotogramas compactos se reconocieron Metal Scraps, Crustadon, Krathulon y OuwFish; la latencia depende de la imagen y del equipo.
+- La primera adquisición puede mostrar un sello amarillo NEW! en lugar de ×1. Solo se acepta junto a un nombre conocido y alineado. Collect y los nombres aislados no confirman una captura.
+- La calibración rechaza objetivos cortados por los bordes y prefiere el carril completo a los contornos internos. Una vez confirmado el minijuego mediante su indicador independiente, la superposición del marcador con el escenario no activa el filtro más restrictivo de localización.
+- Añade una referencia nativa de Collect compacto, manteniendo el umbral de 0,80. La revisión 5 renueva perfiles automáticos antiguos y conserva los ajustes manuales.
+- El registro incluye cada resultado del OCR, la antigüedad de la imagen, la cola y las detecciones. Un historial nuevo descarta imágenes pendientes de la sesión anterior.
+- Validación con pruebas automatizadas, reproducción local de fotogramas en 800×599 y ejecutable compilado. Esto no sustituye una sesión larga controlando Roblox en vivo. `tools/replay_video.py` permite analizar grabaciones locales sin publicarlas.
+
 ## [Beta 0.0.40](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.40-beta)
 
 ### Seguimiento compacto y etiquetas de recompensa sobre el personaje

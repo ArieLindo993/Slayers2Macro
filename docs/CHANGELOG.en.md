@@ -4,6 +4,18 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## [Beta 0.0.41](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.41-beta)
+
+### Continuous capture, first rewards and complete bar calibration
+
+- Notification capture and calibration now continue while an earlier scene scan is busy. A bounded queue preserves original frames, timestamps and cycle ownership; late results update the correct catch without double counting.
+- OCR enlarges small text regions instead of enlarging the entire scene fourfold and stops after a validated reward. Compact recorded frames recognized Metal Scraps, Crustadon, Krathulon and OuwFish; latency depends on the frame and computer load.
+- First acquisitions can show a yellow NEW! badge instead of ×1. It is accepted only beside an aligned known item name. Collect prompts or names alone do not confirm a catch.
+- Calibration rejects targets cut by crop edges and prefers the enclosing rail over inner contours. Once the independent fishing indicator confirms the minigame, marker overlap with scenery does not re-enable the stricter new-bar localization filter.
+- Adds a native compact Collect reference while retaining the 0.80 threshold. Detector revision 5 renews old automatic profiles and preserves manual settings.
+- Logs every OCR outcome with frame age, queue size and detection counts. Starting a new history clears pending frames from the previous session.
+- Validation includes automated tests, local 800×599 recorded-frame replay and the compiled executable. Offline replay does not establish long-session live control reliability. `tools/replay_video.py` accepts local recordings without publishing them.
+
 ## [Beta 0.0.40](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.40-beta)
 
 ### Compact tracking and reward labels over the character

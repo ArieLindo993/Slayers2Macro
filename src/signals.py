@@ -8,11 +8,12 @@ from item_history import RewardReader
 
 class Signals:
     EXIT_THRESHOLD=.78
+    COLLECT_THRESHOLD=.80
 
     def __init__(self, assets):
         self.templates={}
         cv2.setNumThreads(2)
-        for name in ('collect','collect_small','collect_small2','collect_medium','collect_user','exit','reward'):
+        for name in ('collect','collect_small','collect_small2','collect_medium','collect_user','collect_compact','exit','reward'):
             # imdecode permite caminhos Unicode no Windows.
             raw=np.fromfile(Path(assets)/(name+'.png'),np.uint8)
             template=cv2.imdecode(raw,cv2.IMREAD_GRAYSCALE)
@@ -112,9 +113,10 @@ class Signals:
         else:
             candidate_point=reward_point;candidate_score=reward_score;candidate_scale=reward_scale
         # Other fishing indicators keep their established proportional search.
-        gray=cv2.resize(native_gray,(1920,1080),interpolation=cv2.INTER_LINEAR)
+        gray=None
         fishing,_,exit_score,_,_=self.exit_indicator(native_gray)
         if not fishing:
+            gray=cv2.resize(native_gray,(1920,1080),interpolation=cv2.INTER_LINEAR)
             fishing,_,legacy_score=self.match(gray,self.templates['exit'],(760,950,1170,1080),self.EXIT_THRESHOLD)
             exit_score=max(exit_score,legacy_score)
         quality=(self.reward_quality(reward_gray,quality_point,reward_template,reward_scale)
@@ -139,20 +141,30 @@ class Signals:
         # The collection prompt shrinks with the game UI. Match templates at
         # resolution-relative sizes on the un-stretched client image so small
         # prompts do not become oversized or distorted before comparison.
+        collect_threshold=self.COLLECT_THRESHOLD
         native_results=[]
+        # A native compact glyph avoids resampling a large-font reference down
+        # to six-pixel letters. Keep the same .80 acceptance threshold.
+        compact_scales=sorted({round(v,3) for v in (1.,w/800,h/599,(w/800*h/599)**.5) if .6<=v<=3.})
+        compact_found,compact_point,compact_score,_,_=self.match_scaled(native_gray,
+            'collect_compact',(0,0,w,h),collect_threshold,compact_scales)
+        if compact_found:
+            return {'fishing':fishing,'loot':(compact_point[0]/w,compact_point[1]/h),
+                    'collect_score':compact_score,'exit_score':exit_score,**reward_data}
         for scale in self.resolution_scales(w,h):
             for source in self.collect_sources:
                 sh,sw=source.shape;size=(max(1,round(sw*scale)),max(1,round(sh*scale)))
                 if min(size)<5 or size[0]>w or size[1]>h:continue
                 method=cv2.INTER_AREA if scale<1 else cv2.INTER_CUBIC
                 template=cv2.resize(source,size,interpolation=method)
-                native_results.append(self.match(native_gray,template,(0,0,w,h),.80))
+                native_results.append(self.match(native_gray,template,(0,0,w,h),collect_threshold))
         found=False;point=(0.,0.);score=0.
         if native_results:
             found,point,score=max(native_results,key=lambda result:result[2])
             if found:point=(point[0]*1920/w,point[1]*1080/h)
         if not found:
-            results=[self.match(gray,template,(0,0,1920,1080),.80) for template in self.collect_templates]
+            if gray is None:gray=cv2.resize(native_gray,(1920,1080),interpolation=cv2.INTER_LINEAR)
+            results=[self.match(gray,template,(0,0,1920,1080),collect_threshold) for template in self.collect_templates]
             found,legacy_point,legacy_score=max(results,key=lambda result:result[2])
             if found:point=legacy_point;score=legacy_score
         return {'fishing':fishing,'loot':(point[0]/1920,point[1]/1080) if found else None,

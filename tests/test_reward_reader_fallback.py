@@ -13,7 +13,7 @@ class FakeOCR:
 
     def __call__(self,image,use_cls=False):
         self.calls+=1
-        if self.calls<=2:return None,None
+        if float(image.mean())<40:return None,None
         # Reward text is present only in the second independently anchored crop.
         return [
             ([[210,120],[610,120],[610,175],[210,175]],'Clown Fish',.99),
@@ -42,7 +42,7 @@ class RewardReaderFallback(unittest.TestCase):
         reader=RewardReader();fake=FakeOCR();reader.reader=fake
         crop=np.zeros((420,650,3),dtype=np.uint8)
         payload=reader.read_with_diagnostics(crop,crop.copy())
-        self.assertEqual(fake.calls,2)
+        self.assertEqual(fake.calls,1)
         self.assertEqual(len(payload['__ocr_debug__']['recortes_ocr']),1)
 
 

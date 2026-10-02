@@ -117,6 +117,10 @@ DEFAULTS={'roi':[.733,.289,.034,.369],'cast':None,'anticipation':.10,
 # capturas próprias em cada tick; nunca usa imagens atrasadas para mover o mouse.
 SCENE_MAX_AGE=2.5
 WINDOW_STABLE_SECONDS=.25
+CALIBRATION_SEARCH_INTERVAL=.35
+OCR_FRAME_INTERVAL=.30
+OCR_FRAME_QUEUE_LIMIT=8
+OCR_CANDIDATE_MIN_SCORE=.66
 
 class App:
     def __init__(self):
@@ -182,9 +186,10 @@ class App:
         self.history_window=None;self.history_tables=None
         self.history_photos={};self.pending_icons={};self.icon_sampler=IconSampler()
         self.reader=RewardReader();self.worker=BackgroundWorker('leitura-itens',timeout=30,max_pending=3)
-        self.ocr_job=None;self.confirmation_jobs=[];self.history_retries={};self.last_ocr=0.;self.ocr_results={};self.ocr_error=None
+        self.ocr_job=None;self.ocr_queue=[];self.confirmation_jobs=[];self.history_retries={};self.last_ocr=0.;self.ocr_results={};self.ocr_error=None
+        self.last_ocr_capture=0.;self.ocr_active_priority=0.
         self.pending_reward_readings={};self.empty_ocr_cycles=set()
-        self.cycle_id=0;self.last_reward_crop=None;self.last_reward_crops=()
+        self.cycle_id=0;self.last_reward_crop=None;self.last_reward_crops=();self.last_reward_priority=0.
         self.capture=mss.MSS();self.active=False;self.held=False;self.t_down=False
         self.window=None;self.pending_window=None;self.pending_window_since=0.;self.window_change_logged=False
         self.pending_start=None;self.corner=None;self.previous_keys={}
@@ -278,7 +283,9 @@ class App:
         self.history.save()
         self.session_log.event('NOVA_SESSAO_DE_ITENS')
         self.history=ItemHistory(self.data/'historico',log=self.session_log);self.metrics.reset();self.round_metrics.reset()
-        self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.last_reward_crop=None;self.last_reward_crops=()
+        self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.ocr_queue=[]
+        self.last_reward_crop=None;self.last_reward_crops=();self.last_reward_priority=0.
+        self.last_ocr=0.;self.last_ocr_capture=0.
         self.pending_reward_readings={};self.empty_ocr_cycles=set()
         self.history_retries={}
         self.pending_icons={};self.history_photos={};self.icon_sampler=IconSampler()
@@ -343,6 +350,8 @@ class App:
                 self.session_log.event('OCR_SEM_RECOMPENSA',ciclo=cycle,estado=self.engine.state,
                     **evidence)
             return
+        if result.get('name_validated',True):
+            self.ocr_queue=[item for item in self.ocr_queue if item[1]!=cycle]
         entry=self.history.by_cycle.get(cycle)
         if entry is None:
             # OCR can finish just before the engine creates this cycle's
@@ -382,6 +391,7 @@ class App:
                 self.session_log.event('ERRO_RECONHECIMENTO_ITEM',tipo=type(exc).__name__,ciclo=cycle)
                 self.ocr_error=str(exc);self.refresh_history()
         self.confirmation_jobs=remaining
+        if self.ocr_job is None:self.dispatch_queued_ocr()
         if self.ocr_job is None or not self.ocr_job[0].done():return
         future,cycle,captured=self.ocr_job;self.ocr_job=None
         try:
@@ -391,14 +401,52 @@ class App:
             self.ocr_error=str(exc);self.refresh_history();return
         if result:
             self.ocr_results[cycle]=(result,captured)
+        self.session_log.event('OCR_QUADRO_PROCESSADO',ciclo=cycle,
+            idade_quadro=round(max(0,time.monotonic()-captured),3),
+            recompensa_lida=bool(result),fila=len(self.ocr_queue),**(debug or {}))
         self.apply_reward_reading(cycle,result,debug)
+        self.dispatch_queued_ocr()
 
-    def submit_ocr(self,crop,now,cycle=None,alternate_crops=()):
-        if self.ocr_job is not None:return
-        self.last_ocr=now
-        alternatives=tuple(item.copy() for item in alternate_crops if item is not None)
-        future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop.copy(),*alternatives)
-        if future is not None:self.ocr_job=(future,self.cycle_id if cycle is None else cycle,now)
+    def dispatch_queued_ocr(self):
+        if self.ocr_job is not None or not self.ocr_queue or not self.worker.can_submit:return
+        priority,cycle,captured,crop,alternatives=self.ocr_queue.pop(0)
+        future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop.copy(),
+            *(item.copy() for item in alternatives))
+        if future is None:
+            self.ocr_queue.insert(0,(priority,cycle,captured,crop,alternatives))
+        else:
+            self.ocr_job=(future,cycle,captured);self.ocr_active_priority=priority
+
+    def submit_ocr(self,crop,captured,cycle=None,alternate_crops=(),priority=.4):
+        cycle=self.cycle_id if cycle is None else cycle
+        entry=self.history.by_cycle.get(cycle)
+        parsed=self.ocr_results.get(cycle,(None,0))[0]
+        if ((entry and entry['identified'] and entry.get('status')!='unconfirmed')
+            or (parsed and parsed.get('name_validated',True))):return False
+        if crop is None or getattr(crop,'size',0)==0:return False
+        alternatives=tuple(item.copy() for item in alternate_crops if item is not None and getattr(item,'size',0))
+        if (self.ocr_job is not None and self.ocr_job[1]==cycle
+            and abs(self.ocr_job[2]-captured)<.20 and priority<=self.ocr_active_priority):return False
+        for i,item in enumerate(self.ocr_queue):
+            if item[1]==cycle and abs(item[2]-captured)<.20:
+                if priority<=item[0]:return False
+                self.ocr_queue.pop(i);break
+        queued=(float(priority),cycle,captured,crop.copy(),alternatives)
+        self.ocr_queue.append(queued)
+        self.ocr_queue.sort(key=lambda item:(item[0],-item[2]),reverse=True)
+        if len(self.ocr_queue)>OCR_FRAME_QUEUE_LIMIT:
+            # Keep recent observations when the reader is slower than capture.
+            # Template scores alone cannot rank a real label above scenery.
+            counts={c:sum(item[1]==c for item in self.ocr_queue) for c in {item[1] for item in self.ocr_queue}}
+            candidates=[(i,item) for i,item in enumerate(self.ocr_queue) if counts[item[1]]>1]
+            discard=min(candidates,key=lambda pair:(pair[1][0],pair[1][2]))[0]
+            self.ocr_queue.pop(discard)
+            if all(item is not queued for item in self.ocr_queue):return False
+        self.last_ocr=time.monotonic()
+        self.session_log.event('OCR_QUADRO_ENFILEIRADO',ciclo=cycle,prioridade=round(float(priority),3),
+            fila=len(self.ocr_queue),largura=int(crop.shape[1]),altura=int(crop.shape[0]))
+        self.dispatch_queued_ocr()
+        return True
 
     def refresh_point(self):
         self.point_status.set('Ponto na água salvo · F8 para alterar' if self.config['cast'] else 'Aponte para a água e pressione F8')
@@ -654,6 +702,7 @@ class App:
                     was_reward=bool(self.scene.get('reward'))
                     self.scene=scene;self.scene_time=captured
                     has_reward_evidence=bool(scene.get('reward') or scene.get('reward_crop_candidate') is not None)
+                    ocr_priority=2. if scene.get('reward') else .5
                     if (not self.dry.get() and has_reward_evidence
                         and icon_cycle is not None and icon_cycle in (self.cycle_id-1,self.cycle_id)):
                         if scene.get('reward'):
@@ -671,15 +720,14 @@ class App:
                         if crop is not None:
                             fallback=scene.get('reward_crop_fallback')
                             alternatives=(fallback,) if fallback is not None else ()
-                            if icon_cycle==self.cycle_id:
-                                self.last_reward_crop=crop;self.last_reward_crops=tuple([crop,*alternatives])
+                            if icon_cycle==self.cycle_id and ocr_priority>self.last_reward_priority:
+                                self.last_reward_priority=ocr_priority
+                                self.last_reward_crop=crop.copy()
+                                self.last_reward_crops=tuple([crop.copy(),*(item.copy() for item in alternatives)])
                             entry=self.history.by_cycle.get(icon_cycle)
-                            if now-self.last_ocr>=.75 and self.worker.can_submit:
-                                if entry and (not entry['identified'] or entry.get('status')=='unconfirmed'):
-                                    if not any(c==icon_cycle for _,c in self.confirmation_jobs):
-                                        future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop,*alternatives)
-                                        if future is not None:self.confirmation_jobs.append((future,icon_cycle));self.last_ocr=now
-                                elif entry is None:self.submit_ocr(crop,captured,icon_cycle,alternatives)
+                            if (scene.get('reward') or
+                                float(scene.get('reward_candidate_score') or 0.)>=OCR_CANDIDATE_MIN_SCORE):
+                                self.submit_ocr(crop,captured,icon_cycle,alternatives,priority=ocr_priority)
                     visible=bool(scene.get('loot'))
                     if visible!=self.previous_scene_item:
                         self.session_log.event('ITEM_NA_VARA_DETECTADO' if visible else 'ITEM_NA_VARA_NAO_VISIVEL',ciclo=self.cycle_id)
@@ -761,6 +809,64 @@ class App:
                 if not value or not all(0<v<1 for v in value):raise RuntimeError('Ponto de ação inválido.')
                 if not U.SetCursorPos(int(x+value[0]*w),int(y+value[1]*h)):raise RuntimeError('Não foi possível posicionar o mouse.')
 
+    def update_analyses(self,now,reading):
+        """Independent consumers share a fresh capture, never each other's queue.
+
+        The small bar capture/control remains on every tick. In particular, a
+        slow scene scan must not prevent recalibration or erase a short reward
+        notice while the OCR process is starting or reading an older image.
+        """
+        scene_due=(now-self.last_scene>=.25 and self.scene_job is None
+                   and self.vision_worker.can_submit)
+        interval=CALIBRATION_SEARCH_INTERVAL if not self.calibration.locked else 1.
+        calibration_due=(self.config['auto_calibrate'] and self.calibration_job is None
+            and self.calibration_worker.can_submit
+            and now-getattr(self,'last_calibration_search',0)>=interval
+            and self.engine.state in ('INICIO','ESPERANDO','PESCANDO','RESULTADO','RECUPERANDO'))
+        owner=reward_cycle_owner(self.engine.state,self.cycle_id)
+        entry=self.history.by_cycle.get(owner)
+        needs_name=entry is None or not entry['identified'] or entry.get('status')=='unconfirmed'
+        collection_stage=self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA','REINICIANDO')
+        ocr_due=(not self.dry.get() and owner is not None and needs_name
+            and now-self.last_ocr_capture>=OCR_FRAME_INTERVAL
+            and (collection_stage or (self.engine.state=='PESCANDO' and reading is None)))
+        if not (scene_due or calibration_due or ocr_due):return
+        self.tick_stage='captura'
+        full=self.sample(full=True);captured=time.monotonic()
+        self.tick_stage='agendamento_visual'
+        if calibration_due:
+            stage=self.calibration.search_stage
+            self.bar_status.set({'current':'Procurando na região atual…','nearby':'Procurando ao redor da barra…','screen':'Procurando na tela do jogo…'}[stage])
+            future=self.submit_background(self.calibration_worker,self.signals.find_bar,full,self.config['roi'][:],stage)
+            if future is not None:
+                self.calibration_job=(future,self.calibration_epoch,captured)
+                self.last_calibration_search=now
+        if scene_due:
+            quick=self.engine.state=='PESCANDO' and reading is not None and now-self.full_scene_at<1
+            if not quick:self.full_scene_at=now
+            future=self.submit_background(self.vision_worker,self.signals.scan,full,quick)
+            if future is not None:
+                self.scene_job=(future,self.scene_epoch,captured,owner)
+                self.last_scene=now
+        if ocr_due:
+            self.last_ocr_capture=now
+            # An old template position is only a hint. Always retain the new
+            # centered crop too; a spinning item/notification can have moved.
+            point=(self.scene.get('reward_point') or self.scene.get('reward_candidate_point')) if 0<=now-self.scene_time<SCENE_MAX_AGE else None
+            crop=RewardReader.crop(full,point)
+            fallback=RewardReader.fallback_crop(full)
+            self.submit_ocr(crop,captured,owner,((fallback,) if fallback is not None else ()),
+                priority=1. if collection_stage else .4)
+
+    def read_bar(self,rgb,now):
+        fishing_confirmed=(self.engine.state=='PESCANDO' and self.scene.get('fishing')
+                           and 0<=now-self.scene_time<SCENE_MAX_AGE)
+        strict=self.config['auto_calibrate'] and not self.calibration.locked and not fishing_confirmed
+        # Once the independent Exit indicator confirms this minigame, marker
+        # overlap with scenery must not switch control back to the stricter
+        # calibration-only square test. Relocation still uses that strict test.
+        return detect(rgb,require_marker_shape=strict)
+
     def update(self,now):
         if not self.sync_window():return
         if now<self.capture_retry_at:return
@@ -768,7 +874,7 @@ class App:
         self.tick_stage='calibracao'
         self.poll_calibration(now)
         self.tick_stage='captura'
-        rgb=self.sample();reading=detect(rgb,require_marker_shape=self.config['auto_calibrate'] and not self.calibration.locked)
+        rgb=self.sample();reading=self.read_bar(rgb,now)
         self.capture_failures=0
         lost=self.engine.state=='PESCANDO' and reading is None and now-self.engine.last_marker>=.2
         if lost!=self.tracking_lost:
@@ -794,43 +900,7 @@ class App:
             try:self.diagnostic_job.result()
             except Exception as exc:self.background_error('diagnostico',exc)
             self.diagnostic_job=None
-        if now-self.last_scene>=.25 and self.scene_job is None and self.vision_worker.can_submit:
-            self.tick_stage='captura'
-            full=self.sample(full=True)
-            captured=time.monotonic()
-            self.tick_stage='agendamento_visual'
-            if self.config['auto_calibrate'] and self.calibration_job is None and (not self.calibration.locked or now-getattr(self,'last_calibration_search',0)>=1) and self.engine.state in ('INICIO','ESPERANDO','PESCANDO','RESULTADO','RECUPERANDO'):
-                stage=self.calibration.search_stage
-                self.bar_status.set({'current':'Procurando na região atual…','nearby':'Procurando ao redor da barra…','screen':'Procurando na tela do jogo…'}[stage])
-                future=self.submit_background(self.calibration_worker,self.signals.find_bar,full,self.config['roi'][:],stage)
-                if future is not None:self.calibration_job=(future,self.calibration_epoch,captured)
-                self.last_calibration_search=now
-            # A busca de painel jamais bloqueia o controle de 20 ms da barra.
-            quick=self.engine.state=='PESCANDO' and reading is not None and now-self.full_scene_at<1
-            if not quick:self.full_scene_at=now
-            future=self.submit_background(self.vision_worker,self.signals.scan,full,quick)
-            icon_cycle=reward_cycle_owner(self.engine.state,self.cycle_id)
-            if future is not None:self.scene_job=(future,self.scene_epoch,captured,icon_cycle)
-            previous=self.cycle_id-1
-            entry=self.history.by_cycle.get(previous)
-            if (not self.dry.get() and self.engine.state=='REINICIANDO' and self.worker.can_submit and entry
-                and (not entry['identified'] or entry.get('status')=='unconfirmed')
-                and now-self.last_ocr>=.75 and self.history_retries.get(previous,0)<3
-                and not any(cycle==previous for _,cycle in self.confirmation_jobs)):
-                point=self.scene.get('reward_point') or self.scene.get('reward_candidate_point')
-                crop=RewardReader.crop(full,point)
-                fallback=RewardReader.fallback_crop(full)
-                future=self.submit_background(self.worker,self.reader.read_with_diagnostics,crop,*((fallback,) if fallback is not None else ()))
-                if future is not None:self.confirmation_jobs.append((future,previous))
-                self.history_retries[previous]=self.history_retries.get(previous,0)+1;self.last_ocr=now
-            if not self.dry.get() and (self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
-                or (self.engine.state=='PESCANDO' and reading is None)) and not self.scene.get('reward'):
-                point=self.scene.get('reward_point') or self.scene.get('reward_candidate_point')
-                crop=RewardReader.crop(full,point)
-                fallback=RewardReader.fallback_crop(full)
-                if now-self.last_ocr>=.75 and self.worker.can_submit:
-                    self.submit_ocr(crop,now,alternate_crops=((fallback,) if fallback is not None else ()))
-            self.last_scene=time.monotonic()
+        self.update_analyses(now,reading)
         now=time.monotonic()
         if self.preview is not None and self.preview.winfo_exists() and now-self.last_preview>.25:
             im=Image.fromarray(rgb);im.thumbnail((70,90));self.photo=ImageTk.PhotoImage(im)
@@ -903,11 +973,12 @@ class App:
                 self.history.save()
             self.session_log.event('CICLO_CONCLUIDO',ciclo=self.cycle_id,resultado=self.engine.outcome,leituras_validas=self.round_metrics.summary()['valid_percent'],tempo_na_faixa=self.round_metrics.summary()['inside_percent'])
             self.round_metrics.reset()
-            self.cycle_id+=1;self.last_reward_crop=None;self.last_reward_crops=()
+            self.cycle_id+=1;self.last_reward_crop=None;self.last_reward_crops=();self.last_reward_priority=0.
             self.calibration.begin();self.calibration_epoch+=1
             # Resultados antigos só interessam enquanto resolvem uma linha pendente.
             self.ocr_results={k:v for k,v in self.ocr_results.items() if k>=self.cycle_id-1}
             self.pending_reward_readings={k:v for k,v in self.pending_reward_readings.items() if k>=self.cycle_id-1}
+            self.ocr_queue=[item for item in self.ocr_queue if item[1]>=self.cycle_id-1]
             self.empty_ocr_cycles={k for k in self.empty_ocr_cycles if k>=self.cycle_id-1}
             self.history_retries={k:v for k,v in self.history_retries.items() if k>=self.cycle_id-1}
             self.pending_icons={k:v for k,v in self.pending_icons.items() if k>=self.cycle_id-1}

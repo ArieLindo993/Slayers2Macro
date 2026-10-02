@@ -304,6 +304,13 @@
       "tag": "v0.0.40-beta",
       "published": true,
       "commit": "80e453193cc25b5080eaf9429653f9f5b21bea9f"
+    },
+    {
+      "beta": "0.0.41",
+      "original": "continuous capture, bounded reward OCR, first-acquisition badge and complete rail calibration",
+      "kind": "git",
+      "tag": "v0.0.41-beta",
+      "published": false
     }
   ]
 }
