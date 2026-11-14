@@ -318,7 +318,8 @@
       "original": "November circular fishing integration with splash, directional taps and Claim",
       "kind": "git",
       "tag": "v0.0.42-beta",
-      "published": false
+      "published": true,
+      "commit": "3632f940481f4a660d2e4bcf55d10cfb2cf28816"
     }
   ]
 }
