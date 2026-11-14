@@ -312,6 +312,13 @@
       "tag": "v0.0.41-beta",
       "published": true,
       "commit": "a74b1ff7b587a3322b53737758409f33c42ce7d0"
+    },
+    {
+      "beta": "0.0.42",
+      "original": "November circular fishing integration with splash, directional taps and Claim",
+      "kind": "git",
+      "tag": "v0.0.42-beta",
+      "published": false
     }
   ]
 }

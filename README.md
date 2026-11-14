@@ -2,180 +2,76 @@
 
 **Português** · [English](docs/README.en.md) · [Español](docs/README.es.md)
 
-Macro de pesca para **Slayers 2, no Roblox**, com interface para Windows, calibração automática e histórico dos itens da sessão. O nome do aplicativo é genérico, mas o perfil disponível atualmente é específico para Slayers 2.
+Macro visual de pesca para **Slayers 2 no Roblox**, para Windows. **Beta 0.0.42** integra a mecânica circular de novembro: lançamento, splash, segurar/soltar o mouse, pedidos A/D e coleta com T.
 
-**[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Ver versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Histórico de alterações](CHANGELOG.md)**
+**[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Alterações por versão](CHANGELOG.md)**
 
-**Beta 0.0.41:** Preserva os quadros das notificações enquanto o leitor está ocupado, reduz o custo de leitura em janelas pequenas e reconhece o selo `NEW!` da primeira captura. A recalibração funciona independentemente da análise dos itens e rejeita recortes incompletos da barra. A resolução ativa continua visível na interface.
+## Instalar e atualizar
 
-## Interface
+Você precisa de Windows e Roblox. O pacote pronto inclui as dependências: não é necessário instalar Python, Git ou AutoHotkey.
 
-A interface usa um tema noturno inspirado em pesca e Demon Slayer, com verde-jade e detalhes dourados. Desde a Beta 0.0.24, o cabeçalho exibe o ícone de Slayers 2, sem o padrão xadrez. O painel principal reúne status, preparação e inventário; a lateral mantém reconhecimento e registros. A mudança é visual: atalhos, opções e mecânicas permanecem iguais.
+1. Baixe **Atualizador.zip**. O botão verde **Code → Download ZIP** baixa os fontes, não o aplicativo pronto.
+2. Clique com o botão direito no ZIP e escolha **Extrair tudo**. Guarde a pasta extraída em um local fixo onde você possa salvar arquivos.
+3. Abra **Atualizar.cmd** na pasta extraída. Aguarde o download, a verificação de integridade e a extração.
+4. Quando aparecer **Abrir agora? (S/N)**, digite **S** e pressione Enter.
+5. Depois, **Iniciar.cmd** abre a instalação local; **Atualizar.cmd** busca atualizações e **Voltar-versao.cmd** restaura a versão anterior disponível.
 
-## Instalação rápida
+Mantenha `Atualizar.ps1` junto dos atalhos `.cmd` e preserve a pasta oculta `.install`. Se aparecer que o script não foi encontrado, extraia o ZIP inteiro novamente. Se ele desaparecer após extrair, confira a quarentena do antivírus e a origem do pacote. Não execute os atalhos de dentro do ZIP.
 
-Para utilizar o executável, você precisa de Windows e do Roblox. Não é necessário instalar Python, Git ou AutoHotkey. É preciso internet para baixar as atualizações e jogar Roblox.
-
-1. Baixe **Atualizador.zip** pelo link acima. O botão verde “Code → Download ZIP” baixa o código-fonte, não o aplicativo pronto.
-2. Clique com o botão direito no ZIP e escolha **Extrair tudo**. Use uma pasta fixa onde você possa salvar arquivos.
-3. Abra a pasta extraída e dê dois cliques em **Atualizar.cmd**. Não execute os arquivos de dentro do ZIP.
-4. Aguarde a consulta ao GitHub, o download, a verificação de integridade e a extração.
-5. Quando aparecer “Abrir agora? (S/N)”, digite **S** e pressione Enter.
-
-Mantenha os arquivos do atualizador juntos. Não mova apenas o executável nem apague a pasta oculta `.install`: ela guarda as versões instaladas.
-
-### Qual arquivo baixar?
-
-| Arquivo | Para que serve |
+| Arquivo | Uso |
 | --- | --- |
-| **Atualizador.zip** | Opção recomendada: instala o macro e permite atualizar sem baixar o aplicativo manualmente a cada versão. |
-| **Slayers2Macro.zip** | Aplicativo para instalação manual. Extraia todo o conteúdo e execute `Slayers2Macro.exe`, mantendo os demais arquivos ao lado dele. |
-| **Slayers2Macro.zip.sha256** | Código de verificação da integridade do download. O atualizador o verifica automaticamente. |
-| **Source code** | Código-fonte para desenvolvimento; não é o executável. |
+| Atualizador.zip | Instalação e futuras atualizações. |
+| Slayers2Macro.zip | Instalação manual: extraia tudo e abra Slayers2Macro.exe com os arquivos acompanhantes. |
+| Slayers2Macro.zip.sha256 | Verificação de integridade; o atualizador confere automaticamente. |
+| Source code | Fontes para desenvolvimento. |
 
-## Primeira pesca
+## Primeira pesca com a mecânica nova
 
-1. Abra o Roblox, entre no Slayers 2 e equipe a vara perto da água.
-2. Com o Roblox em primeiro plano, aponte o mouse para um ponto válido na água e pressione **F8** para salvar o local do lançamento.
-3. Mantenha a opção de calibração automática ativada e pressione **F4**.
-4. O macro lança a vara, espera o minigame, controla o marcador e tenta coletar o resultado segurando **T**.
-5. Acompanhe a primeira rodada pela prévia e pelo texto de status. Se precisar interromper, use **F10**.
+1. Entre no jogo, equipe a vara e fique perto da água.
+2. Mantenha a câmera fixa. Aponte para **onde a linha vai cair e o splash vai aparecer** e pressione **F8**.
+3. Mantenha a calibração automática ligada e pressione **F4** com o Roblox em primeiro plano.
+4. O macro lança a linha, espera uma mudança visual do splash e dá o segundo clique. No círculo, ↑↑ pede segurar e ↓↓ pede soltar; sem aviso visível, o marcador fora da faixa recebe correção em direção ao arco verde.
+5. Quando um cartão lateral fica ativo, o macro propõe um ou dois toques de A/D conforme os pontos. O mouse continua sendo controlado durante esses pedidos.
+6. Após o resultado, tenta coletar segurando **T por três segundos**, lê Claim/nome/peso e volta a pescar. A coleta pode terminar antes do limite de tentativas.
 
-A sequência considera tentativas sem recompensa e repete a coleta quando necessário. O texto de reconhecimento do item não é requisito para iniciar a tentativa de coleta. Cada rodada tem até três lançamentos e cada sequência de coleta até cinco tentativas. Se nenhum lançamento for confirmado, o macro entra em recuperação e tenta outra rodada após uma espera progressiva de 15 a 60 segundos, com novas leituras de tela. O limite de lançamentos não provoca mais pausa definitiva. A coleta termina antes desse limite ao reconhecer a recompensa ou validar o desaparecimento persistente de um item após T. Sem item identificado nas duas primeiras tentativas, volta a pescar após conferir a ausência. O desaparecimento isolado não é registrado como recompensa confirmada. A presença é estimada pelo aviso Collect, não pelo reconhecimento do objeto 3D. Desde a Beta 0.0.21, pequenas demoras entre capturas não apagam as observações de ausência; sem novas evidências, o macro aguarda antes de gastar outra tentativa, respeitando o limite total da coleta.
+Acompanhe as primeiras rodadas pela prévia e pelo status. O splash é buscado perto do ponto marcado: se mudar câmera ou posição, marque novamente com F8. A interface exige que o Roblox permaneça visível e em primeiro plano. Ao perder foco, o macro pausa e libera os comandos; volte ao jogo e retome com F4.
 
-O Roblox precisa permanecer visível e em primeiro plano. Ao perder o foco, o macro pausa e libera as teclas e o mouse; volte ao jogo e pressione F4 para retomar. O macro usa o mouse e o teclado enquanto está ativo.
+## Atalhos, idiomas e calibração
 
-### Atalhos
-
-Estes são os padrões de fábrica. Abra **Configurar → Idioma e atalhos** para escolher **Português**, **English** ou **Español** e personalizar cada tecla. Clique em **Salvar e fechar**: a interface muda sem reiniciar e mantém o histórico da sessão. As instruções passam a mostrar os seus atalhos.
-
-São aceitas F1–F12, letras e números; **T** fica reservado à coleta do jogo. Cada ação precisa de uma tecla diferente. **Restaurar padrões** repõe os atalhos abaixo; salve para aplicar. Enquanto a janela de configurações estiver aberta, os atalhos não iniciam a pesca. As referências a F4/F8/F6/F10 neste guia indicam os padrões: se você os alterou, use suas teclas escolhidas.
-
-| Tecla | Ação |
+| Padrão | Ação |
 | --- | --- |
-| **F8** | Salvar o ponto na água para lançar a vara. |
-| **F4** | Iniciar ou pausar. |
-| **F6** | Abrir a seleção manual da região da barra. |
-| **F7** | Atalho alternativo para a mesma seleção manual, também configurável. |
-| **F10** | Parar e liberar os comandos. |
+| F4 | Iniciar / pausar. |
+| F8 | Marcar a água e a região de busca do splash. |
+| F6 | Selecionar manualmente o círculo inteiro numa imagem congelada. |
+| F7 | Alternativa para a mesma seleção. |
+| F10 | Parar e liberar os comandos. |
 
-Na seleção manual, Enter salva e Esc cancela. A tecla configurada para parar também cancela a seleção. O clique do mouse e a tecla T enviados ao jogo mantêm o funcionamento atual.
+Em **Configurar → Idioma e atalhos**, escolha **Português**, **English** ou **Español** e as teclas desejadas. A, D e T ficam reservados ao jogo. Atalhos antigos que usavam essas teclas voltam aos padrões para evitar conflito. Salvar aplica as opções sem apagar o histórico. As instruções na interface mostram as teclas configuradas.
 
-A tradução abrange menus, mensagens de estado, histórico, seleção manual e CSV exportado pelo botão. Nomes dos itens permanecem como no jogo; JSON, CSV automático e logs técnicos mantêm o formato estável para diagnóstico. O idioma do macro não altera o idioma do Roblox. Os scripts do atualizador mantêm seus nomes e mensagens em português.
+**Automático:** localiza o anel segmentado em cada pesca e procura novamente quando a leitura some. A posição do marcador fora do arco verde não impede localizar o círculo. A resolução do Roblox aparece na lateral.
 
-## Calibração e acompanhamento
+**Manual:** com o círculo visível, pressione F6, arraste ao redor dele inteiro e salve com Enter; Esc cancela. Os cartões A/D são lidos nas laterais da posição reconhecida. A opção automática pode ser reativada a qualquer momento. Os perfis circulares são separados por tamanho da janela, bordas e DPI; as seleções da antiga barra vertical não são usadas.
 
-**Automática:** a barra é conferida a cada pesca. A localização precisa de três capturas consistentes para ser confirmada. Rodadas com leituras confiáveis refinam o perfil; isso não garante melhora em toda tentativa. A posição continua sendo conferida periodicamente mesmo após a confirmação. Quando a localização se perde, a busca passa pela região atual, seus arredores e a tela do jogo. Desde a Beta 0.0.27, 120 segundos sem reencontrar o marcador levam à recuperação automática, em vez de uma pausa definitiva. Leituras válidas não são interrompidas por esse prazo. O candidato da calibração e o sinal independente de pesca são verificados na mesma captura.
+**Só observar**, nas configurações, permite inspecionar as leituras sem enviar comandos. Tempos de lançamento, espera, resultado e T continuam ajustáveis.
 
-**Manual:** quando o minigame estiver visível, pressione F6. Na captura congelada, arraste para selecionar a barra inteira e salve. Isso ativa o modo manual. Volte ao Roblox e pressione F4. A opção automática pode ser reativada na interface.
+## Histórico e registros
 
-Na atualização para Beta 0.0.18, perfis automáticos antigos são recalibrados para descartar regiões incorretas aprendidas anteriormente. Seleções manuais e demais configurações são preservadas. Uma nova região automática exige a forma do marcador e um sinal independente de minigame ativo.
+O inventário reúne quantidades por nome e o histórico de cada coleta, com horário, peso quando lido e ícones quando disponíveis na notificação. Nomes conhecidos são normalizados; nomes novos precisam de duas imagens distintas com confiança alta antes de entrar na listagem. A exportação CSV mantém o histórico; o JSON local também guarda peso e origem da confirmação.
 
-Os perfis são separados pelo tamanho da janela, presença de bordas e escala de exibição do Windows (DPI). Cada perfil guarda sua região, aprendizado e escolha entre modo automático e manual.
+Ver um nome em Claim identifica o item, mas não conta como aquisição. Uma notificação confirma a recompensa; sem ela, o desaparecimento persistente de Claim depois do período de T permite **inferir** a coleta. Essa origem fica registrada como `claim_after_hold`, separada de `reward_notification`. Física e alterações da interface ainda podem afetar essa inferência. Nenhum item identificado nas primeiras tentativas permite voltar a pescar após conferir a ausência.
 
-Na prévia, **azul** marca a região analisada, **verde** indica o alvo e **rosa** indica o marcador. O indicador de tempo dentro da faixa considera apenas os intervalos com leitura válida: ele não representa a porcentagem de pescas vencidas.
+Os logs de texto registram data, hora, início, pausa, splash, mudanças de etapa, mouse, A/D, T, leituras e resultados. Ficam em `%LOCALAPPDATA%/FishingMacro/logs`; **Ajuda e suporte → Abrir logs** abre a pasta. O resumo de suporte inclui versão, Windows, resolução e modo de calibração, sem usuário, caminhos, imagens ou conteúdo dos logs.
 
-## Ajustes de pesca
+Os dados ficam no computador e não são enviados automaticamente. Vídeos, históricos, configurações e capturas pessoais não fazem parte do GitHub nem dos downloads. A interface pode ser redimensionada. A troca de idioma não muda o idioma do Roblox; nomes de itens ficam como no jogo.
 
-Abra as configurações, altere os valores e clique em **Salvar e fechar**.
+## Validação e limites desta beta
 
-| Ajuste | Padrão atual | Intervalo permitido |
-| --- | --- | --- |
-| Duração do clique | 0,25 segundo | 0,08 a 1 segundo |
-| Segurar T | **3 segundos** | 0,2 a 5 segundos |
-| Esperar a pesca antes de repetir | 20 segundos | 10 a 60 segundos |
-| Esperar item depois da pesca | 2 segundos | 0,5 a 20 segundos |
+A integração tem testes do ciclo de pesca, perda de leitura, comandos concorrentes, liberação das teclas, perfis, identificação e histórico. Os vídeos enviados foram reproduzidos localmente para conferir as decisões, inclusive o A com dois pontos. Essa reprodução não altera as ações do jogador gravadas e não comprova vitória numa rodada ao vivo. Sessões longas e janelas compactas reais com a nova interface ainda precisam de validação em jogo; mudanças de escala também são verificadas com quadros redimensionados.
 
-**Atualizações preservam configurações salvas, salvo migrações documentadas.** Na Beta 0.0.22, o antigo padrão de 12 segundos para esperar o item passa uma única vez para 2 segundos. Outros valores dessa espera são preservados. Se você usava 1,5 segundo para T, altere “Segurar T (s)” para 3 manualmente. O novo padrão se aplica a configurações novas ou sem esse valor salvo.
+[Detalhes da integração circular](docs/NOVO_MINIGAME.md) · [Diagnóstico de estabilidade](docs/ESTABILIDADE.md) · [Numeração beta e versões anteriores](docs/VERSIONAMENTO.md)
 
-O modo **Só observar** permite acompanhar a leitura sem enviar comandos ao jogo.
+## Desenvolvimento
 
-## Histórico e diagnósticos
+Use Python 3.12 e as dependências fixadas em requirements.txt. A integração contínua executa os testes, a auditoria e build.py; o empacotador também executa a verificação do aplicativo compilado. tools/replay_circular.py e tools/replay_fishing.py reproduzem vídeos locais sem entradas ao jogo; precisam adicionalmente de imageio-ffmpeg. Relatórios e gravações não são versionados.
 
-O botão **Itens obtidos** mostra os registros da sessão. O reconhecimento de nomes usa leitura de texto da tela e pode falhar: “Nome não identificado” não deve ser interpretado como um nome de item confirmado. Histórico e exportações usam JSON e CSV; métricas de acompanhamento por ciclo ficam no JSON.
-
-Desde a Beta 0.0.28, as duas abas mostram a miniatura do item quando o aviso de recompensa é capturado. O recorte vem da mesma imagem que confirmou a recompensa e pode conter o fundo do jogo. Coletas não confirmadas e registros sem imagem mostram um traço. Itens com nome reconhecido reutilizam a miniatura já obtida nesta execução. Não existe download de um catálogo de ícones nem recuperação retroativa de imagens de sessões antigas.
-
-As miniaturas ficam no próprio JSON local do histórico; o CSV continua sendo uma tabela de texto. A sessão mantém até 256 miniaturas distintas para limitar o uso de memória. Esses pequenos recortes são independentes da opção **Salvar recortes** de diagnóstico e não são enviados ao GitHub.
-
-Os diagnósticos de perda de leitura são locais e limitados a até 20 pares de imagem e registro. A opção **Salvar recortes** permite desativar essas imagens. Eles ajudam a investigar quando e onde a leitura falhou.
-
-O arquivo local `runtime.json` mantém até 200 eventos de execução e um estado recente atualizado a cada cinco segundos, para investigar paradas mesmo sem gravação. Registra pausas, perda de foco, limites de tempo e falhas internas tratadas; uma interrupção abrupta pode deixar apenas o último estado salvo. Use **Abrir registros** para acessar a pasta. Esse registro textual não contém capturas nem mensagens livres de exceção e não é enviado automaticamente.
-
-### Log completo de eventos em texto
-
-Desde a versão Beta 0.0.19, cada abertura cria um arquivo `sessao-AAAAMMDD-HHMMSS-….txt` em `%LOCALAPPDATA%\FishingMacro\logs`. Clique em **Abrir logs de texto** para encontrar os arquivos e abra o desejado no Bloco de Notas.
-
-Cada linha informa data, horário com milissegundos e fuso local, tipo de evento e seus detalhes. São registrados início/pausa/fechamento, lançamentos, minigames, calibração, perda e recuperação de leitura, tentativas de coleta, comandos T, itens e quantidades reconhecidos, resultados não confirmados e erros. O número do ciclo permite relacionar uma coleta à identificação do item, mesmo quando o nome é lido depois.
-
-O log também salva um estado periódico a cada 30 segundos. Registra eventos e resultados, não um vídeo ou cada quadro capturado. Os arquivos anteriores não são apagados automaticamente e não estão sujeitos ao limite de 200 eventos do registro resumido. Uma interrupção forçada pode deixar apenas os eventos anteriores, sem uma linha de encerramento.
-
-Na Beta 0.0.27, o estado periódico também informa idade e atraso das análises, capturas descartadas, evidências e prazo da recuperação, tarefas pendentes e reinícios dos processos de análise. Falhas de captura e de análise têm eventos próprios; erros internos incluem a etapa e nomes de funções/arquivos, sem caminhos pessoais.
-
-O processamento de sinais, calibração, nomes de itens e recortes usa processos locais com filas limitadas. Se uma tarefa travar, seu processo é encerrado e a próxima análise inicia outro. A barra continua sendo lida diretamente a cada atualização. Com a mesma janela do Roblox ainda em primeiro plano, mudanças de tamanho ou posição provocam ajuste e recuperação; sair do Roblox continua pausando o macro.
-
-O log permanece ativo mesmo com **Salvar recortes** desmarcado. Não é enviado automaticamente e não entra no GitHub ou no pacote de distribuição. Ao investigar um problema, compartilhe o arquivo da execução correspondente após revisar seu conteúdo.
-
-## Atualizar ou voltar de versão
-
-Feche o macro antes de iniciar uma atualização ou trocar de versão.
-
-| Atalho | Ação |
-| --- | --- |
-| **Iniciar.cmd** | Abre a versão já instalada sem consultar o GitHub. O Roblox ainda precisa de sua conexão normal. |
-| **Atualizar.cmd** | Consulta o GitHub, instala a versão mais recente e pergunta se deseja abri-la. |
-| **Voltar-versao.cmd** | Alterna para a versão anterior disponível na mesma instalação, preservando os dados locais. |
-
-Para atualizar os próprios atalhos e o script do atualizador, baixe um novo **Atualizador.zip** e extraia na mesma pasta, substituindo os arquivos e preservando `.install`.
-
-O atualizador Beta 0.0.27 extrai e verifica os arquivos antes de substituir a instalação. Uma extração incompleta é baixada novamente, mesmo que já exista um executável nessa pasta. Para receber essa correção no atualizador, substitua os arquivos dele conforme a orientação acima.
-
-O retorno exige uma versão anterior instalada pelo atualizador. Instalações manuais em outras pastas não são localizadas automaticamente. Depois de voltar, use **Iniciar.cmd**; executar Atualizar novamente procura a versão mais recente.
-
-### Recuperação após falha de lançamento
-
-Na versão Beta 0.0.20, três lançamentos sem confirmação iniciam uma recuperação automática, registrada no log. T e mouse são liberados durante a espera. A recuperação só relança após leituras recentes; um minigame ou item reconhecido tem prioridade. Os contadores e o histórico são preservados. Pausas manuais e perda de foco continuam exigindo F4 para retomar. A recuperação não reconecta o jogo nem muda o ponto de água salvo.
-
-## Solução de problemas
-
-| Situação | O que verificar |
-| --- | --- |
-| A janela do atualizador parece parada | Aguarde o download e a extração. O pacote atualizado mostra cada etapa; a transferência pode levar alguns minutos. |
-| O atualizador informa que o macro está aberto | Feche o aplicativo e tente novamente. Não abra várias atualizações ao mesmo tempo. |
-| O arquivo `.cmd` não encontra o script | Extraia o ZIP inteiro e mantenha `Atualizar.ps1` junto dos atalhos. |
-| Falha de rede ou de integridade | Confira a conexão e tente novamente. Não use um download incompleto. |
-| F4 não inicia a pesca | Coloque o Roblox em primeiro plano, equipe a vara e marque a água com F8. |
-| A barra não é acompanhada | Observe a prévia, confira o modo de calibração e use F6 se precisar selecionar a região manualmente. |
-| T ainda é segurado por 1,5 segundo | A preferência anterior foi preservada. Salve 3 em “Segurar T (s)”. |
-| Não há versão anterior para restaurar | O retorno só fica disponível após ter outra versão instalada pelo mesmo atualizador. |
-
-Para relatar uma falha, informe a versão, o texto do status, o que ocorreu e os passos para reproduzir. Revise qualquer imagem antes de compartilhá-la; não envie a pasta inteira de dados pessoais.
-
-## Dados e privacidade
-
-Configurações, perfis, histórico e diagnósticos ficam em `%LOCALAPPDATA%\FishingMacro`, separados da instalação. Não há telemetria nem envio automático desses dados. O atualizador acessa o GitHub para consultar e baixar versões.
-
-O diagnóstico salva apenas o recorte da região configurada, não uma captura inteira do desktop. Uma seleção incorreta pode incluir outros elementos visíveis. Seus registros usam campos limitados, sem caminhos pessoais, tokens ou mensagens de exceção.
-
-Vídeos pessoais, configurações, históricos e diagnósticos não são incluídos no repositório nem nos pacotes. Os recursos visuais distribuídos são recortes de indicadores e o ícone da [página de Slayers 2 no Roblox](https://www.roblox.com/games/16205713724/Slayers-2). A migração de dados antigos é local e aditiva.
-
-O repositório e os downloads são públicos. O aplicativo ainda não inclui pagamentos, ativação por chave, autenticação de clientes ou restrições de cópia.
-
-## Desenvolvimento e validação
-
-Use Windows e Python 3.12. Em um ambiente virtual, execute:
-
-```powershell
-python -m pip install -r requirements.txt
-python -m unittest discover -s tests -v
-python audit.py
-python src/macro.py
-```
-
-Feche qualquer instância do macro antes dos testes: o teste do retorno de versão respeita o bloqueio de aplicativo aberto. Para gerar os pacotes, execute `python build.py`.
-
-A marca e a versão ficam em `src/product.py`. Uma tag `v*` aciona o GitHub Actions para executar testes, auditar os arquivos, compilar no Windows, testar a inicialização do executável e publicar os pacotes. Mantenha a tag alinhada com `VERSION` e registre as mudanças no [CHANGELOG.md](CHANGELOG.md).
-
-Os testes cobrem métricas, perfis, recuperação da leitura, registros, prévia e retorno de versão. Também foram usados quadros de gravações no desenvolvimento, sem publicar os arquivos pessoais de origem. Esses testes não substituem uma sessão prolongada no jogo ao vivo. Mudanças na interface do jogo podem exigir novos ajustes.
-
-Os pacotes compilados incluem informações disponíveis das bibliotecas usadas na pasta `THIRD_PARTY`.
+O nome do aplicativo é genérico; o perfil disponível é específico para Slayers 2. O repositório e os pacotes são públicos. Não há pagamentos, ativação por chave, autenticação de clientes ou restrições de cópia implementadas.

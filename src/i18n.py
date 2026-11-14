@@ -69,6 +69,22 @@ Pesca|Fishing|Pesca
 Idioma e atalhos|Language and shortcuts|Idioma y atajos
 Idioma|Language|Idioma
 Atalhos|Shortcuts|Atajos
+Ajuda e suporte|Help and support|Ayuda y soporte
+Suporte|Support|Soporte
+Perfil do jogo|Game profile|Perfil del juego
+Windows|Windows|Windows
+Resolução do Roblox|Roblox resolution|Resolución de Roblox
+Não detectada|Not detected|No detectada
+Calibração|Calibration|Calibración
+Automática|Automatic|Automática
+Manual|Manual|Manual
+Copie o resumo abaixo ao pedir ajuda. Ele inclui versão, versão do Windows, resolução do Roblox e modo de calibração. Não inclui nome da conta, caminhos, imagens ou conteúdo dos registros.|Copy the summary below when asking for help. It includes the app version, Windows version, Roblox resolution and calibration mode. It does not include your account name, file paths, images or log contents.|Copia el resumen siguiente cuando solicites ayuda. Incluye la versión de la aplicación, Windows, resolución de Roblox y modo de calibración. No incluye el nombre de tu cuenta, rutas de archivos, imágenes ni contenido de los registros.
+Os registros ficam neste computador. Nada é enviado automaticamente.|Logs stay on this computer. Nothing is sent automatically.|Los registros permanecen en este equipo. No se envía nada automáticamente.
+Resumo de suporte copiado.|Support summary copied.|Resumen de soporte copiado.
+Abrir logs|Open logs|Abrir registros
+Ver atualizações|View updates|Ver actualizaciones
+Copiar resumo|Copy summary|Copiar resumen
+Ajuda aberta. Volte ao Roblox e use o atalho para retomar.|Help opened. Return to Roblox and use the shortcut to resume.|Ayuda abierta. Vuelve a Roblox y usa el atajo para continuar.
 Iniciar / pausar|Start / pause|Iniciar / pausar
 Marcar água|Mark water|Marcar agua
 Calibrar / selecionar barra|Calibrate / select bar|Calibrar / seleccionar barra
@@ -161,7 +177,35 @@ Conferindo novas capturas antes de decidir se repete a coleta…|Checking new fr
 Conferindo recompensa e presença do item após T…|Checking the reward and item after T…|Comprobando la recompensa y el objeto tras T…
 Nome reconhecido|Name recognized|Nombre reconocido
 Sim|Yes|Sí
-Não|No|No'''
+Não|No|No
+Peso (kg)|Weight (kg)|Peso (kg)
+Aguardando o círculo|Waiting for the circle|Esperando el círculo
+↑↑ segurar · ↓↓ soltar\nA/D · um ou dois toques|↑↑ hold · ↓↓ release\nA/D · one or two taps|↑↑ mantener · ↓↓ soltar\nA/D · uno o dos toques
+F8  ·  Marcar a água       F6  ·  Selecionar o círculo|F8  ·  Mark water       F6  ·  Select circle|F8  ·  Marcar agua       F6  ·  Seleccionar círculo
+Automático: conferir círculo em cada pesca|Automatic: check circle on each catch|Automático: comprobar círculo en cada pesca
+Círculo: seleção manual salva|Circle: manual selection saved|Círculo: selección manual guardada
+Selecionar círculo com o mouse|Select circle with the mouse|Seleccionar círculo con el ratón
+Calibrar / selecionar círculo|Calibrate / select circle|Calibrar / seleccionar círculo
+Escolha teclas diferentes. A, D e T ficam reservados à pesca.|Choose different keys. A, D and T are reserved for fishing.|Elige teclas diferentes. A, D y T se reservan para pescar.
+Calibrar o círculo|Calibrate the circle|Calibrar el círculo
+Automático: o círculo é conferido em cada pesca.\nManual: F6 congela a imagem; arraste e salve.\nF8 marca onde a linha cai e onde procurar o splash.|Automatic: the circle is checked on each catch.\nManual: F6 freezes the image; drag and save.\nF8 marks where the line lands and where to look for the splash.|Automático: se comprueba el círculo en cada pesca.\nManual: F6 congela la imagen; arrastra y guarda.\nF8 marca dónde cae la línea y dónde buscar la salpicadura.
+Automático: aguardando o círculo|Automatic: waiting for the circle|Automático: esperando el círculo
+Selecionando o círculo. O macro está pausado.|Selecting the circle. The macro is paused.|Seleccionando el círculo. El macro está pausado.
+Círculo manual salvo · automático pode ser reativado|Manual circle saved · automatic can be re-enabled|Círculo manual guardado · puedes reactivar el modo automático
+Círculo localizado · mouse e A/D ativos|Circle located · mouse and A/D active|Círculo localizado · ratón y A/D activos
+Minigame concluído · aguardando Claim|Minigame complete · waiting for Claim|Minijuego terminado · esperando Claim
+Reencontrando o círculo…|Finding the circle again…|Buscando el círculo de nuevo…
+Arraste ao redor do círculo inteiro. As teclas laterais são lidas automaticamente.|Drag around the entire circle. Side keys are read automatically.|Arrastra alrededor del círculo completo. Las teclas laterales se leen automáticamente.
+Seleção inválida. Inclua o minigame inteiro.|Invalid selection. Include the whole minigame.|Selección inválida. Incluye todo el minijuego.
+Círculo localizado. Lendo mouse e A/D.|Circle located. Reading mouse and A/D.|Círculo localizado. Leyendo ratón y A/D.
+Círculo ativo · {command}|Circle active · {command}|Círculo activo · {command}
+segurando mouse|holding mouse|manteniendo el ratón
+soltando mouse|releasing mouse|soltando el ratón
+aguardando próximo aviso|waiting for next instruction|esperando la siguiente indicación
+Splash detectado. Fisgando…|Splash detected. Hooking…|Salpicadura detectada. Enganchando…
+Splash clicado. Aguardando o círculo…|Splash clicked. Waiting for the circle…|Salpicadura pulsada. Esperando el círculo…
+Linha lançada. Aguardando o splash…|Line cast. Waiting for the splash…|Línea lanzada. Esperando la salpicadura…
+Coleta inferida após T e ausência estável do aviso Claim|Collection inferred after T and stable absence of Claim|Recogida inferida tras T y ausencia estable de Claim'''
 
 CATALOG={}
 for row in _ROWS.splitlines():

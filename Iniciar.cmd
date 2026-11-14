@@ -1,3 +1,9 @@
 @echo off
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Atualizar.ps1" -Iniciar
+set "SCRIPT=%~dp0Atualizar.ps1"
+if not exist "%SCRIPT%" (
+    echo Nao foi possivel localizar Atualizar.ps1. Extraia o Atualizador.zip inteiro antes de usar este atalho.
+    pause
+    exit /b 1
+)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT%" -Iniciar
 if errorlevel 1 pause

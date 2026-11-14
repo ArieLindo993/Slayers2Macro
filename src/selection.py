@@ -6,7 +6,8 @@ from i18n import LocalizedVar
 
 
 class BarSelection:
-    def __init__(self,parent,rgb,window,on_save,on_close,tr=str,stop_key='F10'):
+    def __init__(self,parent,rgb,window,on_save,on_close,tr=str,stop_key='F10',circular=False):
+        self.circular=circular
         self.on_save=on_save;self.on_close=on_close
         self.size=(rgb.shape[1],rgb.shape[0]);self.roi=None;self.start=None;self.rect=None
         self.win=tk.Toplevel(parent);self.win.overrideredirect(True)
@@ -21,7 +22,7 @@ class BarSelection:
         self.canvas.bind('<ButtonRelease-1>',self.release)
         panel=tk.Frame(self.win,bg='#111f27',padx=18,pady=10)
         panel.place(relx=.5,y=14,anchor='n')
-        self.message=LocalizedVar(tr,value='Arraste ao redor da barra inteira, do topo até a base.')
+        self.message=LocalizedVar(tr,value='Arraste ao redor do círculo inteiro. As teclas laterais são lidas automaticamente.' if circular else 'Arraste ao redor da barra inteira, do topo até a base.')
         tk.Label(panel,textvariable=self.message,bg='#111f27',fg='white',font=('Segoe UI',12)).pack()
         row=tk.Frame(panel,bg='#111f27');row.pack(pady=(8,0))
         self.button=tk.Button(row,text=tr('Salvar seleção (Enter)'),command=self.accept,state='disabled',bg='#226853',fg='#f1fff9',activebackground='#2b8066',activeforeground='white',relief='flat',padx=12,pady=7)
@@ -44,9 +45,13 @@ class BarSelection:
     def release(self,event):
         if self.start is None:return
         self.drag(event)
-        self.roi=selection_roi(self.start,(event.x,event.y),self.size)
+        if self.circular:
+            w,h=self.size;x0,x1=sorted((max(0,min(w,self.start[0])),max(0,min(w,event.x))))
+            y0,y1=sorted((max(0,min(h,self.start[1])),max(0,min(h,event.y))))
+            self.roi=[x0/w,y0/h,(x1-x0)/w,(y1-y0)/h] if x1-x0>=60 and y1-y0>=60 else None
+        else:self.roi=selection_roi(self.start,(event.x,event.y),self.size)
         self.button.configure(state='normal' if self.roi else 'disabled')
-        self.message.set('Confira o retângulo. Salvar fixa esta região no modo manual.' if self.roi else 'Seleção inválida. Arraste ao redor da barra vertical inteira.')
+        self.message.set('Confira o retângulo. Salvar fixa esta região no modo manual.' if self.roi else 'Seleção inválida. Inclua o minigame inteiro.')
 
     def accept(self):
         if self.roi is None:return

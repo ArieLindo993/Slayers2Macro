@@ -8,7 +8,7 @@ from product import VERSION
 class RuntimeJournal:
     """Estado de execução persistente, sem imagens, caminhos ou mensagens livres."""
     events_allowed={'startup','started','closed','internal_error','focus_lost','fishing_timeout','cast_unconfirmed','user_pause','previous_session_incomplete'}
-    states_allowed={'INICIO','POSICIONANDO','CLIQUE','ESPERANDO','PESCANDO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA','REINICIANDO','RECUPERANDO','PARADO'}
+    states_allowed={'INICIO','POSICIONANDO','CLIQUE','ESPERANDO','FISGANDO','AGUARDANDO_CIRCULO','PESCANDO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA','REINICIANDO','RECUPERANDO','PARADO'}
 
     def __init__(self,path):
         self.path=Path(path);self.events=[];self.snapshot={}
@@ -61,10 +61,17 @@ class TrackingMetrics:
                 'inside_percent':round(100*self.inside/self.valid,1) if self.valid else None}
 
 def annotated_preview(rgb,reading):
+    if reading is not None and hasattr(reading,'radius'):
+        cx,cy=reading.center;r=reading.radius;h,w=rgb.shape[:2]
+        x0=max(0,int(cx-r*2));y0=max(0,int(cy-r*2.05))
+        x1=min(w,int(cx+r*2));y1=min(h,int(cy+r*1.6))
+        im=Image.fromarray(rgb[y0:y1,x0:x1]).convert('RGB');im.thumbnail((205,195))
+        draw=ImageDraw.Draw(im);draw.rectangle((0,0,im.width-1,im.height-1),outline='#20b8ed',width=2)
+        return im
     im=Image.fromarray(rgb).convert('RGB');im.thumbnail((160,200))
     draw=ImageDraw.Draw(im);w,h=im.size
     draw.rectangle((0,0,w-1,h-1),outline='#20b8ed',width=2)
-    if reading:
+    if reading and reading.marker is not None:
         y0=int((reading.target-reading.band/2)*h);y1=int((reading.target+reading.band/2)*h)
         draw.rectangle((2,max(1,y0),w-3,min(h-2,y1)),outline='#12ed8c',width=2)
         y=max(0,min(h-1,int(reading.marker*h)))

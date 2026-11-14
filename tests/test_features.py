@@ -116,6 +116,7 @@ class Features(unittest.TestCase):
         import macro
         with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,{'FISHING_MACRO_DATA_DIR':tmp}):
             app=macro.App();app.root.withdraw()
+            app.engine=macro.Engine(app.config)
             try:
                 w=(1,0,0,800,500)
                 with patch.object(macro,'game_window',return_value=w):

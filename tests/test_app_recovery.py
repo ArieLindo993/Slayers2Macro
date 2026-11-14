@@ -23,6 +23,9 @@ class AppRecovery(unittest.TestCase):
         for name in ('send_mouse','send_t'):
             mock=patch.object(macro,name);mock.start();self.addCleanup(mock.stop)
         self.app=macro.App();self.app.root.withdraw()
+        # These regressions exercise the retained vertical-bar engine. The
+        # circular application path has separate integration coverage.
+        self.app.engine=macro.Engine(self.app.config)
         self.addCleanup(self.app.close)
         for timer in self.app.root.tk.call('after','info'):self.app.root.after_cancel(timer)
         self.app.config['cast']=[.5,.5]

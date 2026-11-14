@@ -101,6 +101,7 @@ class ItemHistory:
             entry.update(name='Nome não identificado',quantity=result['quantity'],identified=False)
             if self.log:self.log.event('COLETA_CONFIRMADA_TARDIA',ciclo=cycle,item=result['name'],quantidade=result['quantity'])
         result=dict(result,name=canonical_name(result['name']))
+        if result.get('weight_kg') is not None:entry['weight_kg']=result['weight_kg']
         if not result.get('name_validated',True):
             normalized=name_key(result['name']);known=self.validated_names.get(normalized)
             if known and not result.get('name_ambiguous') and result.get('name_confidence',0)>=.9:

@@ -8,6 +8,8 @@ import sys
 import time
 import traceback
 import multiprocessing
+import platform
+import webbrowser
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from background import BackgroundWorker
@@ -17,6 +19,10 @@ import mss
 from PIL import Image, ImageTk, ImageDraw
 from detector import detect
 from engine import Engine
+from circular_engine import CircularEngine
+from circular import CircularReader
+from splash import SplashReader
+from claim import ClaimReader
 from signals import Signals
 from item_history import ItemHistory, RewardReader
 from item_icons import decode_icon,IconSampler
@@ -72,6 +78,13 @@ def send_t(down):
         raise RuntimeError('Windows não aceitou o comando da tecla T.')
 
 
+def send_fishing_key(key,down):
+    code={'A':0x1e,'D':0x20}[key]
+    event=Input(type=1,ki=KeyInput(0,code,0x0008 | (0 if down else 0x0002),0,0))
+    if U.SendInput(1,C.byref(event),C.sizeof(Input))!=1:
+        raise RuntimeError('Windows não aceitou o comando de pesca.')
+
+
 def game_window():
     hwnd = U.GetForegroundWindow()
     pid = W.DWORD()
@@ -125,7 +138,7 @@ OCR_CANDIDATE_MIN_SCORE=.66
 class App:
     def __init__(self):
         self.root=tk.Tk();self.root.title(APP_NAME+' · '+DISPLAY_VERSION)
-        self.root.geometry('900x720');self.root.resizable(False,False)
+        self.root.geometry('980x760');self.root.minsize(900,700);self.root.resizable(True,True)
         self.base=Path(sys.executable if getattr(sys,'frozen',False) else __file__).parent
         self.data=data_directory();migrate_legacy(self.base,self.data)
         self.config_path=self.data/'config.json'
@@ -176,12 +189,20 @@ class App:
         self.selection=None;self.pending_selection=None
         assets=Path(getattr(sys,'_MEIPASS',self.base))/'assets'
         self.signals=Signals(assets)
+        self.circle_reader=CircularReader(assets);self.splash_reader=SplashReader()
+        self.claim_reader=ClaimReader(assets);self.claim_job=None;self.last_claim_ocr=0.;self.claim_votes={}
+        self.current_circle=None;self.last_circle_scan=-float('inf')
+        self.claim_scene=None;self.last_claim_scan=-float('inf');self.circle_splash=False
+        self.fishing_keys={};self.circular_scene={};self.circular_scene_time=0.
+        self.config['circle_profiles']=saved.get('circle_profiles',{}) if isinstance(locals().get('saved'),dict) and isinstance(saved.get('circle_profiles'),dict) else {}
+        self.config['circle_roi']=[.65,.30,.24,.42]
+        self.config['auto_calibrate']=True
         self.vision_worker=BackgroundWorker('sinais-visuais',timeout=10,max_pending=1)
         self.scene_job=None;self.scene_epoch=0;self.scene_time=0.;self.paused_state=None
         self.scene_latency=None;self.scene_dropped=0;self.last_vision_warning=-float('inf')
         self.capture_retry_at=0.;self.capture_failures=0;self.started_at=0.;self.last_tick=None
         self.tick_max_ms=0.;self.tick_stage='inicio';self.full_scene_at=0.
-        self.engine=Engine(self.config)
+        self.engine=CircularEngine(self.config)
         self.history=ItemHistory(self.data/'historico',log=self.session_log)
         self.history_window=None;self.history_tables=None
         self.history_photos={};self.pending_icons={};self.icon_sampler=IconSampler()
@@ -211,9 +232,9 @@ class App:
         ttk.Label(vision,text=self.tr('LEITURA DA ÁGUA'),style='Accent.TLabel').pack(anchor='w')
         ttk.Label(vision,text=self.tr('Reconhecimento'),font=('Segoe UI',16,'bold')).pack(anchor='w',pady=(4,6))
         preview_card=ttk.Frame(vision,style='Panel.TFrame',padding=12);preview_card.pack(fill='x')
-        self.live_preview=ttk.Label(preview_card,text=self.tr('Aguardando a barra'),anchor='center',style='PanelMuted.TLabel')
+        self.live_preview=ttk.Label(preview_card,text=self.tr('Aguardando o círculo'),anchor='center',style='PanelMuted.TLabel')
         self.live_preview.pack(fill='x',pady=4)
-        ttk.Label(vision,text=self.tr('Azul · região   Verde · alvo\nRosa · marcador'),style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w',pady=(10,0))
+        ttk.Label(vision,text=self.tr('↑↑ segurar · ↓↓ soltar\nA/D · um ou dois toques'),style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w',pady=(10,0))
         self.metrics_text=LocalizedVar(self.tr,value='Qualidade: aguardando leituras')
         ttk.Label(vision,textvariable=self.metrics_text,wraplength=218).pack(anchor='w',pady=10)
         self.profile_text=LocalizedVar(self.tr,value='Perfil: aguardando o jogo')
@@ -236,18 +257,19 @@ class App:
         ttk.Label(status_card,textvariable=self.counter,style='PanelMuted.TLabel').pack(anchor='w')
         section(main,self.tr('Preparação'))
         ttk.Label(main,textvariable=self.point_status,style='Muted.TLabel',wraplength=530).pack(anchor='w',pady=(0,9))
-        ttk.Label(main,text=self.tr('F8  ·  Marcar a água       F6  ·  Selecionar a barra'),style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w')
-        self.bar_status=LocalizedVar(self.tr,value='Automático: conferir barra em cada pesca' if self.config['auto_calibrate'] else 'Barra: seleção manual salva')
+        ttk.Label(main,text=self.tr('F8  ·  Marcar a água       F6  ·  Selecionar o círculo'),style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w')
+        self.bar_status=LocalizedVar(self.tr,value='Automático: conferir círculo em cada pesca' if self.config['auto_calibrate'] else 'Círculo: seleção manual salva')
         ttk.Label(main,textvariable=self.bar_status,style='Muted.TLabel',wraplength=530).pack(anchor='w',pady=(12,6))
         self.auto_var=tk.BooleanVar(value=self.config['auto_calibrate'])
         ttk.Checkbutton(main,text=self.tr('Calibrar automaticamente a cada pesca'),variable=self.auto_var,command=self.toggle_auto).pack(anchor='w')
-        ttk.Button(main,text=self.tr('Selecionar barra com o mouse'),command=self.schedule_selection).pack(anchor='w',pady=(10,0))
+        ttk.Button(main,text=self.tr('Selecionar círculo com o mouse'),command=self.schedule_selection).pack(anchor='w',pady=(10,0))
         section(main,self.tr('Inventário da sessão'))
         self.history_button=ttk.Button(main,text=self.tr('Itens obtidos · 0'),command=self.open_history)
         self.history_button.pack(fill='x')
         row=ttk.Frame(main);row.pack(fill='x',side='bottom',pady=(18,0))
         ttk.Label(row,text=self.tr('F4  iniciar / pausar     ·     F10  parar'),style='Muted.TLabel',font=('Segoe UI',9)).pack(side='bottom',pady=(12,0))
-        ttk.Button(row,text=self.tr('Configurar'),command=self.open_settings).pack(side='right')
+        ttk.Button(row,text=self.tr('Ajuda e suporte'),command=self.open_about).pack(side='right')
+        ttk.Button(row,text=self.tr('Configurar'),command=self.open_settings).pack(side='right',padx=(0,7))
         ttk.Button(row,text=self.tr('Parar'),style='Stop.TButton',command=lambda:self.stop('Parado.')).pack(side='right',padx=7)
         self.start_button=ttk.Button(row,text=self.tr('Iniciar'),style='Go.TButton',command=self.button_start)
         self.start_button.pack(side='left',fill='x',expand=True,padx=(0,7))
@@ -267,7 +289,7 @@ class App:
         tabs=ttk.Notebook(frame);tabs.pack(fill='both',expand=True)
         self.history_tables=[]
         ttk.Style(self.root).configure('History.Treeview',rowheight=42)
-        for title,columns in [('Resumo',('Item','Quantidade')),('Histórico',('Horário','Item','Quantidade'))]:
+        for title,columns in [('Resumo',('Item','Quantidade')),('Histórico',('Horário','Item','Quantidade','Peso (kg)'))]:
             page=ttk.Frame(tabs);tabs.add(page,text=self.tr(title))
             table=ttk.Treeview(page,columns=columns,show='tree headings',selectmode='browse',style='History.Treeview')
             table.heading('#0',text=self.tr('Ícone'));table.column('#0',width=58,minwidth=58,stretch=False,anchor='center')
@@ -278,12 +300,58 @@ class App:
             self.history_tables.append(table)
         self.refresh_history()
 
+    def support_summary(self):
+        window=self.window
+        resolution=(f'{window[3]} × {window[4]}' if window else self.tr('Não detectada'))
+        calibration=self.tr('Automática') if self.config['auto_calibrate'] else self.tr('Manual')
+        return '\n'.join((
+            f'{APP_NAME} {DISPLAY_VERSION}',
+            f'{self.tr("Perfil do jogo")}: {GAME_PROFILE}',
+            f'{self.tr("Windows")}: {platform.release()}',
+            f'{self.tr("Resolução do Roblox")}: {resolution}',
+            f'{self.tr("Calibração")}: {calibration}',
+        ))
+
+    def copy_support_summary(self):
+        summary=self.support_summary()
+        self.root.clipboard_clear();self.root.clipboard_append(summary)
+        self.root.update_idletasks()
+        self.session_log.event('RESUMO_DE_SUPORTE_COPIADO',versao=VERSION,
+            resolucao=self.window[3:5] if self.window else None,
+            calibracao='automatica' if self.config['auto_calibrate'] else 'manual')
+        self.status.set(self.tr('Resumo de suporte copiado.'))
+
+    def open_release_page(self):
+        webbrowser.open('https://github.com/ArieLindo993/Slayers2Macro/releases/latest')
+
+    def open_about(self):
+        self.stop(self.tr('Ajuda aberta. Volte ao Roblox e use o atalho para retomar.'))
+        win=tk.Toplevel(self.root);win.title(self.tr('Ajuda e suporte'))
+        win.geometry('600x430');win.minsize(520,400);win.configure(bg=BG);win.transient(self.root)
+        frame=ttk.Frame(win,padding=22);frame.pack(fill='both',expand=True)
+        ttk.Label(frame,text=APP_NAME,font=('Segoe UI',20,'bold')).pack(anchor='w')
+        ttk.Label(frame,text=f'{DISPLAY_VERSION}  ·  {self.tr("Perfil do jogo")}: {GAME_PROFILE}',
+                  style='Muted.TLabel').pack(anchor='w',pady=(3,14))
+        ttk.Label(frame,text=self.tr('Suporte'),font=('Segoe UI',12,'bold')).pack(anchor='w')
+        ttk.Label(frame,text=self.tr('Copie o resumo abaixo ao pedir ajuda. Ele inclui versão, versão do Windows, resolução do Roblox e modo de calibração. Não inclui nome da conta, caminhos, imagens ou conteúdo dos registros.'),
+                  style='Muted.TLabel',wraplength=540,justify='left').pack(anchor='w',pady=(7,12))
+        details=ttk.Frame(frame,style='Panel.TFrame',padding=12);details.pack(fill='x')
+        ttk.Label(details,text=self.support_summary(),style='Panel.TLabel',justify='left').pack(anchor='w')
+        ttk.Label(frame,text=self.tr('Os registros ficam neste computador. Nada é enviado automaticamente.'),
+                  style='Muted.TLabel',wraplength=540).pack(anchor='w',pady=(12,8))
+        buttons=ttk.Frame(frame);buttons.pack(side='bottom',fill='x',pady=(12,0))
+        ttk.Button(buttons,text=self.tr('Abrir logs'),command=self.open_logs).pack(side='left')
+        ttk.Button(buttons,text=self.tr('Ver atualizações'),command=self.open_release_page).pack(side='left',padx=7)
+        ttk.Button(buttons,text=self.tr('Copiar resumo'),style='Go.TButton',
+                   command=self.copy_support_summary).pack(side='right')
+
     def clear_history(self):
         self.stop('Nova sessão. Use F4 para iniciar.')
         self.history.save()
         self.session_log.event('NOVA_SESSAO_DE_ITENS')
         self.history=ItemHistory(self.data/'historico',log=self.session_log);self.metrics.reset();self.round_metrics.reset()
         self.ocr_results={};self.confirmation_jobs=[];self.ocr_job=None;self.ocr_queue=[]
+        self.claim_job=None;self.claim_votes={}
         self.last_reward_crop=None;self.last_reward_crops=();self.last_reward_priority=0.
         self.last_ocr=0.;self.last_ocr_capture=0.
         self.pending_reward_readings={};self.empty_ocr_cycles=set()
@@ -308,7 +376,7 @@ class App:
             key=self.history.icons_by_name.get(name.casefold().strip())
             self.history_tables[0].insert('','end',values=(self.tr(name) if name=='Nome não identificado' else name,qty),**self.history_icon(key))
         for entry in reversed(self.history.entries):
-            self.history_tables[1].insert('','end',values=(datetime.fromisoformat(entry['time']).strftime('%H:%M:%S'),self.tr(entry['name']) if entry.get('status')=='unconfirmed' or not entry['identified'] else entry['name'],entry['quantity'] if entry['quantity'] is not None else '?'),**self.history_icon(entry.get('icon')))
+            self.history_tables[1].insert('','end',values=(datetime.fromisoformat(entry['time']).strftime('%H:%M:%S'),self.tr(entry['name']) if entry.get('status')=='unconfirmed' or not entry['identified'] else entry['name'],entry['quantity'] if entry['quantity'] is not None else '?',entry.get('weight_kg','—')),**self.history_icon(entry.get('icon')))
         self.history_photos={k:v for k,v in self.history_photos.items() if k in self.history.icons}
 
     def history_icon(self,key):
@@ -381,6 +449,23 @@ class App:
         return False
 
     def poll_ocr(self):
+        if self.claim_job is not None and self.claim_job[0].done():
+            future,cycle=self.claim_job;self.claim_job=None
+            try:
+                result=future.result()
+                if result and cycle>=self.cycle_id-1:
+                    vote=self.claim_votes.get(cycle)
+                    if vote is None or vote['name']!=result['name']:
+                        vote={'name':result['name'],'samples':set()};self.claim_votes[cycle]=vote
+                    if result.get('sample_id') and result['name_confidence']>=.92 and len(vote['samples'])<2:
+                        vote['samples'].add(result['sample_id'])
+                    if len(vote['samples'])>=2 and not result['name_ambiguous']:result['name_validated']=True
+                    self.pending_reward_readings[cycle]=result
+                    entry=self.history.by_cycle.get(cycle)
+                    if entry and entry.get('status')!='unconfirmed':
+                        self.history.identify(cycle,result);self.refresh_history()
+                    self.session_log.event('NOME_CLAIM_LIDO',ciclo=cycle,item=result['name'],peso_kg=result['weight_kg'])
+            except Exception as exc:self.background_error('claim',exc)
         remaining=[]
         for future,cycle in self.confirmation_jobs:
             if not future.done():remaining.append((future,cycle));continue
@@ -466,12 +551,12 @@ class App:
         ttk.Combobox(preferences,textvariable=self.language_var,values=list(LANGUAGES.values()),state='readonly',width=24).pack(anchor='w',pady=(8,16))
         ttk.Label(preferences,text=self.tr('Atalhos'),font=('Segoe UI',12,'bold')).pack(anchor='w')
         self.hotkey_vars={}
-        for action,label in [('toggle','Iniciar / pausar'),('water','Marcar água'),('calibrate','Calibrar / selecionar barra'),('calibrate_alt','Calibrar (atalho alternativo)'),('stop','Parar')]:
+        for action,label in [('toggle','Iniciar / pausar'),('water','Marcar água'),('calibrate','Calibrar / selecionar círculo'),('calibrate_alt','Calibrar (atalho alternativo)'),('stop','Parar')]:
             row=ttk.Frame(preferences);row.pack(fill='x',pady=6)
             ttk.Label(row,text=self.tr(label)).pack(side='left')
             var=tk.StringVar(value=self.config['hotkeys'][action]);self.hotkey_vars[action]=var
             ttk.Combobox(row,textvariable=var,values=list(KEY_CODES),state='readonly',width=7).pack(side='right')
-        ttk.Label(preferences,text=self.tr('Escolha teclas diferentes. T permanece reservado à coleta.'),wraplength=535,style='Muted.TLabel').pack(anchor='w',pady=12)
+        ttk.Label(preferences,text=self.tr('Escolha teclas diferentes. A, D e T ficam reservados à pesca.'),wraplength=535,style='Muted.TLabel').pack(anchor='w',pady=12)
         ttk.Button(preferences,text=self.tr('Restaurar padrões'),command=self.reset_hotkey_fields).pack(anchor='w')
         self.fields={}
         for key,label,lo,hi in [('cast_hold','Duração do clique (s)',.08,1),('t_hold','Segurar T (s)',.2,5),
@@ -483,8 +568,8 @@ class App:
             ttk.Spinbox(row,textvariable=var,from_=lo,to=hi,increment=.1,width=7).pack(side='right')
         ttk.Checkbutton(frame,text=self.tr('Só observar (não envia comandos)'),variable=self.dry,
                         command=lambda:self.stop('Modo de observação alterado.')).pack(anchor='w',pady=12)
-        ttk.Label(frame,text=self.tr('Calibrar a barra'),font=('Segoe UI',12,'bold')).pack(anchor='w',pady=(4,6))
-        ttk.Label(frame,text=self.tr('Automático: a barra é conferida em cada pesca.\nManual: F6 congela a imagem; arraste e salve.\nF8 salva o ponto de lançamento na água.'),style='Muted.TLabel').pack(anchor='w')
+        ttk.Label(frame,text=self.tr('Calibrar o círculo'),font=('Segoe UI',12,'bold')).pack(anchor='w',pady=(4,6))
+        ttk.Label(frame,text=self.tr('Automático: o círculo é conferido em cada pesca.\nManual: F6 congela a imagem; arraste e salve.\nF8 marca onde a linha cai e onde procurar o splash.'),style='Muted.TLabel',wraplength=520).pack(anchor='w')
         ttk.Label(frame,text=self.tr('3 lançamentos por rodada; recuperação automática. Até 5 coletas.\nT é segurado mesmo se o painel desaparecer.'),style='Muted.TLabel').pack(anchor='w',pady=12)
         self.preview=ttk.Label(frame,text=self.tr('Prévia aparece no modo de observação'),anchor='center')
         self.preview.pack(fill='x',expand=True)
@@ -520,10 +605,17 @@ class App:
         self.status.set('Ajustes salvos. Use F4 dentro do jogo.')
 
     def save(self):
+        temporary=self.config_path.with_suffix('.tmp')
         try:
-            self.config_path.write_text(json.dumps(self.config,indent=2),encoding='utf-8')
-            self.profiles.save(self.profile_key,self.config['roi'],self.calibration.profile,self.config['auto_calibrate'])
-        except OSError:self.status.set('Ajustes aplicados; não foi possível salvar nesta pasta.')
+            if isinstance(self.engine,CircularEngine) and self.profile_key:
+                self.config['circle_profiles'][self.profile_key]={'roi':self.config['circle_roi'],'automatic':self.config['auto_calibrate']}
+            temporary.write_text(json.dumps(self.config,ensure_ascii=False,indent=2),encoding='utf-8')
+            temporary.replace(self.config_path)
+            if not isinstance(self.engine,CircularEngine):self.profiles.save(self.profile_key,self.config['roi'],self.calibration.profile,self.config['auto_calibrate'])
+        except OSError:
+            try:temporary.unlink(missing_ok=True)
+            except OSError:pass
+            self.status.set('Ajustes aplicados; não foi possível salvar nesta pasta.')
 
     def toggle_diagnostics(self):
         self.config['diagnostics_enabled']=self.diagnostic_var.get();self.save()
@@ -544,6 +636,23 @@ class App:
             mode='window' if U.GetWindowLongW(window[0],-16)&0x00C00000 else 'borderless'
         except (AttributeError,OSError):dpi=96;mode='window'
         key=self.profiles.key(window[3],window[4],mode,dpi)
+        if isinstance(self.engine,CircularEngine):
+            if key!=self.profile_key:
+                if self.profile_key:self.save()
+                profile=self.config['circle_profiles'].get(key,{})
+                if not isinstance(profile,dict):profile={}
+                roi=profile.get('roi',[])
+                valid=(isinstance(roi,list) and len(roi)==4 and all(type(v) in (int,float) for v in roi)
+                       and 0<=roi[0]<1 and 0<=roi[1]<1 and .04<roi[2]<=1 and .04<roi[3]<=1
+                       and roi[0]+roi[2]<=1 and roi[1]+roi[3]<=1)
+                self.config['circle_roi']=roi if valid else [.65,.30,.24,.42]
+                self.config['auto_calibrate']=profile.get('automatic',True) is not False
+                self.auto_var.set(self.config['auto_calibrate']);self.profile_key=key
+                self.circle_reader.reset();self.splash_reader.reset();self.save()
+                self.bar_status.set('Automático: aguardando o círculo' if self.config['auto_calibrate'] else 'Círculo: seleção manual salva')
+            self.resolution_text.set(f'Resolução Roblox: {window[3]} × {window[4]}')
+            self.profile_text.set(f'Perfil: {"Janela" if mode=="window" else "Sem bordas / tela cheia"} · escala {round(dpi/96*100)}%')
+            return
         if key!=self.profile_key:
             if self.profile_key:self.save()
             # A configuração antiga só serve para migrar o primeiro perfil.
@@ -566,13 +675,32 @@ class App:
 
     def mouse(self,down):
         if down and (not self.active or self.dry.get() or game_window()!=self.window):return
-        if down!=self.held:send_mouse(down);self.held=down
+        if down!=self.held:
+            send_mouse(down);self.held=down
+            self.session_log.event('COMANDO_MOUSE_PRESSIONADO' if down else 'COMANDO_MOUSE_LIBERADO',ciclo=self.cycle_id,estado=self.engine.state)
 
     def key_t(self,down):
         if down and (not self.active or self.dry.get() or game_window()!=self.window):return
         if down!=self.t_down:
             send_t(down);self.t_down=down
             self.session_log.event('COMANDO_T_PRESSIONADO' if down else 'COMANDO_T_LIBERADO',ciclo=self.cycle_id)
+
+    def release_fishing_keys(self,now=None):
+        failed=None
+        for key,deadline in list(self.fishing_keys.items()):
+            if now is not None and now<deadline:continue
+            try:send_fishing_key(key,False)
+            except Exception as exc:failed=exc
+            else:self.fishing_keys.pop(key,None)
+        if failed:raise failed
+
+    def tap_fishing_key(self,key):
+        if not self.active or self.dry.get() or game_window()!=self.window:return
+        self.release_fishing_keys()
+        # Keep pending ownership even if Windows reports an input failure.
+        self.fishing_keys[key]=time.monotonic()+.045
+        send_fishing_key(key,True)
+        self.session_log.event('COMANDO_TECLA_PESCA',tecla=key,ciclo=self.cycle_id)
 
     def stop(self,reason):
         self.session_log.event('APLICATIVO_FECHADO' if reason=='Fechando' else 'MACRO_PAUSADO',motivo=reason,estado=self.engine.state,ciclo=self.cycle_id)
@@ -587,7 +715,9 @@ class App:
         self.active=False;self.pending_start=None
         # T e mouse são liberados separadamente mesmo se um comando falhar.
         try:self.mouse(False)
-        finally:self.key_t(False)
+        finally:
+            try:self.key_t(False)
+            finally:self.release_fishing_keys()
         self.engine.state='PARADO';self.status.set(reason);self.start_button.configure(text=self.tr('Iniciar'))
 
     def start(self,window):
@@ -598,6 +728,8 @@ class App:
         if not self.config['cast'] and not self.dry.get():self.stop('Marque um ponto na água com F8.');return
         self.window=window;self.pending_window=None;self.window_change_logged=False
         self.engine.reset(time.monotonic(),preserve_counts=True);self.active=True
+        self.circle_reader.reset();self.splash_reader.reset();self.current_circle=None
+        self.claim_scene=None;self.last_claim_scan=-float('inf');self.last_circle_scan=-float('inf')
         self.started_at=time.monotonic();self.capture_retry_at=0.;self.capture_failures=0
         self.session_log.event('MACRO_INICIADO',ciclo=self.cycle_id,modo='observação' if self.dry.get() else 'pesca',calibracao='automática' if self.config['auto_calibrate'] else 'manual',segurar_T=self.config['t_hold'],perfil=self.profile_key)
         self.journal.record('started',self.engine.state,active=True,cycles=self.engine.cycles)
@@ -633,7 +765,8 @@ class App:
         self.config['auto_calibrate']=self.auto_var.get()
         self.session_log.event('MODO_CALIBRACAO_ALTERADO',automatico=self.config['auto_calibrate'])
         self.calibration.begin();self.calibration_epoch+=1;self.save()
-        self.bar_status.set('Automático: aguardando a barra' if self.auto_var.get() else 'Manual: região atual fixa')
+        self.circle_reader.reset()
+        self.bar_status.set('Automático: aguardando o círculo' if self.auto_var.get() else 'Manual: região atual fixa')
 
     def schedule_selection(self):
         self.stop('Volte ao Roblox com o minigame visível. Captura em 3 segundos…')
@@ -642,15 +775,20 @@ class App:
     def open_selection(self,window):
         self.pending_selection=None
         if not window:self.status.set('Abra o minigame no Roblox e pressione F6.');return
-        self.stop('Selecionando a barra. O macro está pausado.')
+        self.stop('Selecionando o círculo. O macro está pausado.')
         self.window=window
         self.choose_profile(window)
         rgb=self.sample(full=True)
         self.calibration_epoch+=1
-        self.selection=BarSelection(self.root,rgb,window,self.save_selection,self.selection_closed,self.tr,self.config['hotkeys']['stop'])
+        self.selection=BarSelection(self.root,rgb,window,self.save_selection,self.selection_closed,self.tr,self.config['hotkeys']['stop'],circular=isinstance(self.engine,CircularEngine))
 
     def save_selection(self,roi):
         self.session_log.event('CALIBRACAO_MANUAL_SALVA',regiao=roi)
+        if isinstance(self.engine,CircularEngine):
+            self.config['circle_roi']=roi;self.config['auto_calibrate']=False;self.auto_var.set(False)
+            self.circle_reader.reset();self.save()
+            self.bar_status.set('Círculo manual salvo · automático pode ser reativado')
+            self.status.set('Seleção salva. Volte ao Roblox e pressione F4.');return
         self.config['roi']=roi;self.config['auto_calibrate']=False;self.auto_var.set(False)
         self.calibration.profile={};self.config['calibration_profile']={}
         self.calibration.begin();self.calibration_epoch+=1;self.save()
@@ -753,6 +891,7 @@ class App:
             self.window=current;self.pending_window=None;self.window_change_logged=False
             return True
         now=time.monotonic()
+        self.mouse(False);self.key_t(False);self.release_fishing_keys()
         # Debounce only the dimensions. Changes to origin or HWND during a
         # resize must not restart the stability timer.
         if self.pending_window is None or current[3:]!=self.pending_window[3:]:
@@ -771,9 +910,11 @@ class App:
         # Adopt only after the new client geometry remains stable. This avoids
         # cycling recovery when Roblox briefly exposes alternate foreground
         # surfaces while switching between windowed and fullscreen modes.
-        self.mouse(False);self.key_t(False)
+        self.mouse(False);self.key_t(False);self.release_fishing_keys()
         self.window=current;self.choose_profile(current)
         if size_changed:
+            self.circle_reader.reset();self.splash_reader.reset();self.current_circle=None
+            self.claim_scene=None;self.last_claim_scan=-float('inf')
             self.scene_epoch+=1;self.scene_time=0.;self.scene={'fishing':False,'loot':None,'reward':False}
             self.calibration.begin();self.calibration_epoch+=1
             self.session_log.event('JANELA_REDIMENSIONADA',largura=current[3],altura=current[4],
@@ -795,6 +936,8 @@ class App:
         for kind,value in actions:
             if kind=='mouse':self.mouse(value)
             elif kind=='t':self.key_t(value)
+            elif kind=='tap':self.tap_fishing_key(value)
+            elif kind=='release_keys':self.release_fishing_keys()
             elif kind=='recover':
                 self.session_log.event('RECUPERACAO_DE_LANCAMENTO',ciclo=self.cycle_id,rodada=value,
                     regiao=self.config['roi'],pesca_visivel=self.scene.get('fishing'),
@@ -819,7 +962,7 @@ class App:
         scene_due=(now-self.last_scene>=.25 and self.scene_job is None
                    and self.vision_worker.can_submit)
         interval=CALIBRATION_SEARCH_INTERVAL if not self.calibration.locked else 1.
-        calibration_due=(self.config['auto_calibrate'] and self.calibration_job is None
+        calibration_due=(not isinstance(self.engine,CircularEngine) and self.config['auto_calibrate'] and self.calibration_job is None
             and self.calibration_worker.can_submit
             and now-getattr(self,'last_calibration_search',0)>=interval
             and self.engine.state in ('INICIO','ESPERANDO','PESCANDO','RESULTADO','RECUPERANDO'))
@@ -844,7 +987,7 @@ class App:
         if scene_due:
             quick=self.engine.state=='PESCANDO' and reading is not None and now-self.full_scene_at<1
             if not quick:self.full_scene_at=now
-            future=self.submit_background(self.vision_worker,self.signals.scan,full,quick)
+            future=self.submit_background(self.vision_worker,self.signals.scan,full,quick,isinstance(self.engine,CircularEngine))
             if future is not None:
                 self.scene_job=(future,self.scene_epoch,captured,owner)
                 self.last_scene=now
@@ -867,7 +1010,64 @@ class App:
         # calibration-only square test. Relocation still uses that strict test.
         return detect(rgb,require_marker_shape=strict)
 
+    def update_circular(self,now):
+        if not self.sync_window() or now<self.capture_retry_at:return
+        self.tick_stage='sinais';self.poll_scene(now)
+        self.tick_stage='captura';full=self.sample(full=True);captured=time.monotonic()
+        reading=None
+        if self.current_circle is not None or now-self.last_circle_scan>=.12:
+            self.tick_stage='circulo'
+            roi=None if self.config['auto_calibrate'] else self.config['circle_roi']
+            reading=self.circle_reader.read(full,roi)
+            self.current_circle=reading;self.last_circle_scan=now
+        self.capture_failures=0
+        self.circle_splash=self.splash_reader.observe(full,self.config['cast'],captured,
+            self.engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO') and captured>=self.engine.splash_armed_at)
+        if self.circle_splash:self.session_log.event('SPLASH_DETECTADO',ciclo=self.cycle_id)
+        stages=('INICIO','ESPERANDO','AGUARDANDO_CIRCULO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
+        if now-self.last_claim_scan>=.15 and self.engine.state in stages:
+            self.tick_stage='aviso_claim';self.claim_scene=self.claim_reader.scan(full);self.last_claim_scan=captured
+        claim=self.claim_scene if 0<=captured-self.last_claim_scan<.4 else None
+        if claim and not self.dry.get() and self.worker.can_submit and self.claim_job is None and now-self.last_claim_ocr>=.4:
+            owner=reward_cycle_owner(self.engine.state,self.cycle_id)
+            if owner is not None:
+                future=self.submit_background(self.worker,self.claim_reader.read,claim['crop'])
+                if future is not None:self.claim_job=(future,owner);self.last_claim_ocr=now
+        live=reading is not None and not reading.complete
+        notification=self.scene.get('reward',False) and 0<=captured-self.scene_time<SCENE_MAX_AGE
+        self.circular_scene={'fishing':live,'loot':claim['point'] if claim else None,'reward':notification}
+        self.circular_scene_time=captured
+        lost=self.engine.state=='PESCANDO' and reading is None and now-self.engine.last_marker>=.2
+        if lost!=self.tracking_lost:
+            self.session_log.event('LEITURA_PERDIDA' if lost else 'LEITURA_RECUPERADA',ciclo=self.cycle_id)
+            self.tracking_lost=lost
+        metric=reading if live and reading.marker is not None else None
+        if self.engine.state=='PESCANDO':
+            self.metrics.observe(metric,now);self.round_metrics.observe(metric,now)
+        else:self.metrics.pause();self.round_metrics.pause()
+        if reading is not None:
+            self.bar_status.set('Círculo localizado · mouse e A/D ativos' if live else 'Minigame concluído · aguardando Claim')
+        elif lost:self.bar_status.set('Reencontrando o círculo…')
+        if now-self.last_live_preview>=.15:
+            if reading is not None:preview=annotated_preview(full,reading)
+            else:
+                # Preview and diagnostics contain only the selected minigame
+                # region, never the whole desktop or game window.
+                x,y,w,h=self.config['circle_roi'];fh,fw=full.shape[:2]
+                crop=full[int(y*fh):max(int(y*fh)+1,int((y+h)*fh)),int(x*fw):max(int(x*fw)+1,int((x+w)*fw))]
+                preview=annotated_preview(crop,None)
+            self.live_photo=ImageTk.PhotoImage(preview)
+            self.live_preview.configure(image=self.live_photo,text='');self.last_live_preview=now
+            quality=self.metrics.summary();inside=quality['inside_percent']
+            self.metrics_text.set(('Dentro da faixa: —' if inside is None else f'Dentro da faixa: {inside:.1f}%')+f'\nLeituras válidas: {quality["valid_percent"]:.1f}%\nTempo medido: {quality["observed_seconds"]:.1f}s')
+        self.update_analyses(now,reading)
+        if self.dry.get():
+            self.status.set('Observando: '+('pesca ativa' if live else 'item para coletar' if claim else 'sem pesca ou item reconhecido'))
+            return
+        self.advance(time.monotonic(),reading)
+
     def update(self,now):
+        if isinstance(self.engine,CircularEngine):return self.update_circular(now)
         if not self.sync_window():return
         if now<self.capture_retry_at:return
         self.tick_stage='sinais';self.poll_scene(now)
@@ -908,6 +1108,9 @@ class App:
         if self.dry.get():
             self.status.set('Observando: '+('pesca ativa' if reading or self.scene['fishing'] else 'item para coletar' if self.scene['loot'] else 'sem pesca ou item reconhecido'))
             return
+        self.advance(now,reading)
+
+    def advance(self,now,reading):
         previous_cycles=self.engine.cycles;previous_collected=self.engine.collected
         parsed,captured=self.ocr_results.get(self.cycle_id,(None,0))
         # A leitura pertence ao ciclo capturado. Inicialização do OCR pode demorar
@@ -915,7 +1118,12 @@ class App:
         text_reward=parsed is not None
         previous_state=self.engine.state
         self.tick_stage='controle'
-        if (reading is None and now-max(self.scene_time,self.started_at)>5
+        if isinstance(self.engine,CircularEngine):
+            scene=self.circular_scene
+            actions=self.engine.step(now,reading,loot=scene.get('loot'),
+                reward=bool(scene.get('reward') or text_reward),scene_stamp=self.circular_scene_time,
+                scene_valid=0<=now-self.circular_scene_time<.5,splash=self.circle_splash)
+        elif (reading is None and now-max(self.scene_time,self.started_at)>5
             and self.engine.state!='RECUPERANDO'):
             actions=self.engine.recover(now,reason='vision_unavailable')
         else:
@@ -938,7 +1146,7 @@ class App:
             self.session_log.event(events.get(self.engine.state,'MUDANCA_DE_ESTADO'),ciclo=self.cycle_id,anterior=previous_state,estado=self.engine.state,lancamento=self.engine.attempts,tentativa_coleta=self.engine.collect_attempts,descricao=self.engine.message)
         if previous_state=='PESCANDO' and self.engine.state!='PESCANDO':
             self.session_log.event('MINIGAME_FINALIZADO',ciclo=self.cycle_id,proxima_etapa=self.engine.state)
-        if previous_state=='PESCANDO' and self.engine.state!='PESCANDO' and self.config['auto_calibrate']:
+        if previous_state=='PESCANDO' and self.engine.state!='PESCANDO' and self.config['auto_calibrate'] and not isinstance(self.engine,CircularEngine):
             profile=self.calibration.finish()
             if profile:
                 self.config['calibration_profile']=profile
@@ -949,7 +1157,8 @@ class App:
         if self.engine.collected>previous_collected:
             # The notification may already have vanished after being latched by
             # the engine. Its x1 evidence still confirms one item pending OCR.
-            self.history.record(self.cycle_id,parsed if text_reward else None,1)
+            collected_entry=self.history.record(self.cycle_id,parsed if text_reward else None,1)
+            if isinstance(self.engine,CircularEngine):collected_entry['confirmation_source']=self.engine.confirmation_source
             pending=self.pending_reward_readings.pop(self.cycle_id,None)
             if pending:self.history.identify(self.cycle_id,pending,confirm=True)
             self.apply_pending_icon(self.cycle_id)
@@ -963,7 +1172,7 @@ class App:
             if self.engine.collected==previous_collected:
                 self.history.record_outcome(self.cycle_id,self.engine.outcome)
                 pending=self.pending_reward_readings.pop(self.cycle_id,None)
-                if pending:self.apply_reward_reading(self.cycle_id,pending)
+                if pending and pending.get('source')!='claim':self.apply_reward_reading(self.cycle_id,pending)
                 self.refresh_history()
             entry=self.history.by_cycle.get(self.cycle_id)
             if entry:
@@ -981,6 +1190,7 @@ class App:
             self.ocr_queue=[item for item in self.ocr_queue if item[1]>=self.cycle_id-1]
             self.empty_ocr_cycles={k for k in self.empty_ocr_cycles if k>=self.cycle_id-1}
             self.history_retries={k:v for k,v in self.history_retries.items() if k>=self.cycle_id-1}
+            self.claim_votes={k:v for k,v in self.claim_votes.items() if k>=self.cycle_id-1}
             self.pending_icons={k:v for k,v in self.pending_icons.items() if k>=self.cycle_id-1}
             self.icon_sampler.prune(self.cycle_id)
         if self.active:self.status.set(self.engine.message)
@@ -994,6 +1204,7 @@ class App:
             self.tick_stage='ocr'
             self.poll_ocr()
             self.tick_stage='atalhos'
+            self.release_fishing_keys(time.monotonic())
             self.keys()
             if self.pending_selection is not None and time.monotonic()>=self.pending_selection:self.open_selection(game_window())
             if self.pending_start is not None and time.monotonic()>=self.pending_start:self.start(game_window())
@@ -1061,7 +1272,9 @@ class App:
         try:self.root.mainloop()
         finally:
             try:self.mouse(False)
-            finally:self.key_t(False)
+            finally:
+                try:self.key_t(False)
+                finally:self.release_fishing_keys()
 
 
 if __name__=='__main__':
@@ -1082,12 +1295,15 @@ if __name__=='__main__':
         result={'startup':True,'active':app.active,'screen_capture':False,'version':VERSION}
         test=app.capture.grab({'left':0,'top':0,'width':20,'height':20})
         result['screen_capture']=np.asarray(test).shape==(20,20,4)
-        engine=Engine(dict(DEFAULTS,cast=[.5,.5]))
+        engine=CircularEngine(dict(DEFAULTS,cast=[.5,.5]))
         engine.track(0);engine.step(1,None,False,(.5,.3))
-        result['collect_without_prompt']=('t',True) in engine.step(1.3,None,False,None)
+        engine.step(1.1,None,False,(.5,.3))
+        result['collect_without_prompt']=('t',True) in engine.step(1.4,None,False,None)
         result['vision_background']=hasattr(app,'vision_worker')
         result['auto_calibration']=app.config['auto_calibrate']
         result['manual_selection']=callable(app.open_selection)
+        result['circular_flow']=isinstance(app.engine,CircularEngine)
+        result['key_input_layout']=C.sizeof(Input)==40
         # Exercise spawn in the frozen executable, including the OCR model.
         # All frames are synthetic and no game input is sent.
         blank=np.zeros((1080,1920,3),np.uint8)
@@ -1100,6 +1316,7 @@ if __name__=='__main__':
             time.sleep(.02)
         result['isolated_workers']=all(f.done() and f.exception() is None for _,f in jobs)
         result['blank_scene_safe']=result['isolated_workers'] and not jobs[0][1].result()['fishing'] and not jobs[1][1].result()['fishing'] and jobs[2][1].result() is None
+        result['circular_blank_safe']=app.circle_reader.read(blank) is None and app.claim_reader.scan(blank) is None
         app.history.path=None;app.close();Path(sys.argv[2]).write_text(json.dumps(result),encoding='utf-8')
         test_data.cleanup()
     else:App().run()

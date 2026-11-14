@@ -22,6 +22,7 @@ class CapturePipeline(unittest.TestCase):
             mock = patch.object(macro, name)
             mock.start(); self.addCleanup(mock.stop)
         self.app = macro.App()
+        self.app.engine = macro.Engine(self.app.config)
         self.app.root.withdraw()
         self.addCleanup(self.app.close)
         for timer in self.app.root.tk.call('after', 'info'):

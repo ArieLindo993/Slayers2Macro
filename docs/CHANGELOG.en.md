@@ -4,6 +4,16 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## Beta 0.0.42 — November circular fishing
+
+- Integrates casting, temporal splash detection, hook click, circle commands and concurrent A/D taps into the app.
+- Reacquires the segmented ring independently of marker position. Recognizes active side cards and one/two dots without repeating an event every frame.
+- Reserves A, D and T for fishing; preserves F4/F8/F6/F7/F10 defaults. Manual selection and resolution/DPI profiles now use the circle.
+- Reads Claim, item name and weight; new names require two distinct high-confidence images. A name on the rod does not itself confirm acquisition.
+- Holds T for three seconds by default. Persistent Claim absence after the hold can infer collection; the JSON history records this evidence source separately from reward notifications.
+- Releases inputs on pause, lost focus, resize, recovery and exit. Adds support information without personal paths and clearer updater extraction errors.
+- Validated with automated tests and local recording replay without game input. Live gameplay and overnight stability remain unverified. Mark the line landing area with F8 for splash detection.
+
 ## [Beta 0.0.41](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.41-beta)
 
 ### Continuous capture, first rewards and complete bar calibration

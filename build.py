@@ -11,8 +11,9 @@ exe=root/'dist/Slayers2Macro/Slayers2Macro.exe'
 result=root/'build/self-test.json'
 subprocess.run([str(exe),'--self-test',str(result)],check=True,timeout=45)
 data=json.loads(result.read_text())
-assert data['startup'] and data['collect_without_prompt'] and data['auto_calibration']
+assert data['startup'] and data['collect_without_prompt'] and data['auto_calibration'],data
 assert data['isolated_workers'] and data['blank_scene_safe'], data
+assert data['screen_capture'] and data['circular_flow'] and data['circular_blank_safe'] and data['key_input_layout'],data
 notices=root/'dist/Slayers2Macro/THIRD_PARTY';notices.mkdir(exist_ok=True)
 dependencies=[]
 for name in ('mss','numpy','opencv-python','Pillow','rapidocr-onnxruntime','onnxruntime','pyinstaller'):
@@ -24,7 +25,7 @@ for name in ('mss','numpy','opencv-python','Pillow','rapidocr-onnxruntime','onnx
 (notices/'dependencies.json').write_text(json.dumps(dependencies,indent=2),encoding='utf-8')
 documentation=['README.md','CHANGELOG.md','docs/README.en.md','docs/README.es.md',
                'docs/CHANGELOG.en.md','docs/CHANGELOG.es.md','docs/ESTABILIDADE.md',
-               'docs/VERSIONAMENTO.md','docs/VERSIONING.en.md','docs/VERSIONING.es.md','docs/versions.json']
+               'docs/VERSIONAMENTO.md','docs/VERSIONING.en.md','docs/VERSIONING.es.md','docs/versions.json','docs/NOVO_MINIGAME.md']
 for name in documentation:
     target=root/'dist/Slayers2Macro'/name;target.parent.mkdir(parents=True,exist_ok=True)
     shutil.copy2(root/name,target)

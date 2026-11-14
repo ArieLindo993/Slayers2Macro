@@ -4,6 +4,16 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## Beta 0.0.42 — pesca circular de noviembre
+
+- Integra lanzamiento, detección temporal de la salpicadura, clic de enganche, círculo y toques A/D junto al ratón.
+- Localiza el anillo segmentado aunque el marcador esté fuera del arco verde. Reconoce tarjetas activas y uno/dos puntos sin repetir cada aviso por fotograma.
+- Reserva A, D y T para pescar y conserva F4/F8/F6/F7/F10. La selección manual y los perfiles de resolución/DPI ahora usan el círculo.
+- Lee Claim, nombre y peso; los nombres nuevos requieren dos imágenes distintas con confianza alta. Un nombre en la caña no confirma la adquisición.
+- Mantiene T tres segundos por defecto. La ausencia persistente de Claim después puede inferir una recogida; el historial JSON distingue esa evidencia de una notificación.
+- Suelta las entradas al pausar, perder foco, cambiar de tamaño, recuperar o cerrar. Añade soporte sin rutas personales y errores claros de extracción del actualizador.
+- Validado con pruebas automáticas y reproducción local de grabaciones sin entradas al juego. Falta comprobar el juego en directo y sesiones nocturnas. Marca con F8 dónde cae la línea para detectar la salpicadura.
+
 ## [Beta 0.0.41](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.41-beta)
 
 ### Captura continua, primeras recompensas y calibración completa

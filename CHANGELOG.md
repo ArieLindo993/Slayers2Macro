@@ -4,6 +4,18 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## Beta 0.0.42 — pesca circular de novembro
+
+- Integra o minigame novo ao aplicativo: lançamento, detecção temporal do splash, clique de fisgada, círculo, mouse e toques A/D concorrentes.
+- Reconhece o anel segmentado e o arco verde; a busca não depende de o marcador estar dentro da faixa. Avisos ↑↑/↓↓ controlam o mouse; entre avisos, o marcador fora da faixa recebe correção de direção.
+- Lê os cartões laterais ativos e um ou dois pontos. Pedidos persistentes não geram toques novos em cada quadro. A, D e T passam a ser reservados à pesca; os padrões F4/F8/F6/F7/F10 continuam iguais.
+- F6 seleciona o círculo inteiro. Perfis circulares são separados por resolução, bordas e DPI e não reutilizam as seleções da barra antiga.
+- Lê Claim junto do botão T e extrai nome e peso. Um nome novo exige duas imagens distintas com confiança alta. O nome na vara não é uma notificação de aquisição.
+- A coleta segura T por três segundos por padrão e volta a pescar antes de cinco tentativas quando há evidência suficiente. Sem notificação, o desaparecimento persistente de Claim após o período de T gera uma coleta **inferida**, cuja origem fica registrada no histórico JSON. Uma ausência breve não basta.
+- Teclas A/D têm liberação programada sem bloquear captura ou atalhos. Pausa, perda de foco, redimensionamento, recuperação e encerramento liberam os comandos.
+- Inclui janela redimensionável, ajuda e resumo de suporte sem caminhos pessoais, gravação atômica das configurações e mensagens claras quando o script do atualizador não está junto dos atalhos.
+- Validação: testes automatizados e reprodução dos vídeos locais, sem enviar entradas ao jogo. A validação em vídeo não comprova sucesso numa sessão real nem estabilidade durante toda uma noite. A detecção do splash exige marcar com F8 a região onde a linha cai.
+
 ## [Beta 0.0.41](https://github.com/ArieLindo993/Slayers2Macro/releases/tag/v0.0.41-beta)
 
 ### Captura contínua, primeira recompensa e calibração completa

@@ -50,7 +50,7 @@ class Signals:
              min(w,round(1170*w/1920)),h)
         return self.match_scaled(gray,'exit',box,self.EXIT_THRESHOLD)
 
-    def scan(self,rgb,fishing_only=False):
+    def scan(self,rgb,fishing_only=False,reward_only=False):
         cv2.setNumThreads(2)
         h,w=rgb.shape[:2]
         native_gray=cv2.cvtColor(rgb,cv2.COLOR_RGB2GRAY)
@@ -136,6 +136,8 @@ class Signals:
                      'reward_quality':quality}
         # Com a barra sendo controlada, o indicador independente basta.
         # Se ele sumir, procure coleta/recompensa já nesta mesma captura.
+        if reward_only:
+            return {'fishing':False,'loot':None,'collect_score':0.,'exit_score':exit_score,**reward_data}
         if fishing_only and fishing:
             return {'fishing':True,'loot':None,'collect_score':0.,'exit_score':exit_score,**reward_data}
         # The collection prompt shrinks with the game UI. Match templates at
