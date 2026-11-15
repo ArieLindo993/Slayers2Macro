@@ -50,7 +50,8 @@ Toda la trayectoria del producto se clasifica como beta, incluidos los prototipo
 | Beta 0.0.41 | [v0.0.41-beta](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.41-beta) | Captura continua, sello NEW y calibración completa |
 | Beta 0.0.42 | [v0.0.42-beta](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.42-beta) | Pesca circular, salpicadura, A/D y Claim |
 | Beta 0.0.43 | [v0.0.43-beta](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.43-beta) | Salpicadura en zonas de pesca y clic prioritario |
+| Beta 0.0.44 | [v0.0.44-beta](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.44-beta) | Caída de la línea y flechas de color del ratón |
 
-Se conservan etiquetas, commits, checksums y paquetes antiguos. Los ejecutables antiguos pueden mostrar su versión original; la nueva interfaz muestra **Beta 0.0.43**. Este inventario no publica archivos personales ni recompila prototipos. Los paquetes “ajustada” y “fonte-corrigida” tienen el mismo código Python listado, pero hashes diferentes; se registran por separado sin inventar una corrección de código.
+Se conservan etiquetas, commits, checksums y paquetes antiguos. Los ejecutables antiguos pueden mostrar su versión original; la nueva interfaz muestra **Beta 0.0.44**. Este inventario no publica archivos personales ni recompila prototipos. Los paquetes “ajustada” y “fonte-corrigida” tienen el mismo código Python listado, pero hashes diferentes; se registran por separado sin inventar una corrección de código.
 
 **Compatibilidad:** Beta describe la etapa del producto. Las releases permanecen en el canal `/releases/latest` para conservar los actualizadores y enlaces existentes. No se convierten al filtro técnico de prerelease de GitHub, que [queda fuera de ese canal](https://docs.github.com/en/rest/releases/releases#get-the-latest-release). El actualizador usa identificadores de release y no compara 7.x con 0.x. No se reinician preferencias ni datos.

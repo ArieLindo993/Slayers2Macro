@@ -4,6 +4,14 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## Beta 0.0.44 — impacto inicial y órdenes de color
+
+- Lee los cheurones verdes hacia la derecha para mantener y rojos hacia la izquierda para soltar, siguiendo su rotación y comprobando color/forma, también con rojo atenuado.
+- Las flechas blancas superiores y la posición del marcador ya no ordenan el ratón. Mantiene la última orden válida entre señales visibles; perder el círculo sigue soltando la entrada.
+- Añade una etapa de asentamiento con protección ajustable de 1,8 segundos por defecto, comprobación breve de estabilización y límite para evitar bloqueos por la animación de la zona.
+- Registra impactos ignorados, protección y cambios de señales de color. Actualiza indicaciones y documentación PT/EN/ES.
+- Prueba impactos tardíos, estabilización, reanudación, rotación/escala, marcador blanco ausente y rechazo de flechas blancas. La reproducción grabada no sustituye la validación en directo del control corregido.
+
 ## Beta 0.0.43 — salpicadura en zonas de pesca
 
 - Reconoce partículas cian compactas y coherentes en lugar del aumento global del brillo del agua, separando el efecto continuo de la zona de los indicios de picada.

@@ -10,7 +10,7 @@ como Beta 0.0.42; consulte a página de releases para a disponibilidade publicad
 1. Clicar na água para lançar a linha.
 2. Esperar o splash e dar outro clique esquerdo. Esse segundo clique pode ser em
    qualquer lugar da janela do jogo.
-3. No círculo, ↑↑ pede segurar o botão esquerdo e ↓↓ pede soltar.
+3. Correção de 15/11: no círculo, o chevron verde para a direita pede segurar o botão esquerdo; o vermelho para a esquerda pede soltar. Ambos giram com o marcador.
 4. Alguns peixes lendários ou itens de raridade superior também pedem um ou dois
    toques rápidos em A ou D. Um pedido de tecla pode coincidir com o mouse.
    A e D nunca são pedidos simultaneamente.
@@ -24,9 +24,9 @@ do mouse e resultado. A localização usa os segmentos laterais do anel e exige
 o arco verde para validar a interface. A posição do marcador não é condição
 para localizar o anel: sair da faixa verde não interrompe essa localização.
 
-As setas grandes acima do círculo são lidas separadamente dos pequenos sinais
-coloridos junto ao marcador. Uma seta ausente não é interpretada como ordem
-para soltar. O componente `CircularCommand` preserva a última ordem enquanto
+Desde a Beta 0.0.44, os chevrons coloridos junto ao marcador são lidos como os
+comandos do mouse; as setas brancas superiores não têm essa função. Um sinal
+ausente não é interpretado como ordem para soltar. `CircularCommand` preserva a última ordem enquanto
 há interface ativa, e libera o comando quando o círculo termina ou fica ausente
 por pelo menos 150 ms. O componente apenas propõe um estado; não envia entradas.
 
@@ -97,3 +97,19 @@ As regressões usam apenas máscaras binárias ciano anônimas. O trecho de fund
 não gerou acionamentos; os exemplos de fisgada anteriores continuam detectados
 com e sem uma zona de pesca. Isso não comprova funcionamento ao vivo na nova
 posição ou em outras animações ainda não gravadas.
+
+## Impacto inicial e chevrons coloridos — Beta 0.0.44
+
+O log de 15/11 mostrou uma fisgada cerca de 0,95 segundo após a liberação do
+lançamento, compatível com o impacto inicial relatado. A antiga proteção de
+0,9 segundo não cobria esse caso. A nova etapa de assentamento tem proteção
+padrão de 1,8 segundo e uma breve verificação de estabilização; pode ser
+ajustada para voos maiores. Há limite de espera para não bloquear a pesca em
+uma área com animação contínua. Um minigame já visível pode retomar de imediato.
+
+A instrução anterior baseada em ↑↑/↓↓ estava incorreta. O comando vem dos
+chevrons coloridos junto ao marcador. O leitor normaliza sua rotação e confere
+cor e formato. Não usa os avisos brancos nem a posição como substitutos de uma
+ordem. Entre leituras válidas, mantém o comando anterior; perder o círculo o
+libera. As novas referências contêm apenas setas binárias e recortes do círculo,
+sem imagens de personagens, nomes de jogadores ou caminhos locais.

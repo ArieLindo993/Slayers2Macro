@@ -28,7 +28,7 @@ class CircularReader:
     def __init__(self, assets):
         cv2.setNumThreads(2)
         self.templates={}
-        for key in ('ring','ring_mask','hold','release'):
+        for key in ('ring','ring_mask','mouse_hold','mouse_release','mouse_release_faint'):
             raw=np.fromfile(Path(assets)/('circle_'+key+'.png'),np.uint8)
             self.templates[key]=cv2.imdecode(raw,cv2.IMREAD_GRAYSCALE)
         self.reset()
@@ -36,6 +36,7 @@ class CircularReader:
     def reset(self):
         self.geometry=None
         self.shape=None
+        self.last_mouse_scores={}
 
     def read(self,rgb,search_roi=None):
         h,w=rgb.shape[:2]
@@ -102,26 +103,59 @@ class CircularReader:
         target=float(np.median(angles));band=float(np.percentile(angles,95)-np.percentile(angles,5))
         white=ring&(rr>210)&(gg>210)&(bb>195)
         marker=float(np.median(angle[white])) if np.count_nonzero(white)>max(4,r*r*.001) else None
-        # The large arrow sits above the ring, distinct from the small coloured
-        # chevrons attached to the moving marker.
-        left,top_y=round(cx-r*.17),round(cy-r*1.95)
-        right,bottom=round(cx+r*.17),round(cy-r*1.56)
-        hold=None
-        if left>=0 and top_y>=0 and right<=w and bottom<=h:
-            crop=rgb[top_y:bottom,left:right]
-            binary=cv2.inRange(crop,np.array([155,155,155]),np.array([255,255,255]))
-            scores=[]
-            for key in ('hold','release'):
-                glyph=cv2.resize(self.templates[key],None,fx=r/166,fy=r/166,interpolation=cv2.INTER_NEAREST)
-                if min(glyph.shape)<4 or any(a<b for a,b in zip(binary.shape,glyph.shape)):scores.append(0.);continue
-                value=cv2.matchTemplate(binary,glyph,cv2.TM_CCOEFF_NORMED)
-                scores.append(float(value.max()))
-            if max(scores)>.65 and abs(scores[0]-scores[1])>.10:hold=scores[0]>scores[1]
+        # Commands are the coloured chevrons next to the marker. The white
+        # arrows above the ring are not mouse instructions.
+        hold=self.read_mouse_cue(rgb,cx,cy,r,marker)
         center=(distance<r*.36)
         gold=center&(rr>180)&(gg>140)&(bb<130)
         complete=np.count_nonzero(gold)>r*r*.018
         key,presses=self.read_keys(rgb,cx,cy,r) if not complete else (None,0)
         return CircularReading((cx,cy),r,score,hold,marker,target,band,bool(complete),key,presses)
+
+    def read_mouse_cue(self,rgb,cx,cy,r,marker):
+        h,w=rgb.shape[:2]
+        x0,x1=max(0,int(cx-r*1.55)),min(w,int(cx+r*1.55)+1)
+        y0,y1=max(0,int(cy-r*1.55)),min(h,int(cy+r*1.55)+1)
+        crop=rgb[y0:y1,x0:x1].astype(np.int16)
+        rr,gg,bb=[crop[:,:,i] for i in range(3)]
+        yy,xx=np.ogrid[y0:y1,x0:x1];distance=np.hypot(xx-cx,yy-cy)
+        annulus=(distance>r*1.15)&(distance<r*1.54)
+        masks=[(gg>150)&(gg-rr>45)&(gg-bb>45),
+               (rr>125)&(rr-gg>25)&(rr-bb>10)]
+        u,v=np.meshgrid(np.arange(-58,59,dtype=np.float32),np.arange(192,257,dtype=np.float32))
+        best=[]
+        for mask,key in zip(masks,('mouse_hold','mouse_release')):
+            mask=(mask&annulus).astype(np.uint8)
+            _,_,stats,centers=cv2.connectedComponentsWithStats(mask)
+            candidates=[]
+            for (x,y,bw,bh,area),(px,py) in zip(stats[1:],centers[1:]):
+                if not max(3,r*r*.00025)<=area<=r*r*.03:continue
+                if not .08<=area/(bw*bh)<=.88:continue
+                theta=math.atan2(px+x0-cx,-(py+y0-cy))
+                candidates.append((area,theta))
+            angles=([marker*2*math.pi] if marker is not None else [])
+            candidates=sorted(candidates,reverse=True)[:3]
+            if candidates:
+                mean=math.atan2(sum(area*math.sin(theta) for area,theta in candidates),
+                                sum(area*math.cos(theta) for area,theta in candidates))
+                angles += [mean,mean-.04,mean+.04]
+            angles += [theta for _,theta in candidates]
+            score=0.
+            for theta in angles:
+                sx=cx+(u*math.cos(theta)+v*math.sin(theta))*r/166
+                sy=cy+(u*math.sin(theta)-v*math.cos(theta))*r/166
+                strip=cv2.remap(rgb,sx.astype(np.float32),sy.astype(np.float32),cv2.INTER_LINEAR)
+                a=strip.astype(np.int16);red,green,blue=[a[:,:,j] for j in range(3)]
+                binary=((green>150)&(green-red>45)&(green-blue>45)) if key=='mouse_hold' else ((red>125)&(red-green>25)&(red-blue>10))
+                references=[self.templates[key]]
+                if key=='mouse_release':references.append(self.templates['mouse_release_faint'])
+                for reference in references:
+                    values=cv2.matchTemplate(binary.astype(np.uint8)*255,reference,cv2.TM_CCOEFF_NORMED)
+                    score=max(score,float(np.nan_to_num(values,nan=0.).max()))
+            best.append(score)
+        self.last_mouse_scores={'green_right':round(best[0],3),'red_left':round(best[1],3)}
+        if max(best)>=.64 and abs(best[0]-best[1])>=.08:return best[0]>best[1]
+        return None
 
     @staticmethod
     def read_keys(rgb,cx,cy,r):
@@ -167,12 +201,6 @@ class CircularCommand:
         else:
             self.last_visible=now
             if reading.hold is not None:self.held=bool(reading.hold)
-            elif reading.marker is not None:
-                # Arrows fade. Between explicit instructions, return an escaped
-                # marker towards the green arc instead of waiting indefinitely.
-                margin=max(.012,reading.band*.22)
-                if reading.marker<reading.target-margin:self.held=True
-                elif reading.marker>reading.target+margin:self.held=False
         return self.held
 
 

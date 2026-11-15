@@ -9,10 +9,12 @@ class CircularEngine(Engine):
         self.mouse_command=CircularCommand();self.key_command=KeyPromptCommand()
         self.splash_armed_at=float('inf');self.claim_hold_completed=False
         self.confirmation_source=None
+        self.cast_released_at=None;self.last_landing_activity=None
 
     def cast(self,now):
         self.mouse_command.reset();self.key_command.reset()
         self.claim_hold_completed=False
+        self.cast_released_at=None;self.last_landing_activity=None
         return [('release_keys',True)]+super().cast(now)
 
     def recover(self,now,reason='cast_unconfirmed',require_marker=False):
@@ -40,7 +42,7 @@ class CircularEngine(Engine):
         return [('release_keys',True)]+super().finish(now,confirmed,reason)
 
     def step(self,now,reading,fishing=False,loot=None,reward=False,
-             scene_stamp=None,scene_valid=True,splash=False):
+             scene_stamp=None,scene_valid=True,splash=False,impact_activity=False):
         if self.state=='PARADO':return []
         fresh=scene_valid and (scene_stamp is None or 0<=now-scene_stamp<.5)
         if not fresh:loot=None;reward=False
@@ -63,6 +65,14 @@ class CircularEngine(Engine):
                 return [('mouse',False),('release_keys',True)]
             self.message='Reencontrando o círculo…'
             return [('mouse',mouse),('release_keys',True)]
+        if self.state=='ASSENTANDO_LINHA':
+            if impact_activity:self.last_landing_activity=now
+            quiet=self.last_landing_activity is None or now-self.last_landing_activity>=.30
+            if now>=self.deadline and (quiet or now>=self.deadline+1.2):
+                self.state='ESPERANDO';self.splash_armed_at=now
+                self.deadline=now+self.cfg['wait_seconds']
+                self.message='Linha lançada. Aguardando o splash…'
+            return [('mouse',False)]
         if self.state=='FISGANDO':
             if now>=self.deadline:
                 self.state='AGUARDANDO_CIRCULO';self.deadline=now+4
@@ -85,7 +95,12 @@ class CircularEngine(Engine):
         previous=self.state
         actions=super().step(now,None,False,loot,reward,scene_stamp,scene_valid)
         if previous=='CLIQUE' and self.state=='ESPERANDO':
-            self.splash_armed_at=now+.9
-            self.message='Linha lançada. Aguardando o splash…'
+            # The first landing burst can arrive after the former 0.9 s guard.
+            # Keep it disarmed through the configurable settling interval and
+            # a short quiet gap. The upper bound prevents zone mist deadlocks.
+            self.state='ASSENTANDO_LINHA';self.splash_armed_at=float('inf')
+            self.cast_released_at=now;self.last_landing_activity=now
+            self.deadline=now+self.cfg.get('cast_settle_seconds',1.8)
+            self.message='Esperando a linha assentar…'
         if previous=='TECLA_T' and self.state=='VERIFICANDO_COLETA':self.claim_hold_completed=True
         return actions

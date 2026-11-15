@@ -4,6 +4,14 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## Beta 0.0.44 — landing guard and coloured mouse commands
+
+- Reads the green right chevrons to hold and red left chevrons to release, following rotation around the marker and checking colour/shape, including dim red cues.
+- White upper arrows and marker position no longer issue mouse commands. The last valid command persists between cues while the circle remains visible; losing the circle still releases input.
+- Adds a line-settling stage with a configurable default 1.8-second guard, a short quiet check and an upper bound to prevent zone-animation deadlocks.
+- Logs ignored landing activity, configured guard and coloured instruction changes. Updates PT/EN/ES hints and documentation.
+- Tests cover delayed impacts, settling, resuming an existing circle, cue rotation/scaling, missing white marker and ignored white arrows. Recorded replay does not replace live validation of the corrected controller.
+
 ## Beta 0.0.43 — splash detection in fishing zones
 
 - Recognizes coherent compact cyan particles instead of a global increase in water brightness, separating the persistent fishing-zone glow from bite evidence.

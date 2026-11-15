@@ -51,6 +51,7 @@ class SplashReader:
         elif rise>max(25,feature*.12) and self.pending is None:self.pending=now
         self.stats={'particles':len(masses),'coherence':round(coherence,3),
                     'mass':round(feature,1),'baseline':round(self.baseline,1),
+                    'burst_onset':bool(not first and feature>self.baseline*1.35+40 and rise>max(25,feature*.12)),
                     'armed':bool(armed),'detected':bool(event)}
         # Learn during arming too. Keep cooldown/history across brief disarmed
         # intervals; a sustained bright frame cannot repeatedly trigger clicks.

@@ -4,6 +4,14 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## Beta 0.0.44 — impacto inicial e comandos coloridos
+
+- Corrige a identificação do comando do mouse: lê os chevrons verdes para a direita (segurar) e vermelhos para a esquerda (soltar) junto ao marcador. A leitura acompanha a rotação, confirma cor e formato e inclui referências de setas vermelhas em diferentes intensidades.
+- Os avisos brancos superiores e a posição do marcador deixam de comandar o mouse. Entre sinais válidos, o comando anterior é preservado enquanto o círculo está visível; perder o círculo continua liberando o botão.
+- Após lançar, entra na etapa de assentamento da linha. A proteção padrão passa a 1,8 segundo, com uma breve espera de estabilização e limite para não ficar presa na animação de uma área. O intervalo pode ser ajustado em Configurar → Proteção após lançar (s).
+- Adiciona registros do impacto ignorado, da proteção configurada e de cada mudança do sinal colorido, incluindo a pontuação de reconhecimento. Interface e instruções PT/EN/ES passam a mostrar os comandos corretos.
+- Regressões verificam impacto inicial tardio, estabilização, retomada de um círculo já visível, rotação e mudança de escala dos chevrons, leitura sem marcador branco e rejeição dos avisos brancos. As gravações anteriores são usadas para replay; ainda falta validar o controle ao vivo após a correção.
+
 ## Beta 0.0.43 — splash em áreas de pesca
 
 - Substitui a comparação do brilho de uma área inteira por partículas ciano compactas, sua forma e concentração local. O efeito contínuo da área de pesca deixa de ser considerado um aumento global de brilho suficiente para fisgar.

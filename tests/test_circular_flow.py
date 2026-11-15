@@ -16,13 +16,37 @@ def ring(**kw):return CircularReading((1482,576),166,.9,**kw)
 
 
 class Flow(unittest.TestCase):
+    def test_delayed_first_impact_is_ignored_until_line_settles(self):
+        engine=CircularEngine(cfg());engine.state='CLIQUE';engine.deadline=0.
+        engine.step(0,None)
+        self.assertEqual(engine.state,'ASSENTANDO_LINHA')
+        self.assertNotIn(('mouse',True),engine.step(.95,None,splash=True,impact_activity=True))
+        self.assertNotIn(('mouse',True),engine.step(1.81,None,splash=True,impact_activity=True))
+        self.assertEqual(engine.state,'ASSENTANDO_LINHA')
+        engine.step(2.0,None);self.assertEqual(engine.state,'ASSENTANDO_LINHA')
+        engine.step(2.12,None);self.assertEqual(engine.state,'ESPERANDO')
+        self.assertIn(('mouse',True),engine.step(2.3,None,splash=True))
+
+    def test_continuous_zone_activity_cannot_keep_settling_forever(self):
+        engine=CircularEngine(cfg());engine.state='CLIQUE';engine.deadline=0.
+        engine.step(0,None)
+        for now in (.5,1.,1.5,1.9,2.5,3.01):engine.step(now,None,impact_activity=True)
+        self.assertEqual(engine.state,'ESPERANDO')
+
+    def test_existing_minigame_can_resume_during_settle_guard(self):
+        engine=CircularEngine(cfg());engine.state='CLIQUE';engine.deadline=0.
+        engine.step(0,None)
+        self.assertIn(('mouse',True),engine.step(.5,ring(hold=True)))
+        self.assertEqual(engine.state,'PESCANDO')
+
     def test_five_hundred_consecutive_cycles_keep_advancing(self):
         engine=CircularEngine(cfg());now=1.
         for cycle in range(500):
             now=max(now,engine.deadline+.01);engine.step(now,None)
             now+=.2;engine.step(now,None)
             now+=.3;engine.step(now,None)
-            now+=1.1;engine.step(now,None,splash=True)
+            now+=1.9;engine.step(now,None)
+            now+=.1;engine.step(now,None,splash=True)
             now+=.11;engine.step(now,None)
             now+=.1;engine.step(now,ring(hold=True,key='D',presses=1))
             now+=.2;engine.step(now,ring(hold=False))
@@ -42,30 +66,32 @@ class Flow(unittest.TestCase):
         self.assertIn(('aim',[.5,.3]),engine.step(1,None))
         self.assertIn(('mouse',True),engine.step(1.2,None))
         engine.step(1.5,None)
-        self.assertEqual(engine.state,'ESPERANDO')
-        self.assertEqual(engine.step(1.6,None,splash=True),[]) # initial cast splash is not armed
-        self.assertIn(('mouse',True),engine.step(2.5,None,splash=True))
+        self.assertEqual(engine.state,'ASSENTANDO_LINHA')
+        self.assertEqual(engine.step(1.6,None,splash=True),[('mouse',False)]) # initial impact is not armed
+        self.assertEqual(engine.step(2.5,None,splash=True),[('mouse',False)])
+        engine.step(3.35,None)
+        self.assertIn(('mouse',True),engine.step(3.5,None,splash=True))
         self.assertEqual(engine.state,'FISGANDO')
-        self.assertIn(('mouse',False),engine.step(2.6,None))
+        self.assertIn(('mouse',False),engine.step(3.6,None))
         r=ring(hold=True,key='A',presses=2)
-        actions=engine.step(2.8,r)
+        actions=engine.step(3.8,r)
         self.assertIn(('mouse',True),actions);self.assertIn(('tap','A'),actions)
-        self.assertIn(('tap','A'),engine.step(2.91,r))
-        self.assertNotIn(('tap','A'),engine.step(3.1,r))
-        self.assertIn(('mouse',False),engine.step(3.2,ring(hold=False)))
-        engine.step(4,ring(complete=True));self.assertEqual(engine.state,'RESULTADO')
-        engine.step(4.1,None,loot=(.6,.4));engine.step(4.4,None,loot=(.6,.4))
+        self.assertIn(('tap','A'),engine.step(3.91,r))
+        self.assertNotIn(('tap','A'),engine.step(4.1,r))
+        self.assertIn(('mouse',False),engine.step(4.2,ring(hold=False)))
+        engine.step(5,ring(complete=True));self.assertEqual(engine.state,'RESULTADO')
+        engine.step(5.1,None,loot=(.6,.4));engine.step(5.4,None,loot=(.6,.4))
         self.assertEqual(engine.state,'TECLA_T')
-        engine.step(7.5,None,loot=(.6,.4))
+        engine.step(8.5,None,loot=(.6,.4))
         self.assertEqual(engine.state,'VERIFICANDO_COLETA')
-        for t in (7.6,7.9,8.3,8.9,9.1):engine.step(t,None)
+        for t in (8.6,8.9,9.3,9.9,10.1):engine.step(t,None)
         self.assertEqual(engine.cycles,1);self.assertEqual(engine.collected,1)
         self.assertEqual(engine.collect_attempts,0)
 
     def test_lost_circle_releases_mouse_and_can_reacquire_outside_green(self):
         engine=CircularEngine(cfg());engine.step(1,ring(hold=True))
         self.assertIn(('mouse',False),engine.step(1.2,None))
-        actions=engine.step(1.4,ring(marker=-.25))
+        actions=engine.step(1.4,ring(marker=-.25,hold=True))
         self.assertEqual(engine.state,'PESCANDO');self.assertIn(('mouse',True),actions)
         engine.recover(2);self.assertFalse(engine.mouse_command.held)
 

@@ -13,10 +13,11 @@ def frame(width=1920,height=1072,hold=True,center=None):
     cx,cy=center or (round(width*.772),round(height*.537))
     scale=radius/166
     rgb=np.full((height,width,3),(28,80,150),dtype=np.uint8)
-    patch=cv2.cvtColor(cv2.imread(str(ROOT/'tests/fixtures/circular_ui.png')),cv2.COLOR_BGR2RGB)
-    size=round(360*scale);patch=cv2.resize(patch,(size,size))
-    left,top=round(cx-size/2),round(cy-size/2)
-    rgb[top:top+size,left:left+size]=patch
+    fixture='circular_green_cue.png' if hold else 'circular_red_cue.png'
+    patch=cv2.cvtColor(cv2.imread(str(ROOT/'tests/fixtures'/fixture)),cv2.COLOR_BGR2RGB)
+    pw,ph=round(520*scale),round(440*scale);patch=cv2.resize(patch,(pw,ph))
+    left,top=round(cx-260*scale),round(cy-260*scale)
+    rgb[top:top+ph,left:left+pw]=patch
     key='hold' if hold else 'release'
     glyph=cv2.imread(str(ROOT/f'src/assets/circle_{key}.png'),cv2.IMREAD_GRAYSCALE)
     glyph=cv2.resize(glyph,None,fx=scale,fy=scale,interpolation=cv2.INTER_NEAREST)
@@ -27,6 +28,35 @@ def frame(width=1920,height=1072,hold=True,center=None):
 
 
 class CircularTests(unittest.TestCase):
+    def test_white_arrows_and_marker_position_are_not_mouse_commands(self):
+        image=frame()
+        cx,cy=round(1920*.772),round(1072*.537)
+        yy,xx=np.ogrid[:1072,:1920]
+        distance=np.hypot(xx-cx,yy-cy)
+        image[(distance>166*1.14)&(distance<166*1.55)]=(28,80,150)
+        reader=CircularReader(ROOT/'src/assets')
+        result=reader.read(image)
+        self.assertIsNotNone(result);self.assertIsNone(result.hold)
+        command=CircularCommand()
+        self.assertFalse(command.step(CircularReading((1,1),1,1,marker=-.25),0))
+        self.assertTrue(command.step(CircularReading((1,1),1,1,hold=True),.1))
+        self.assertTrue(command.step(CircularReading((1,1),1,1,marker=.25),.2))
+
+    def test_coloured_cues_work_when_marker_is_temporarily_missing(self):
+        reader=CircularReader(ROOT/'src/assets')
+        cx,cy=round(1920*.772),round(1072*.537)
+        for held in (True,False):
+            self.assertEqual(reader.read_mouse_cue(frame(hold=held),cx,cy,166,None),held)
+
+    def test_coloured_cues_rotate_with_marker(self):
+        reader=CircularReader(ROOT/'src/assets')
+        cx,cy=round(1920*.772),round(1072*.537)
+        for held in (True,False):
+            for degrees in (-90,45,90):
+                image=frame(hold=held)
+                rotated=cv2.warpAffine(image,cv2.getRotationMatrix2D((cx,cy),-degrees,1),(1920,1072))
+                self.assertEqual(reader.read_mouse_cue(rotated,cx,cy,166,None),held,(held,degrees))
+
     def key_frame(self,count=2,side='A'):
         image=frame();cx,cy=round(1920*.772),round(1072*.537)
         patch=cv2.cvtColor(cv2.imread(str(ROOT/'tests/fixtures/circular_key_a.png')),cv2.COLOR_BGR2RGB)

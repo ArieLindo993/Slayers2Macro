@@ -16,3 +16,10 @@ cyan-particle masks, normalized water coordinates and frame geometry. They
 exclude the original RGB images, UI text, player names, recording paths and
 audio. They cover the November 15 animated fishing zone and earlier bites
 inside/outside fishing zones. Raw recordings remain local.
+
+Starting with Beta 0.0.44, `circle_mouse_*` contains rotation-normalized binary
+green/right and red/left chevrons from those recordings. The older white
+`circle_hold`/`circle_release` glyphs remain only as negative test references;
+the production reader no longer uses them as mouse instructions. The RGB
+`circular_green_cue`/`circular_red_cue` fixtures contain only the circular UI and
+its adjacent game background, excluding characters, player names and paths.

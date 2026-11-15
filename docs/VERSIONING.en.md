@@ -50,7 +50,8 @@ The entire product history is classified as beta, including prototypes from befo
 | Beta 0.0.41 | [v0.0.41-beta](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.41-beta) | Continuous capture, NEW badge and complete calibration |
 | Beta 0.0.42 | [v0.0.42-beta](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.42-beta) | Circular fishing, splash, A/D and Claim |
 | Beta 0.0.43 | [v0.0.43-beta](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.43-beta) | Fishing-zone splash recognition and priority hook click |
+| Beta 0.0.44 | [v0.0.44-beta](https://github.com/ArieLindo993/Slayers2Macro/tree/v0.0.44-beta) | Line landing guard and coloured mouse chevrons |
 
-Old tags, commits, checksums and packages are preserved. Older executables may still display their original compiled version; the new interface displays **Beta 0.0.43**. This inventory does not publish personal files or rebuild prototypes. The “ajustada” and “fonte-corrigida” archives have the same listed Python sources but different package hashes; they are recorded separately without inventing a code fix.
+Old tags, commits, checksums and packages are preserved. Older executables may still display their original compiled version; the new interface displays **Beta 0.0.44**. This inventory does not publish personal files or rebuild prototypes. The “ajustada” and “fonte-corrigida” archives have the same listed Python sources but different package hashes; they are recorded separately without inventing a code fix.
 
 **Compatibility:** Beta describes the product stage. Releases stay on the `/releases/latest` distribution channel to preserve installed updaters and download links. They are not switched to GitHub’s technical prerelease filter, which [is excluded from that channel](https://docs.github.com/en/rest/releases/releases#get-the-latest-release). The updater uses release IDs, not a comparison between 7.x and 0.x. Settings and user data are not reset.

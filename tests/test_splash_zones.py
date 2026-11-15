@@ -5,11 +5,28 @@ from unittest.mock import patch
 import numpy as np
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'src'))
 from splash import SplashReader
+from circular_engine import CircularEngine
 import test_circular_flow as flow_tests
 import macro
 
 
 class SplashZones(unittest.TestCase):
+    def test_recorded_landing_is_ignored_and_later_bite_hooks(self):
+        data=np.load(ROOT/'tests/fixtures/splash_bite_masks.npz')
+        shape=tuple(data['shape']);masks=np.unpackbits(data['masks'],count=int(np.prod(shape))).reshape(shape)
+        w,h=map(int,data['frame_size']);x0,y0=map(int,data['origin']);point=tuple(data['point'])
+        engine=CircularEngine(flow_tests.cfg());engine.state='CLIQUE';engine.deadline=1.5
+        reader=SplashReader();hooks=[]
+        for i,mask in enumerate(masks):
+            rgb=np.zeros((h,w,3),np.uint8)
+            rgb[y0:y0+mask.shape[0],x0:x0+mask.shape[1]][mask.astype(bool)]=(70,230,255)
+            now=i/float(data['fps'])
+            event=reader.observe(rgb,point,now,engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO'))
+            previous=engine.state
+            engine.step(now,None,splash=event,impact_activity=reader.stats.get('burst_onset',False))
+            if engine.state=='FISGANDO' and previous!='FISGANDO':hooks.append(now)
+        self.assertEqual(len(hooks),1);self.assertAlmostEqual(hooks[0],4.2,delta=.1)
+
     def replay(self,name,armed_at=0):
         data=np.load(ROOT/'tests/fixtures'/name)
         shape=tuple(data['shape']);masks=np.unpackbits(data['masks'],count=int(np.prod(shape))).reshape(shape)

@@ -2,7 +2,7 @@
 
 [Português](../README.md) · [English](README.en.md) · **Español**
 
-Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.43** integra el minijuego circular de noviembre: lanzamiento, salpicadura, mantener/soltar el ratón, toques A/D y recogida con T.
+Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.44** integra el minijuego circular de noviembre: lanzamiento, salpicadura, mantener/soltar el ratón, toques A/D y recogida con T.
 
 **[Descargar actualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Descargas](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Cambios](CHANGELOG.es.md)**
 
@@ -20,7 +20,7 @@ Para instalar manualmente, extrae **Slayers2Macro.zip** y abre **Slayers2Macro.e
 
 1. Equipa la caña cerca del agua y fija la cámara. Apunta donde caerá la línea y aparecerá la salpicadura; pulsa **F8**.
 2. Deja la calibración automática activada y pulsa **F4** con Roblox en primer plano.
-3. El macro lanza y vuelve a pulsar cuando detecta la salpicadura. ↑↑ mantiene y ↓↓ suelta el ratón. Entre indicaciones corrige el marcador que salga del arco verde.
+3. El macro lanza y vuelve a pulsar cuando detecta la salpicadura. La protección tras lanzar dura 1,8 segundos por defecto, con una breve comprobación de estabilización. Ajusta **Protección tras lanzar (s)** si el vuelo es más largo. Las flechas **verdes hacia la derecha mantienen** y las **rojas hacia la izquierda sueltan** el ratón; giran con el marcador. Las flechas blancas superiores no son órdenes del ratón. La última orden válida se mantiene entre avisos mientras el círculo siga visible.
 4. Las tarjetas activas A/D piden uno o dos toques según sus puntos, junto al control del ratón.
 5. Tras el resultado, mantiene **T tres segundos** por defecto, comprueba Claim/nombre/peso y vuelve a pescar. Observa las primeras rondas en la vista previa.
 

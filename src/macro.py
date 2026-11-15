@@ -124,7 +124,7 @@ def reward_cycle_owner(state,cycle):
 
 DEFAULTS={'roi':[.733,.289,.034,.369],'cast':None,'anticipation':.10,
           'wait_seconds':20.,'result_wait':2.,'recast_seconds':1.5,
-          'cast_hold':.25,'t_hold':3.0,'max_cast':3,'max_collect':5,'collect_timeout':35.,'auto_calibrate':True,'fast_collection_defaults':True}
+          'cast_hold':.25,'cast_settle_seconds':1.8,'t_hold':3.0,'max_cast':3,'max_collect':5,'collect_timeout':35.,'auto_calibrate':True,'fast_collection_defaults':True}
 
 # Observações lentas continuam úteis por um intervalo limitado. A barra usa
 # capturas próprias em cada tick; nunca usa imagens atrasadas para mover o mouse.
@@ -164,7 +164,7 @@ class App:
                 roi=profile.get('roi',[])
                 if len(roi)==4 and all(isinstance(v,(int,float)) and 0<v<1 for v in roi) and roi[0]+roi[2]<=1 and roi[1]+roi[3]<=1:
                     self.config['calibration_profile']=profile
-            for key,lo,hi in [('cast_hold',.08,1),('t_hold',.2,5),('wait_seconds',10,60),('result_wait',.5,20)]:
+            for key,lo,hi in [('cast_hold',.08,1),('cast_settle_seconds',.6,5),('t_hold',.2,5),('wait_seconds',10,60),('result_wait',.5,20)]:
                 value=saved.get(key)
                 if isinstance(value,(int,float)) and lo<=value<=hi:self.config[key]=value
             point=saved.get('cast')
@@ -192,6 +192,7 @@ class App:
         self.circle_reader=CircularReader(assets);self.splash_reader=SplashReader()
         self.claim_reader=ClaimReader(assets);self.claim_job=None;self.last_claim_ocr=0.;self.claim_votes={}
         self.current_circle=None;self.last_circle_scan=-float('inf')
+        self.last_mouse_instruction=None
         self.claim_scene=None;self.last_claim_scan=-float('inf');self.circle_splash=False
         self.fishing_keys={};self.circular_scene={};self.circular_scene_time=0.
         self.config['circle_profiles']=saved.get('circle_profiles',{}) if isinstance(locals().get('saved'),dict) and isinstance(saved.get('circle_profiles'),dict) else {}
@@ -234,7 +235,7 @@ class App:
         preview_card=ttk.Frame(vision,style='Panel.TFrame',padding=12);preview_card.pack(fill='x')
         self.live_preview=ttk.Label(preview_card,text=self.tr('Aguardando o círculo'),anchor='center',style='PanelMuted.TLabel')
         self.live_preview.pack(fill='x',pady=4)
-        ttk.Label(vision,text=self.tr('↑↑ segurar · ↓↓ soltar\nA/D · um ou dois toques'),style='Muted.TLabel',font=('Segoe UI',9)).pack(anchor='w',pady=(10,0))
+        ttk.Label(vision,text=self.tr('Verde → segurar · Vermelha ← soltar\nA/D · um ou dois toques'),style='Muted.TLabel',font=('Segoe UI',9),wraplength=218).pack(anchor='w',pady=(10,0))
         self.metrics_text=LocalizedVar(self.tr,value='Qualidade: aguardando leituras')
         ttk.Label(vision,textvariable=self.metrics_text,wraplength=218).pack(anchor='w',pady=10)
         self.profile_text=LocalizedVar(self.tr,value='Perfil: aguardando o jogo')
@@ -559,13 +560,15 @@ class App:
         ttk.Label(preferences,text=self.tr('Escolha teclas diferentes. A, D e T ficam reservados à pesca.'),wraplength=535,style='Muted.TLabel').pack(anchor='w',pady=12)
         ttk.Button(preferences,text=self.tr('Restaurar padrões'),command=self.reset_hotkey_fields).pack(anchor='w')
         self.fields={}
-        for key,label,lo,hi in [('cast_hold','Duração do clique (s)',.08,1),('t_hold','Segurar T (s)',.2,5),
+        for key,label,lo,hi in [('cast_hold','Duração do clique (s)',.08,1),('cast_settle_seconds','Proteção após lançar (s)',.6,5),('t_hold','Segurar T (s)',.2,5),
                                ('wait_seconds','Esperar a pesca antes de repetir (s)',10,60),
                                ('result_wait','Esperar item depois da pesca (s)',.5,20)]:
             row=ttk.Frame(frame);row.pack(fill='x',pady=5)
             ttk.Label(row,text=self.tr(label)).pack(side='left')
             var=tk.StringVar(value=str(self.config[key]));self.fields[key]=(var,lo,hi)
             ttk.Spinbox(row,textvariable=var,from_=lo,to=hi,increment=.1,width=7).pack(side='right')
+        ttk.Label(frame,text=self.tr('Se o impacto da linha ainda for clicado, aumente a proteção após lançar.'),
+                  style='Muted.TLabel',wraplength=520).pack(anchor='w',pady=(4,0))
         ttk.Checkbutton(frame,text=self.tr('Só observar (não envia comandos)'),variable=self.dry,
                         command=lambda:self.stop('Modo de observação alterado.')).pack(anchor='w',pady=12)
         ttk.Label(frame,text=self.tr('Calibrar o círculo'),font=('Segoe UI',12,'bold')).pack(anchor='w',pady=(4,6))
@@ -729,9 +732,10 @@ class App:
         self.window=window;self.pending_window=None;self.window_change_logged=False
         self.engine.reset(time.monotonic(),preserve_counts=True);self.active=True
         self.circle_reader.reset();self.splash_reader.reset();self.current_circle=None
+        self.last_mouse_instruction=None
         self.claim_scene=None;self.last_claim_scan=-float('inf');self.last_circle_scan=-float('inf')
         self.started_at=time.monotonic();self.capture_retry_at=0.;self.capture_failures=0
-        self.session_log.event('MACRO_INICIADO',ciclo=self.cycle_id,modo='observação' if self.dry.get() else 'pesca',calibracao='automática' if self.config['auto_calibrate'] else 'manual',segurar_T=self.config['t_hold'],perfil=self.profile_key)
+        self.session_log.event('MACRO_INICIADO',ciclo=self.cycle_id,modo='observação' if self.dry.get() else 'pesca',calibracao='automática' if self.config['auto_calibrate'] else 'manual',segurar_T=self.config['t_hold'],protecao_lancamento=self.config['cast_settle_seconds'],perfil=self.profile_key)
         self.journal.record('started',self.engine.state,active=True,cycles=self.engine.cycles)
         if self.paused_state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
             self.engine.state='RESULTADO';self.engine.deadline=time.monotonic()+1
@@ -1028,7 +1032,10 @@ class App:
                 self.circular_scene={};self.circular_scene_time=captured
                 self.advance(time.monotonic(),None)
                 return
-        if self.engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO') and now-getattr(self,'last_splash_log',0)>=2:
+        if self.engine.state=='ASSENTANDO_LINHA' and self.splash_reader.stats.get('burst_onset'):
+            self.session_log.event('IMPACTO_LINHA_IGNORADO',ciclo=self.cycle_id,
+                desde_lancamento=round(captured-(self.engine.cast_released_at or captured),3))
+        if self.engine.state in ('ASSENTANDO_LINHA','ESPERANDO','AGUARDANDO_CIRCULO') and now-getattr(self,'last_splash_log',0)>=2:
             self.last_splash_log=now
             self.session_log.event('LEITURA_SPLASH',ciclo=self.cycle_id,**self.splash_reader.stats)
         reading=None
@@ -1037,6 +1044,11 @@ class App:
             roi=None if self.config['auto_calibrate'] else self.config['circle_roi']
             reading=self.circle_reader.read(full,roi)
             self.current_circle=reading;self.last_circle_scan=now
+            if reading is not None and not reading.complete and reading.hold is not None and reading.hold!=self.last_mouse_instruction:
+                self.last_mouse_instruction=reading.hold
+                self.session_log.event('SINAL_MOUSE_LIDO',ciclo=self.cycle_id,
+                    sinal='verde_direita' if reading.hold else 'vermelha_esquerda',
+                    comando='segurar' if reading.hold else 'soltar',**self.circle_reader.last_mouse_scores)
         self.capture_failures=0
         stages=('INICIO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
         if now-self.last_claim_scan>=.15 and self.engine.state in stages:
@@ -1136,7 +1148,8 @@ class App:
             scene=self.circular_scene
             actions=self.engine.step(now,reading,loot=scene.get('loot'),
                 reward=bool(scene.get('reward') or text_reward),scene_stamp=self.circular_scene_time,
-                scene_valid=0<=now-self.circular_scene_time<.5,splash=self.circle_splash)
+                scene_valid=0<=now-self.circular_scene_time<.5,splash=self.circle_splash,
+                impact_activity=self.splash_reader.stats.get('burst_onset',False))
         elif (reading is None and now-max(self.scene_time,self.started_at)>5
             and self.engine.state!='RECUPERANDO'):
             actions=self.engine.recover(now,reason='vision_unavailable')
@@ -1156,7 +1169,7 @@ class App:
                 capturas_sem_item=self.engine.absent_frames,item_visto_na_coleta=self.engine.loot_seen,
                 tentativa=self.engine.collect_attempts,decisao=self.engine.state)
         if self.engine.state!=previous_state:
-            events={'POSICIONANDO':'LANCAMENTO_PREPARADO','CLIQUE':'VARA_LANCADA','ESPERANDO':'AGUARDANDO_PESCA','PESCANDO':'MINIGAME_INICIADO','RESULTADO':'MINIGAME_ENCERRADO','MIRANDO_ITEM':'TENTATIVA_DE_COLETA','TECLA_T':'T_PRESSIONADO','VERIFICANDO_COLETA':'T_LIBERADO_VERIFICANDO_COLETA','REINICIANDO':'PREPARANDO_PROXIMA_PESCA','PARADO':'PARADA_AUTOMATICA','RECUPERANDO':'RECUPERACAO_AUTOMATICA'}
+            events={'POSICIONANDO':'LANCAMENTO_PREPARADO','CLIQUE':'VARA_LANCADA','ASSENTANDO_LINHA':'AGUARDANDO_IMPACTO_LINHA','ESPERANDO':'AGUARDANDO_PESCA','PESCANDO':'MINIGAME_INICIADO','RESULTADO':'MINIGAME_ENCERRADO','MIRANDO_ITEM':'TENTATIVA_DE_COLETA','TECLA_T':'T_PRESSIONADO','VERIFICANDO_COLETA':'T_LIBERADO_VERIFICANDO_COLETA','REINICIANDO':'PREPARANDO_PROXIMA_PESCA','PARADO':'PARADA_AUTOMATICA','RECUPERANDO':'RECUPERACAO_AUTOMATICA'}
             self.session_log.event(events.get(self.engine.state,'MUDANCA_DE_ESTADO'),ciclo=self.cycle_id,anterior=previous_state,estado=self.engine.state,lancamento=self.engine.attempts,tentativa_coleta=self.engine.collect_attempts,descricao=self.engine.message)
         if previous_state=='PESCANDO' and self.engine.state!='PESCANDO':
             self.session_log.event('MINIGAME_FINALIZADO',ciclo=self.cycle_id,proxima_etapa=self.engine.state)
