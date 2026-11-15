@@ -358,7 +358,8 @@
       "original": "Two mouse buttons and green-edge pressure relief",
       "kind": "git",
       "tag": "v0.0.47-beta",
-      "published": false
+      "published": true,
+      "commit": "8b8d5edb4b9529f11088f4b2e79b7d2d87948517"
     }
   ]
 }
