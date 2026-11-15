@@ -79,3 +79,21 @@ validação durante o uso. O splash depende de F8 perto de onde a linha cai.
 
 Os vídeos e relatórios ficam locais; apenas recortes de interface sem nomes
 de jogadores e caminhos pessoais entram nas referências de teste.
+
+## Correção de splash em zonas de pesca — Beta 0.0.43
+
+O vídeo de 15/11 mostra um efeito contínuo com peixes, arcos brancos e névoa.
+A soma global do brilho usada na Beta 0.0.42 podia aumentar com essa animação
+ou manter uma referência alta demais para perceber a fisgada. O log também
+mostrava cliques sem círculo subsequente e processamento demorado entre leituras.
+
+O leitor agora busca grupos compactos de partículas ciano e sua concentração,
+com referência temporal própria. Não depende de um aumento do brilho total da
+área. Aprende mesmo antes de armar, preserva o intervalo entre eventos e expira
+candidatos não confirmados. O clique e a liberação têm prioridade sobre análises
+mais lentas. Os logs incluem os sinais usados para distinguir os eventos.
+
+As regressões usam apenas máscaras binárias ciano anônimas. O trecho de fundo
+não gerou acionamentos; os exemplos de fisgada anteriores continuam detectados
+com e sem uma zona de pesca. Isso não comprova funcionamento ao vivo na nova
+posição ou em outras animações ainda não gravadas.

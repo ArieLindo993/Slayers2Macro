@@ -4,6 +4,15 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## Beta 0.0.43 — splash em áreas de pesca
+
+- Substitui a comparação do brilho de uma área inteira por partículas ciano compactas, sua forma e concentração local. O efeito contínuo da área de pesca deixa de ser considerado um aumento global de brilho suficiente para fisgar.
+- Aprende o fundo enquanto o clique ainda está desarmado e mantém o intervalo entre eventos. Candidatos que não se confirmam expiram; não há espera pendente que fique travada depois de uma captura lenta.
+- Dá prioridade ao clique de fisgada e à sua liberação, antes da procura do círculo, do aviso Claim ou de análises de recompensa. Reutiliza a captura atual e evita procurar Claim durante a espera pelo splash.
+- A busca do círculo descarta cedo quadros sem alvo neon e limita o paralelismo local do OpenCV. O log registra partículas, concentração, intensidade local e referência de fundo a cada dois segundos de espera, além do evento detectado.
+- Acrescenta regressões com máscaras ciano anônimas: efeito contínuo do vídeo de 15/11 sem acionamento, e splashes anteriores detectados dentro e fora de uma área de pesca. Também verifica a ordem do clique e da liberação, intervalo entre eventos e recuperação de candidatos expirados.
+- Limite da validação: o novo trecho de 2,51 segundos demonstra o efeito de fundo. Os exemplos de fisgada vêm das gravações anteriores; não houve teste ao vivo desta correção na área nova.
+
 ## Beta 0.0.42 — pesca circular de novembro
 
 - Integra o minigame novo ao aplicativo: lançamento, detecção temporal do splash, clique de fisgada, círculo, mouse e toques A/D concorrentes.

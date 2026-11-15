@@ -4,6 +4,14 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## Beta 0.0.43 — salpicadura en zonas de pesca
+
+- Reconoce partículas cian compactas y coherentes en lugar del aumento global del brillo del agua, separando el efecto continuo de la zona de los indicios de picada.
+- Aprende el fondo antes de armarse, conserva el intervalo entre eventos y caduca candidatos sin bloquearse tras una captura lenta.
+- Envía y suelta el clic de enganche antes de analizar círculo, Claim o recompensa. Reutiliza la captura actual y evita buscar Claim mientras espera; descarta pronto búsquedas del anillo sin objetivo neón.
+- Añade diagnóstico de partículas, concentración y fondo, y pruebas con máscaras anónimas del nuevo efecto y picadas anteriores dentro/fuera de zonas. Verifica orden de entradas, intervalos y recuperación de candidatos caducados.
+- El nuevo vídeo de 2,51 segundos muestra el efecto de fondo. Las picadas positivas proceden de grabaciones anteriores; falta validar esta corrección en directo en la zona nueva.
+
 ## Beta 0.0.42 — pesca circular de noviembre
 
 - Integra lanzamiento, detección temporal de la salpicadura, clic de enganche, círculo y toques A/D junto al ratón.

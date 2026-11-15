@@ -81,9 +81,11 @@ class Flow(unittest.TestCase):
         self.assertEqual(engine.collected,1)
 
     def test_splash_is_temporal_and_rearms_without_spamming(self):
+        import cv2
         reader=SplashReader();image=np.zeros((599,800,3),np.uint8)
         self.assertFalse(reader.observe(image,(.5,.3),0))
-        image[165:185,390:415]=(90,230,255)
+        cv2.ellipse(image,(380,158),(12,4),-40,0,360,(70,230,255),-1)
+        cv2.ellipse(image,(420,155),(12,4),40,0,360,(70,230,255),-1)
         self.assertFalse(reader.observe(image,(.5,.3),.1))
         self.assertTrue(reader.observe(image,(.5,.3),.15))
         self.assertFalse(reader.observe(image,(.5,.3),.2))

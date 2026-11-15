@@ -4,6 +4,14 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## Beta 0.0.43 — splash detection in fishing zones
+
+- Recognizes coherent compact cyan particles instead of a global increase in water brightness, separating the persistent fishing-zone glow from bite evidence.
+- Learns background while disarmed, preserves event cooldown and expires unconfirmed candidates without getting stuck after a slow capture.
+- Sends and releases the hook click before ring, Claim or reward analysis. Reuses the current capture and skips Claim search while waiting for a bite; rejects ring searches early when there is no neon target.
+- Adds diagnostic particle/coherence/background fields and anonymous mask regressions for the new zone animation plus earlier real bites inside/outside zones. Tests also cover input ordering, cooldown and expired-candidate recovery.
+- The new 2.51-second clip demonstrates the background effect. Positive bites come from earlier recordings; this fix has not been validated live in the newly shown area.
+
 ## Beta 0.0.42 — November circular fishing
 
 - Integrates casting, temporal splash detection, hook click, circle commands and concurrent A/D taps into the app.

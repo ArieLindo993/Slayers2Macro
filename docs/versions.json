@@ -320,6 +320,13 @@
       "tag": "v0.0.42-beta",
       "published": true,
       "commit": "3632f940481f4a660d2e4bcf55d10cfb2cf28816"
+    },
+    {
+      "beta": "0.0.43",
+      "original": "Splash-zone discrimination and immediate hook input",
+      "kind": "git",
+      "tag": "v0.0.43-beta",
+      "published": false
     }
   ]
 }

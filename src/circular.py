@@ -26,6 +26,7 @@ class CircularReading:
 
 class CircularReader:
     def __init__(self, assets):
+        cv2.setNumThreads(2)
         self.templates={}
         for key in ('ring','ring_mask','hold','release'):
             raw=np.fromfile(Path(assets)/('circle_'+key+'.png'),np.uint8)
@@ -43,6 +44,11 @@ class CircularReader:
         # of marker colour, position and whether an arrow is currently visible.
         factor=min(1.,800/w)
         image=cv2.resize(rgb,None,fx=factor,fy=factor,interpolation=cv2.INTER_AREA)
+        # Empty waiting frames need no expensive multiscale ring search.
+        a=image.astype(np.int16)
+        neon=(a[:,:,1]>170)&(a[:,:,1]-a[:,:,0]>45)&(a[:,:,1]-a[:,:,2]>50)
+        if int(neon.sum())<max(8,int(h*w*factor*factor*.000025)):
+            self.geometry=None;return None
         gray=cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
         edges=cv2.Canny(gray,25,60)
         scales=[self.geometry[2]] if self.geometry else []

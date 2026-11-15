@@ -2,7 +2,7 @@
 
 [Português](../README.md) · **English** · [Español](README.es.md)
 
-A visual Windows fishing macro for **Slayers 2 on Roblox**. **Beta 0.0.42** integrates November's circular minigame, splash hook click, held/released mouse, A/D taps and T collection.
+A visual Windows fishing macro for **Slayers 2 on Roblox**. **Beta 0.0.43** integrates November's circular minigame, splash hook click, held/released mouse, A/D taps and T collection.
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 

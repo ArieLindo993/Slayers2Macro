@@ -10,3 +10,9 @@ player names, character images or local file paths. The circular reader is
 connected to the application input loop starting with Beta 0.0.42. The
 `claim_*` references and `tests/fixtures/circular_key_a.png` likewise contain
 only game-interface glyphs and their immediate background.
+
+The `tests/fixtures/splash_*_masks.npz` regression samples retain only binary
+cyan-particle masks, normalized water coordinates and frame geometry. They
+exclude the original RGB images, UI text, player names, recording paths and
+audio. They cover the November 15 animated fishing zone and earlier bites
+inside/outside fishing zones. Raw recordings remain local.

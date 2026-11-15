@@ -952,7 +952,7 @@ class App:
                 if not value or not all(0<v<1 for v in value):raise RuntimeError('Ponto de ação inválido.')
                 if not U.SetCursorPos(int(x+value[0]*w),int(y+value[1]*h)):raise RuntimeError('Não foi possível posicionar o mouse.')
 
-    def update_analyses(self,now,reading):
+    def update_analyses(self,now,reading,full=None,captured=None):
         """Independent consumers share a fresh capture, never each other's queue.
 
         The small bar capture/control remains on every tick. In particular, a
@@ -975,7 +975,8 @@ class App:
             and (collection_stage or (self.engine.state=='PESCANDO' and reading is None)))
         if not (scene_due or calibration_due or ocr_due):return
         self.tick_stage='captura'
-        full=self.sample(full=True);captured=time.monotonic()
+        if full is None:full=self.sample(full=True)
+        if captured is None:captured=time.monotonic()
         self.tick_stage='agendamento_visual'
         if calibration_due:
             stage=self.calibration.search_stage
@@ -1012,8 +1013,24 @@ class App:
 
     def update_circular(self,now):
         if not self.sync_window() or now<self.capture_retry_at:return
+        if self.engine.state in ('CLIQUE','FISGANDO') and not self.dry.get():
+            # Timed clicks must finish before CV/OCR can delay key release.
+            self.circle_splash=False;self.circular_scene={};self.circular_scene_time=now
+            self.advance(now,None);return
         self.tick_stage='sinais';self.poll_scene(now)
         self.tick_stage='captura';full=self.sample(full=True);captured=time.monotonic()
+        self.tick_stage='splash'
+        self.circle_splash=self.splash_reader.observe(full,self.config['cast'],captured,
+            self.engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO') and captured>=self.engine.splash_armed_at)
+        if self.circle_splash:
+            self.session_log.event('SPLASH_DETECTADO',ciclo=self.cycle_id,**self.splash_reader.stats)
+            if not self.dry.get():
+                self.circular_scene={};self.circular_scene_time=captured
+                self.advance(time.monotonic(),None)
+                return
+        if self.engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO') and now-getattr(self,'last_splash_log',0)>=2:
+            self.last_splash_log=now
+            self.session_log.event('LEITURA_SPLASH',ciclo=self.cycle_id,**self.splash_reader.stats)
         reading=None
         if self.current_circle is not None or now-self.last_circle_scan>=.12:
             self.tick_stage='circulo'
@@ -1021,10 +1038,7 @@ class App:
             reading=self.circle_reader.read(full,roi)
             self.current_circle=reading;self.last_circle_scan=now
         self.capture_failures=0
-        self.circle_splash=self.splash_reader.observe(full,self.config['cast'],captured,
-            self.engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO') and captured>=self.engine.splash_armed_at)
-        if self.circle_splash:self.session_log.event('SPLASH_DETECTADO',ciclo=self.cycle_id)
-        stages=('INICIO','ESPERANDO','AGUARDANDO_CIRCULO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
+        stages=('INICIO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
         if now-self.last_claim_scan>=.15 and self.engine.state in stages:
             self.tick_stage='aviso_claim';self.claim_scene=self.claim_reader.scan(full);self.last_claim_scan=captured
         claim=self.claim_scene if 0<=captured-self.last_claim_scan<.4 else None
@@ -1060,7 +1074,7 @@ class App:
             self.live_preview.configure(image=self.live_photo,text='');self.last_live_preview=now
             quality=self.metrics.summary();inside=quality['inside_percent']
             self.metrics_text.set(('Dentro da faixa: —' if inside is None else f'Dentro da faixa: {inside:.1f}%')+f'\nLeituras válidas: {quality["valid_percent"]:.1f}%\nTempo medido: {quality["observed_seconds"]:.1f}s')
-        self.update_analyses(now,reading)
+        self.update_analyses(now,reading,full,captured)
         if self.dry.get():
             self.status.set('Observando: '+('pesca ativa' if live else 'item para coletar' if claim else 'sem pesca ou item reconhecido'))
             return
