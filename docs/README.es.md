@@ -2,7 +2,7 @@
 
 [Português](../README.md) · [English](README.en.md) · **Español**
 
-Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.46** integra el minijuego circular de noviembre: lanzamiento, salpicadura, mantener/soltar el ratón, toques A/D y recogida con T.
+Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.47** integra el minijuego circular de noviembre: lanzamiento, salpicadura, mantener/soltar el ratón, toques A/D y recogida con T.
 
 **[Descargar actualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Descargas](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Cambios](CHANGELOG.es.md)**
 
@@ -21,7 +21,7 @@ Para instalar manualmente, extrae **Slayers2Macro.zip** y abre **Slayers2Macro.e
 1. Equipa la caña cerca del agua y fija la cámara. Apunta donde caerá la línea y aparecerá la salpicadura; pulsa **F8**.
 2. Deja la calibración automática activada y pulsa **F4** con Roblox en primer plano.
 3. El macro lanza y deja asentar la línea. La protección predeterminada es de **3 segundos**, con comprobación de estabilización. Tras reconocer la salpicadura, espera **0,18 segundos (180 ms)** antes de pulsar. Ajusta **Protección tras lanzar (s)** y **Retraso del enganche (s)** según el vuelo y la respuesta del juego.
-4. El objetivo es **mantener el marcador dentro del arco verde**, siguiendo los avisos: **verde hacia la derecha = mantener; rojo hacia la izquierda = soltar**. La posición no puede contradecir el rojo. La última instrucción se conserva entre lecturas; la posición solo se usa antes del primer aviso, sin anticipar un movimiento a la izquierda del centro.
+4. El objetivo es **mantener la aguja dentro del arco verde**. Según la [guía del minijuego](https://www.youtube.com/watch?v=BO6waB_XXhY&t=90s), **flecha verde hacia la derecha = mantener el botón derecho; flecha roja hacia la izquierda = mantener el botón izquierdo**. El macro suelta el botón anterior antes de cambiar. Cerca del borde verde en la dirección de la presión, alivia ambos botones y retoma dentro de un margen seguro. A/D sigue independiente. La respuesta específica a saltos todavía requiere una señal visual confirmada; el alivio de borde es un control distinto.
 5. Las tarjetas activas A/D piden uno o dos toques según sus puntos, junto al control del ratón.
 6. Tras el resultado, mantiene **T tres segundos** por defecto, comprueba Claim/nombre/peso y vuelve a pescar. Observa las primeras rondas en la vista previa.
 

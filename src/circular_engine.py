@@ -17,23 +17,38 @@ class CircularEngine(Engine):
         self.claim_hold_completed=False
         self.cast_released_at=None;self.last_landing_activity=None
         self.splash_ready=False;self.hook_requested_at=None
-        return [('release_keys',True)]+super().cast(now)
+        return [('right_mouse',False),('release_keys',True)]+super().cast(now)
+
+    @staticmethod
+    def mouse_actions(button):
+        # Release the opposite button first. Repeated readings do not require
+        # releasing and pressing the selected button on every capture.
+        if button=='right':return [('mouse',False),('right_mouse',True)]
+        if button=='left':return [('right_mouse',False),('mouse',True)]
+        return [('mouse',False),('right_mouse',False)]
+
+    def stop(self,message):
+        self.mouse_command.reset();self.key_command.reset()
+        return [('right_mouse',False),('release_keys',True)]+super().stop(message)
+
+    def prepare_collect(self,now,loot):
+        return [('right_mouse',False)]+super().prepare_collect(now,loot)
 
     def prepare_hook(self,now):
         self.state='PREPARANDO_FISGADA';self.hook_requested_at=now
         self.deadline=now+self.cfg.get('splash_click_delay',.18)
         self.message='Splash confirmado. Aguardando o instante de fisgar…'
-        return [('mouse',False)]
+        return self.mouse_actions(None)
 
     def recover(self,now,reason='cast_unconfirmed',require_marker=False):
         self.mouse_command.reset();self.key_command.reset()
-        return [('release_keys',True)]+super().recover(now,reason,require_marker)
+        return [('right_mouse',False),('release_keys',True)]+super().recover(now,reason,require_marker)
 
     def track(self,now):
         actions=super().track(now)
         self.mouse_command.reset();self.key_command.reset()
         self.message='Círculo localizado. Lendo mouse e A/D.'
-        return actions
+        return [('right_mouse',False)]+actions
 
     def finish(self,now,confirmed,reason=None):
         # Claim disappearance is only collection evidence after a full hold,
@@ -47,7 +62,7 @@ class CircularEngine(Engine):
             self.confirmation_source='claim_after_hold'
         elif confirmed:self.confirmation_source='reward_notification'
         self.mouse_command.reset();self.key_command.reset()
-        return [('release_keys',True)]+super().finish(now,confirmed,reason)
+        return [('right_mouse',False),('release_keys',True)]+super().finish(now,confirmed,reason)
 
     def step(self,now,reading,fishing=False,loot=None,reward=False,
              scene_stamp=None,scene_valid=True,splash=False,impact_activity=False):
@@ -61,8 +76,8 @@ class CircularEngine(Engine):
             if self.state!='PESCANDO':actions+=self.track(now)
             self.last_fishing=now;self.last_marker=now
             mouse=self.mouse_command.step(reading,now)
-            self.message='Círculo ativo · '+('segurando mouse' if mouse else 'soltando mouse')
-            actions.append(('mouse',mouse))
+            self.message='Círculo ativo · '+('segurando botão direito' if mouse=='right' else 'segurando botão esquerdo' if mouse=='left' else 'aliviando na borda verde' if self.mouse_command.reason=='green_edge' else 'botões do mouse soltos')
+            actions+=self.mouse_actions(mouse)
             actions.extend(('tap',key) for key in self.key_command.step(reading,now))
             return actions
         if self.state=='PESCANDO':
@@ -71,9 +86,9 @@ class CircularEngine(Engine):
                 self.state='RESULTADO';self.deadline=now+self.cfg['result_wait']
                 self.collect_attempts=0;self.collect_started=None;self.loot_seen=False
                 self.message='Verificando se há item para coletar…'
-                return [('mouse',False),('release_keys',True)]
+                return self.mouse_actions(None)+[('release_keys',True)]
             self.message='Reencontrando o círculo…'
-            return [('mouse',mouse),('release_keys',True)]
+            return self.mouse_actions(mouse)+[('release_keys',True)]
         if self.state=='ASSENTANDO_LINHA':
             if impact_activity:self.last_landing_activity=now
             quiet=self.last_landing_activity is None or now-self.last_landing_activity>=.30

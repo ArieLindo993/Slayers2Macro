@@ -4,6 +4,15 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## Beta 0.0.47 — right mouse, left mouse and green-arc balance
+
+- Corrects the user-confirmed mapping from the [Ashira RBX guide](https://www.youtube.com/watch?v=BO6waB_XXhY&t=90s): green/right means **hold right mouse**; red/left means **hold left mouse**, not release. Readings name the button explicitly instead of using an ambiguous boolean.
+- Implements Windows right-button input and exclusive switching. Repeated readings do not recreate clicks. Pause, focus loss, resize, recovery, collection and shutdown release both; other releases are still attempted if one fails.
+- Uses needle position to ease off both buttons near the green edge in the pulling direction, with a separate inner resume margin. Missing position cannot blindly resume an edge-paused input. Does not assume motion through the centre.
+- Updates PT/EN/ES hints, actual-button status/logs, reference names and replay reports. A/D, T collection, the 3-second guard and 180 ms hook delay remain available.
+- Tests cover Windows M1/M2 flags, exclusive switching, complete release, observation mode and edge relief. The frozen executable self-test also checks both-button flow. Recorded replay is not a live-win guarantee.
+- A dedicated leap response still needs a confirmed visual cue; edge relief is not labelled as leap detection. Full guide recordings and transcripts stay outside the repository.
+
 ## Beta 0.0.46 — landing protection, hook timing and red-cue priority
 
 - Raises default post-cast protection from 1.8 to 3 seconds after a confirmed landing click about 2.57 seconds after release. Settling considers the elevated signal throughout the burst; an active signal at the time limit must settle before another hook is accepted.

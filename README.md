@@ -2,7 +2,7 @@
 
 **Português** · [English](docs/README.en.md) · [Español](docs/README.es.md)
 
-Macro visual de pesca para **Slayers 2 no Roblox**, para Windows. **Beta 0.0.46** integra a mecânica circular de novembro: lançamento, splash, segurar/soltar o mouse, pedidos A/D e coleta com T.
+Macro visual de pesca para **Slayers 2 no Roblox**, para Windows. **Beta 0.0.47** integra a mecânica circular de novembro: lançamento, splash, segurar/soltar o mouse, pedidos A/D e coleta com T.
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Alterações por versão](CHANGELOG.md)**
 
@@ -31,7 +31,7 @@ Mantenha `Atualizar.ps1` junto dos atalhos `.cmd` e preserve a pasta oculta `.in
 2. Mantenha a câmera fixa. Aponte para **onde a linha vai cair e o splash vai aparecer** e pressione **F8**.
 3. Mantenha a calibração automática ligada e pressione **F4** com o Roblox em primeiro plano.
 4. O macro lança e aguarda a linha assentar. A proteção padrão é de **3 segundos**, com verificação de estabilização. Ao identificar o splash, espera **0,18 segundo (180 ms)** antes do clique. Ajuste **Proteção após lançar (s)** e **Atraso da fisgada (s)** em Configurar, conforme a posição e a resposta do jogo.
-5. O objetivo é **manter a barrinha no arco verde**, seguindo os avisos: **verde para a direita = segurar; vermelho para a esquerda = soltar**. A posição não pode contrariar um aviso vermelho. A última instrução colorida é conservada entre leituras; a posição serve apenas antes do primeiro aviso, sem antecipação de movimento para a esquerda do centro.
+5. O objetivo é **manter a agulha no arco verde**. Conforme o [guia do minigame](https://www.youtube.com/watch?v=BO6waB_XXhY&t=90s), **seta verde para a direita = segurar o botão direito; seta vermelha para a esquerda = segurar o botão esquerdo**. O macro solta o botão anterior antes de trocar. Ao se aproximar da borda do verde no sentido da pressão, alivia os dois botões e retoma dentro de uma margem segura. A/D continua independente. O alívio específico de saltos ainda depende de um sinal visual confirmado; não é confundido com essa proteção de borda.
 6. Quando um cartão lateral fica ativo, o macro propõe um ou dois toques de A/D conforme os pontos. O mouse continua sendo controlado durante esses pedidos.
 7. Após o resultado, tenta coletar segurando **T por três segundos**, lê Claim/nome/peso e volta a pescar. A coleta pode terminar antes do limite de tentativas.
 

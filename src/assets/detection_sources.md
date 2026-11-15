@@ -17,8 +17,9 @@ exclude the original RGB images, UI text, player names, recording paths and
 audio. They cover the November 15 animated fishing zone and earlier bites
 inside/outside fishing zones. Raw recordings remain local.
 
-Starting with Beta 0.0.44, `circle_mouse_*` contains rotation-normalized binary
-green/right and red/left chevrons from those recordings. The older white
+The rotation-normalized green/right and red/left chevrons were introduced in
+Beta 0.0.44. Beta 0.0.47 renames them to `circle_green_right`, `circle_red_left`
+and `circle_red_left_faint`, removing the incorrect hold/release naming. The older white
 `circle_hold`/`circle_release` glyphs remain only as negative test references;
 the production reader no longer uses them as mouse instructions. The RGB
 `circular_green_cue`/`circular_red_cue` fixtures contain only the circular UI and
@@ -31,7 +32,11 @@ not include recording names, paths, audio, player names or character images.
 They cover the three user-confirmed small bursts, a zone-only control, lower
 capture rates and a resized variant. Original recordings remain local.
 
-`circular_release_centre.png` is a circle-only crop from the later November 15
-report, where red release guidance appears with the marker near the centre.
+`circular_red_centre.png` is a circle-only crop from the later November 15
+report, where red left-button guidance appears with the marker near the centre.
 It excludes characters, player names, recording names and local paths, and
 regresses instruction priority over the position fallback.
+
+The public Ashira RBX guide confirms the two-button semantics around 1:30.
+Its URL is cited in the documentation; downloaded guide video, screenshots
+and full transcripts are not bundled or tracked.

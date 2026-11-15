@@ -57,7 +57,7 @@ class Flow(unittest.TestCase):
             engine=CircularEngine(cfg());engine.state='ESPERANDO';engine.splash_armed_at=0.
             engine.step(1.,None,splash=True)
             if interruption=='stop':engine.stop('Pausado.')
-            else:engine.step(1.05,ring(hold=False))
+            else:engine.step(1.05,ring(mouse_button='left'))
             self.assertNotIn(('mouse',True),engine.step(1.3,None))
             self.assertNotEqual(engine.state,'FISGANDO')
 
@@ -77,7 +77,7 @@ class Flow(unittest.TestCase):
     def test_existing_minigame_can_resume_during_settle_guard(self):
         engine=CircularEngine(cfg());engine.state='CLIQUE';engine.deadline=0.
         engine.step(0,None)
-        self.assertIn(('mouse',True),engine.step(.5,ring(hold=True)))
+        self.assertIn(('right_mouse',True),engine.step(.5,ring(mouse_button='right')))
         self.assertEqual(engine.state,'PESCANDO')
 
     def test_five_hundred_consecutive_cycles_keep_advancing(self):
@@ -90,8 +90,8 @@ class Flow(unittest.TestCase):
             now+=.1;engine.step(now,None,splash=True)
             now+=.2;engine.step(now,None)
             now+=.11;engine.step(now,None)
-            now+=.1;engine.step(now,ring(hold=True,key='D',presses=1))
-            now+=.2;engine.step(now,ring(hold=False))
+            now+=.1;engine.step(now,ring(mouse_button='right',key='D',presses=1))
+            now+=.2;engine.step(now,ring(mouse_button='left'))
             now+=.2;engine.step(now,ring(complete=True))
             now+=.1;engine.step(now,None,loot=(.6,.4))
             now+=.3;engine.step(now,None,loot=(.6,.4))
@@ -100,7 +100,7 @@ class Flow(unittest.TestCase):
             self.assertEqual(engine.cycles,cycle+1)
             self.assertEqual(engine.collected,cycle+1)
             self.assertEqual(engine.state,'REINICIANDO')
-            self.assertFalse(engine.mouse_command.held)
+            self.assertIsNone(engine.mouse_command.button)
             self.assertIsNone(engine.key_command.key)
 
     def test_cast_splash_simultaneous_mouse_and_keys_and_early_collection(self):
@@ -117,12 +117,12 @@ class Flow(unittest.TestCase):
         self.assertIn(('mouse',True),engine.step(4.8,None))
         self.assertEqual(engine.state,'FISGANDO')
         self.assertIn(('mouse',False),engine.step(4.9,None))
-        r=ring(hold=True,key='A',presses=2)
+        r=ring(mouse_button='right',key='A',presses=2)
         actions=engine.step(5.1,r)
-        self.assertIn(('mouse',True),actions);self.assertIn(('tap','A'),actions)
+        self.assertIn(('right_mouse',True),actions);self.assertIn(('tap','A'),actions)
         self.assertIn(('tap','A'),engine.step(5.21,r))
         self.assertNotIn(('tap','A'),engine.step(5.4,r))
-        self.assertIn(('mouse',False),engine.step(5.5,ring(hold=False)))
+        self.assertIn(('mouse',True),engine.step(5.5,ring(mouse_button='left')))
         engine.step(6.3,ring(complete=True));self.assertEqual(engine.state,'RESULTADO')
         engine.step(6.4,None,loot=(.6,.4));engine.step(6.7,None,loot=(.6,.4))
         self.assertEqual(engine.state,'TECLA_T')
@@ -133,11 +133,11 @@ class Flow(unittest.TestCase):
         self.assertEqual(engine.collect_attempts,0)
 
     def test_lost_circle_releases_mouse_and_can_reacquire_outside_green(self):
-        engine=CircularEngine(cfg());engine.step(1,ring(hold=True))
+        engine=CircularEngine(cfg());engine.step(1,ring(mouse_button='right'))
         self.assertIn(('mouse',False),engine.step(1.2,None))
-        actions=engine.step(1.4,ring(marker=-.25,hold=True))
-        self.assertEqual(engine.state,'PESCANDO');self.assertIn(('mouse',True),actions)
-        engine.recover(2);self.assertFalse(engine.mouse_command.held)
+        actions=engine.step(1.4,ring(marker=-.25,mouse_button='right'))
+        self.assertEqual(engine.state,'PESCANDO');self.assertIn(('right_mouse',True),actions)
+        engine.recover(2);self.assertIsNone(engine.mouse_command.button)
 
     def test_result_name_is_not_reward_and_stale_prompt_is_ignored(self):
         engine=CircularEngine(cfg());engine.track(0)
@@ -200,12 +200,12 @@ class CircularApp(unittest.TestCase):
         app=self.app;app.active=True
         image=np.full((1072,1920,3),35,np.uint8)
         with patch.object(macro,'game_window',return_value=app.window),patch.object(app,'sample',return_value=image),\
-             patch.object(app.circle_reader,'read',return_value=ring(hold=True,key='D',presses=1)),\
+             patch.object(app.circle_reader,'read',return_value=ring(mouse_button='right',key='D',presses=1)),\
              patch.object(app.claim_reader,'scan',return_value=None),patch.object(app,'update_analyses'),\
              patch.object(app,'read_bar',side_effect=AssertionError('legacy bar used')):
             app.update(1)
             self.assertEqual(app.engine.state,'PESCANDO')
-            macro.send_mouse.assert_called_with(True);macro.send_fishing_key.assert_called_with('D',True)
+            macro.send_mouse.assert_called_with(True,'right');macro.send_fishing_key.assert_called_with('D',True)
 
 
 if __name__=='__main__':unittest.main()

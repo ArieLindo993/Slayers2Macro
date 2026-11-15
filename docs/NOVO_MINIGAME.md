@@ -1,16 +1,16 @@
-# Minigame circular — Beta 0.0.42
+# Minigame circular — Beta 0.0.47
 
 O aplicativo usa `CircularEngine` como motor padrão nesta beta. Os leitores do
 círculo, splash e Claim estão ligados ao ciclo de pesca. A interface permite
 seleção circular manual e exibe a resolução ativa. A distribuição é identificada
-como Beta 0.0.42; consulte a página de releases para a disponibilidade publicada.
+como Beta 0.0.47; consulte a página de releases para a disponibilidade publicada.
 
-## Mecânica confirmada pelo usuário em 14 de novembro de 2026
+## Mecânica atual — esclarecimentos de 15 de novembro de 2026
 
 1. Clicar na água para lançar a linha.
 2. Esperar o splash e dar outro clique esquerdo. Esse segundo clique pode ser em
    qualquer lugar da janela do jogo.
-3. Correção de 15/11: no círculo, o chevron verde para a direita pede segurar o botão esquerdo; o vermelho para a esquerda pede soltar. Ambos giram com o marcador.
+3. No círculo, o chevron verde para a direita pede segurar o botão direito; o vermelho para a esquerda pede segurar o botão esquerdo. Ambos giram com o marcador. A interpretação anterior de segurar/soltar o mesmo botão foi corrigida pelo usuário e pelo guia.
 4. Alguns peixes lendários ou itens de raridade superior também pedem um ou dois
    toques rápidos em A ou D. Um pedido de tecla pode coincidir com o mouse.
    A e D nunca são pedidos simultaneamente.
@@ -24,16 +24,20 @@ do mouse e resultado. A localização usa os segmentos laterais do anel e exige
 o arco verde para validar a interface. A posição do marcador não é condição
 para localizar o anel: sair da faixa verde não interrompe essa localização.
 
-O objetivo, confirmado em 15/11, é manter a barrinha no arco verde. A observação
-posterior esclareceu que soltar faz a barra retornar ao centro, sem atravessá-lo
-para a esquerda. Desde a Beta 0.0.46, `CircularCommand` prioriza as instruções
-coloridas: verde segura e vermelho solta. A última instrução permanece válida
-entre leituras enquanto o círculo estiver ativo. A posição só serve como apoio
-antes do primeiro aviso; não pode contrariar o vermelho. As setas brancas
-superiores não comandam o mouse. O botão é liberado no término ou após ausência
-do círculo por pelo menos 150 ms. O componente apenas propõe um estado; não envia
-entradas. A antiga simulação de inércia foi retirada por não representar esse
-comportamento observado.
+O objetivo é manter a agulha no arco verde. Desde a Beta 0.0.47,
+`CircularReading.mouse_button` indica explicitamente `right`, `left` ou `None`.
+`CircularCommand` usa as setas para escolher o botão. A posição permite aliviar
+ao alcançar 75% da distância do centro à borda, no sentido da pressão aplicada;
+retoma ao voltar para 35%. Essa diferença de margens evita oscilações. A última
+direção é conservada entre leituras e um alívio por borda não retoma sem posição
+válida. Não pressupõe que soltar provoque inércia para atravessar o centro.
+
+O motor libera o botão oposto antes de pressionar o escolhido. A aplicação
+também impõe exclusão entre os dois no envio ao Windows. Término ou ausência do
+círculo por pelo menos 150 ms libera ambos. Pausa, foco, resize, erro e fechamento
+tentam liberar cada entrada separadamente. As setas brancas superiores não são
+interpretadas como M1/M2. Ainda falta identificar visualmente o salto para um
+alívio preventivo dedicado; o controle de borda não é um detector de salto.
 
 O leitor foi exercitado em 275 quadros amostrados dos dez vídeos. Foram obtidas
 leituras do anel, de ambas as instruções e do resultado dourado. A amostragem
@@ -164,3 +168,19 @@ No minigame, todos os 87 quadros reconhecidos com aviso vermelho resultaram em
 soltar, inclusive com diferença entre a posição e o centro do arco. A regressão
 inclui um recorte anônimo desse caso. A gravação não muda com as entradas
 propostas; portanto ainda falta validar sua aceitação pelo jogo ao vivo.
+
+## Esclarecimento dos dois botões — Beta 0.0.47
+
+O usuário confirmou que verde/direita significa botão direito e vermelho/esquerda
+significa botão esquerdo. Isso também aparece entre 1:30 e 1:40 no
+[guia de Ashira RBX](https://www.youtube.com/watch?v=BO6waB_XXhY&t=90s), cuja
+legenda e trecho visual foram consultados localmente. O antigo booleano `hold`
+misturava duas ações diferentes e foi substituído por um nome de botão.
+
+Os atalhos A/D seguem independentes. A proteção de lançamento e o atraso de
+fisgada não mudam nesta correção. Os registros indicam o botão efetivamente
+pressionado/liberado e a razão de alívio. Os testes verificam os códigos nativos
+Windows de M1/M2, a ordem das trocas e liberação mesmo quando outra entrada
+falha. O autoteste do executável também verifica o fluxo dos dois botões,
+sem enviar entradas ao jogo. A reprodução de vídeo não demonstra uma vitória
+ao vivo nem identifica automaticamente todos os estados de movimento do peixe.

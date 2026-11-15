@@ -4,6 +4,15 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## Beta 0.0.47 — botón derecho, botón izquierdo y equilibrio en el verde
+
+- Corrige la asignación confirmada por el usuario y la [guía de Ashira RBX](https://www.youtube.com/watch?v=BO6waB_XXhY&t=90s): verde/derecha indica **mantener el botón derecho**; rojo/izquierda indica **mantener el botón izquierdo**, no soltar. Las lecturas indican el botón explícitamente.
+- Implementa el botón derecho de Windows y cambios exclusivos. Las lecturas repetidas no recrean clics. Pausa, pérdida de foco, resize, recuperación, recogida y cierre sueltan ambos botones; las otras liberaciones se intentan aunque una falle.
+- La posición de la aguja permite aliviar ambos botones cerca del borde verde en la dirección aplicada, con un margen interno distinto para retomar. No retoma a ciegas si pierde la posición durante el alivio ni supone movimiento más allá del centro.
+- Actualiza PT/EN/ES, estado y registros por botón, referencias y reproducción. Se conservan A/D, recogida con T, protección de 3 segundos y retraso de 180 ms.
+- Las pruebas cubren códigos Windows de M1/M2, exclusión, cambio sin repetición, liberaciones, observación y alivio de borde. El ejecutable verifica ambos botones en su autotest. La reproducción no demuestra victorias en directo.
+- La respuesta específica a saltos aún necesita una señal visual confirmada; el alivio de borde no se presenta como detector de salto. No se publica la grabación ni la transcripción completa de la guía.
+
 ## Beta 0.0.46 — protección del impacto, tiempo del enganche y prioridad del rojo
 
 - Sube la protección predeterminada de 1,8 a 3 segundos tras confirmar un clic en el impacto unos 2,57 segundos después del lanzamiento. La estabilización considera la señal elevada completa; si sigue activa al alcanzar el límite, espera a que se estabilice antes de aceptar otro enganche.

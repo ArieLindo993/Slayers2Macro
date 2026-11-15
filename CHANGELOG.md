@@ -4,6 +4,15 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## Beta 0.0.47 — botão direito, botão esquerdo e equilíbrio no verde
+
+- Corrige a interpretação confirmada pelo usuário e pelo [guia de Ashira RBX](https://www.youtube.com/watch?v=BO6waB_XXhY&t=90s): verde/direita pede **segurar o botão direito**; vermelho/esquerda pede **segurar o botão esquerdo**. Vermelho não é uma ordem de soltar. A leitura deixa de usar um booleano ambíguo e passa a indicar explicitamente o botão.
+- Implementa o botão direito no envio de entradas do Windows. Trocas liberam o botão anterior antes de pressionar o próximo; leituras repetidas não recriam o clique. Pausa, perda de foco, redimensionamento, recuperação, coleta e encerramento liberam os dois. As liberações restantes são tentadas mesmo se uma delas falhar.
+- A direção indicada escolhe o botão e a posição da agulha limita a pressão. Próximo da borda do verde no sentido da força aplicada, libera os dois e retoma em uma margem interna diferente, reduzindo oscilações. Se a posição some durante esse alívio, não retoma às cegas. Não presume inércia para atravessar o centro.
+- Atualiza prévia, status, traduções PT/EN/ES, logs por botão, nomes das referências visuais e ferramentas de replay. A/D, coleta com T, proteção de 3 s e atraso de 180 ms da fisgada permanecem disponíveis.
+- Adiciona regressões dos códigos Windows de M1/M2, exclusão entre botões, troca sem repetição, liberação em pausa/foco/resize/erro, observação sem entradas e alívio nas bordas. O executável também verifica o fluxo dos dois botões em seu autoteste. Replay sobre gravação não comprova vitória ao vivo.
+- O guia menciona surge, dive, leap e tired. Ainda não há identificação visual confirmada de salto para alívio preventivo dedicado; o alívio de borda não é apresentado como detector de salto. Nenhuma legenda ou gravação completa do guia é publicada no repositório.
+
 ## Beta 0.0.46 — proteção do impacto, tempo da fisgada e prioridade do vermelho
 
 - O relato confirmado e o log mostram um clique no impacto cerca de 2,57 segundos depois de lançar, além do padrão anterior de 1,8 segundo. A proteção padrão passa a 3 segundos e considera o sinal elevado inteiro, além do instante inicial. Se atingir o limite de assentamento com sinal ativo, aguarda estabilização antes de aceitar outra fisgada.

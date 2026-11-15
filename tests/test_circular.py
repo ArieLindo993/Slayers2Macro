@@ -8,17 +8,17 @@ sys.path.insert(0,str(ROOT/'src'))
 from circular import CircularReader,CircularReading,CircularCommand,KeyPromptCommand
 
 
-def frame(width=1920,height=1072,hold=True,center=None):
+def frame(width=1920,height=1072,button='right',center=None):
     radius=166*height/1072
     cx,cy=center or (round(width*.772),round(height*.537))
     scale=radius/166
     rgb=np.full((height,width,3),(28,80,150),dtype=np.uint8)
-    fixture='circular_green_cue.png' if hold else 'circular_red_cue.png'
+    fixture='circular_green_cue.png' if button=='right' else 'circular_red_cue.png'
     patch=cv2.cvtColor(cv2.imread(str(ROOT/'tests/fixtures'/fixture)),cv2.COLOR_BGR2RGB)
     pw,ph=round(520*scale),round(440*scale);patch=cv2.resize(patch,(pw,ph))
     left,top=round(cx-260*scale),round(cy-260*scale)
     rgb[top:top+ph,left:left+pw]=patch
-    key='hold' if hold else 'release'
+    key='hold' if button=='right' else 'release'
     glyph=cv2.imread(str(ROOT/f'src/assets/circle_{key}.png'),cv2.IMREAD_GRAYSCALE)
     glyph=cv2.resize(glyph,None,fx=scale,fy=scale,interpolation=cv2.INTER_NEAREST)
     left,top=round(cx-16*scale),round(cy-318*scale)
@@ -36,67 +36,83 @@ class CircularTests(unittest.TestCase):
         image[(distance>166*1.14)&(distance<166*1.55)]=(28,80,150)
         reader=CircularReader(ROOT/'src/assets')
         result=reader.read(image)
-        self.assertIsNotNone(result);self.assertIsNone(result.hold)
+        self.assertIsNotNone(result);self.assertIsNone(result.mouse_button)
         command=CircularCommand()
-        self.assertTrue(command.step(CircularReading((1,1),1,1,marker=-.25),0))
-        self.assertTrue(command.step(CircularReading((1,1),1,1,hold=True),.1))
-        self.assertTrue(command.step(CircularReading((1,1),1,1,marker=.25),.2))
-        self.assertFalse(CircularCommand().step(CircularReading((1,1),1,1,marker=.25),.2))
+        self.assertEqual(command.step(CircularReading((1,1),1,1,marker=-.25),0),'right')
+        self.assertEqual(command.step(CircularReading((1,1),1,1,mouse_button='right'),.1),'right')
+        self.assertEqual(command.step(CircularReading((1,1),1,1,marker=.02),.2),'right')
+        self.assertEqual(CircularCommand().step(CircularReading((1,1),1,1,marker=.25),.2),'left')
 
-    def test_release_instruction_overrides_position_and_remains_latched(self):
+    def test_left_button_instruction_overrides_position_and_remains_latched(self):
         command=CircularCommand()
-        reading=CircularReading((1,1),1,1,hold=False,marker=-.10,target=0.,band=.10)
-        self.assertFalse(command.step(reading,0.))
+        reading=CircularReading((1,1),1,1,mouse_button='left',marker=-.01,target=0.,band=.10)
+        self.assertEqual(command.step(reading,0.),'left')
         reading.marker=-.01
-        self.assertFalse(command.step(reading,.1))
-        reading.marker=.15;reading.hold=True
-        self.assertTrue(command.step(reading,.2))
-        reading.marker=.25;reading.hold=None
-        self.assertTrue(command.step(reading,.3))
-        reading.hold=False
-        self.assertFalse(command.step(reading,.4))
+        self.assertEqual(command.step(reading,.1),'left')
+        reading.marker=.015;reading.mouse_button='right'
+        self.assertEqual(command.step(reading,.2),'right')
+        reading.marker=.02;reading.mouse_button=None
+        self.assertEqual(command.step(reading,.3),'right')
+        reading.mouse_button='left'
+        self.assertEqual(command.step(reading,.4),'left')
 
     def test_marker_across_angle_wrap_takes_shortest_direction(self):
         command=CircularCommand()
         reading=CircularReading((1,1),1,1,marker=.49,target=-.49,band=.1)
-        self.assertTrue(command.step(reading,0.))
+        self.assertEqual(command.step(reading,0.),'right')
         reading.marker=-.46;reading.target=.49
-        self.assertFalse(command.step(reading,.1))
+        self.assertEqual(command.step(reading,.1),'left')
 
-    def test_release_returns_to_centre_without_assumed_left_overshoot(self):
+    def test_red_is_an_active_left_input_near_centre(self):
+        for marker in (-.02,0.,.02):
+            reading=CircularReading((1,1),1,1,mouse_button='left',marker=marker,target=.035,band=.15)
+            self.assertEqual(CircularCommand().step(reading,0.),'left')
+
+    def test_pressure_pauses_near_green_edge_and_resumes_without_chattering(self):
+        for button,sign in (('right',1),('left',-1)):
+            command=CircularCommand()
+            reading=CircularReading((1,1),1,1,mouse_button=button,marker=0.,target=0.,band=.2)
+            self.assertEqual(command.step(reading,0.),button)
+            reading.marker=sign*.08
+            self.assertIsNone(command.step(reading,.1))
+            self.assertEqual(command.reason,'green_edge')
+            reading.marker=sign*.06
+            self.assertIsNone(command.step(reading,.2))
+            reading.marker=None
+            self.assertIsNone(command.step(reading,.3))
+            reading.marker=sign*.02
+            self.assertEqual(command.step(reading,.4),button)
+
+    def test_new_direction_can_pull_back_from_unsafe_edge(self):
         command=CircularCommand()
-        command.step(CircularReading((1,1),1,1,hold=True),0.)
-        marker=.20
-        for i in range(60):
-            marker=max(0.,marker-.01)
-            reading=CircularReading((1,1),1,1,hold=False if i==0 else None,marker=marker,target=.035,band=.15)
-            self.assertFalse(command.step(reading,(i+1)*.05),i)
-        self.assertEqual(marker,0.)
-        self.assertTrue(command.step(CircularReading((1,1),1,1,hold=True,marker=0.),3.1))
+        reading=CircularReading((1,1),1,1,mouse_button='right',marker=.13,target=0.,band=.2)
+        self.assertIsNone(command.step(reading,0.))
+        reading.mouse_button='left'
+        self.assertEqual(command.step(reading,.1),'left')
 
-    def test_recorded_red_at_centre_is_released_despite_position_offset(self):
+    def test_recorded_red_at_centre_selects_left_button(self):
         rgb=np.full((1072,1920,3),30,np.uint8)
-        crop=cv2.cvtColor(cv2.imread(str(ROOT/'tests/fixtures/circular_release_centre.png')),cv2.COLOR_BGR2RGB)
+        crop=cv2.cvtColor(cv2.imread(str(ROOT/'tests/fixtures/circular_red_centre.png')),cv2.COLOR_BGR2RGB)
         rgb[316:756,1222:1742]=crop
         reading=CircularReader(ROOT/'src/assets').read(rgb)
-        self.assertIsNotNone(reading);self.assertIs(reading.hold,False)
+        self.assertIsNotNone(reading);self.assertEqual(reading.mouse_button,'left')
         self.assertLess(reading.marker,reading.target)
-        self.assertFalse(CircularCommand().step(reading,0.))
+        self.assertEqual(CircularCommand().step(reading,0.),'left')
 
     def test_coloured_cues_work_when_marker_is_temporarily_missing(self):
         reader=CircularReader(ROOT/'src/assets')
         cx,cy=round(1920*.772),round(1072*.537)
-        for held in (True,False):
-            self.assertEqual(reader.read_mouse_cue(frame(hold=held),cx,cy,166,None),held)
+        for button in ('right','left'):
+            self.assertEqual(reader.read_mouse_cue(frame(button=button),cx,cy,166,None),button)
 
     def test_coloured_cues_rotate_with_marker(self):
         reader=CircularReader(ROOT/'src/assets')
         cx,cy=round(1920*.772),round(1072*.537)
-        for held in (True,False):
+        for button in ('right','left'):
             for degrees in (-90,45,90):
-                image=frame(hold=held)
+                image=frame(button=button)
                 rotated=cv2.warpAffine(image,cv2.getRotationMatrix2D((cx,cy),-degrees,1),(1920,1072))
-                self.assertEqual(reader.read_mouse_cue(rotated,cx,cy,166,None),held,(held,degrees))
+                self.assertEqual(reader.read_mouse_cue(rotated,cx,cy,166,None),button,(button,degrees))
 
     def key_frame(self,count=2,side='A'):
         image=frame();cx,cy=round(1920*.772),round(1072*.537)
@@ -144,11 +160,11 @@ class CircularTests(unittest.TestCase):
         self.assertEqual(command.step(None,1),[])
 
     def test_arrows_with_marker_outside_or_at_edge(self):
-        for held in (True,False):
+        for button in ('right','left'):
             reader=CircularReader(ROOT/'src/assets')
-            reading=reader.read(frame(hold=held))
+            reading=reader.read(frame(button=button))
             self.assertIsNotNone(reading)
-            self.assertEqual(reading.hold,held)
+            self.assertEqual(reading.mouse_button,button)
             self.assertFalse(reading.complete)
 
     def test_resize_and_relocate_reacquires(self):
@@ -156,7 +172,7 @@ class CircularTests(unittest.TestCase):
         for width,height,center in ((1920,1072,None),(800,599,(550,350)),(1280,720,(700,380))):
             reading=reader.read(frame(width,height,False,center))
             self.assertIsNotNone(reading,(width,height))
-            self.assertEqual(reading.hold,False)
+            self.assertEqual(reading.mouse_button,'left')
             expected=center or (width*.772,height*.537)
             self.assertLess(abs(reading.center[0]-expected[0]),10)
 
@@ -167,19 +183,19 @@ class CircularTests(unittest.TestCase):
             cv2.putText(image,'^^',(590,140),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),3)
             self.assertIsNone(reader.read(image))
 
-    def test_arrow_is_latched_only_while_ui_is_present(self):
+    def test_button_is_latched_only_while_ui_is_present(self):
         command=CircularCommand()
-        reading=CircularReading((1,1),1,1.,hold=True)
-        self.assertTrue(command.step(reading,1))
-        reading.hold=None
-        self.assertTrue(command.step(reading,1.5))
-        self.assertTrue(command.step(None,1.6))
-        self.assertFalse(command.step(None,1.7))
-        self.assertFalse(command.step(reading,2))
-        reading.hold=True
-        self.assertTrue(command.step(reading,2.1))
+        reading=CircularReading((1,1),1,1.,mouse_button='right')
+        self.assertEqual(command.step(reading,1),'right')
+        reading.mouse_button=None
+        self.assertEqual(command.step(reading,1.5),'right')
+        self.assertEqual(command.step(None,1.6),'right')
+        self.assertIsNone(command.step(None,1.7))
+        self.assertIsNone(command.step(reading,2))
+        reading.mouse_button='left'
+        self.assertEqual(command.step(reading,2.1),'left')
         reading.complete=True
-        self.assertFalse(command.step(reading,2.2))
+        self.assertIsNone(command.step(reading,2.2))
 
 
 if __name__=='__main__':unittest.main()

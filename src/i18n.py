@@ -178,7 +178,7 @@ Conferindo recompensa e presença do item após T…|Checking the reward and ite
 Nome reconhecido|Name recognized|Nombre reconocido
 Sim|Yes|Sí
 Não|No|No
-Mantenha a barra no arco verde\nVerde → segurar · Vermelha ← soltar\nA/D · um ou dois toques|Keep the marker inside the green arc\nGreen → hold · Red ← release\nA/D · one or two taps|Mantén el marcador dentro del arco verde\nVerde → mantener · Roja ← soltar\nA/D · uno o dos toques
+Mantenha a barra no arco verde\nVerde → botão direito\nVermelha ← botão esquerdo\nA/D · um ou dois toques|Keep the marker inside the green arc\nGreen → right mouse button\nRed ← left mouse button\nA/D · one or two taps|Mantén el marcador dentro del arco verde\nVerde → botón derecho\nRoja ← botón izquierdo\nA/D · uno o dos toques
 Proteção após lançar (s)|Post-cast protection (s)|Protección tras lanzar (s)
 Atraso da fisgada (s)|Hook delay (s)|Retraso del enganche (s)
 Aguardando estabilização da água antes de fisgar…|Waiting for the water to settle before hooking…|Esperando a que el agua se estabilice antes de enganchar…
@@ -209,6 +209,10 @@ Seleção inválida. Inclua o minigame inteiro.|Invalid selection. Include the w
 Círculo localizado. Lendo mouse e A/D.|Circle located. Reading mouse and A/D.|Círculo localizado. Leyendo ratón y A/D.
 Círculo ativo · {command}|Circle active · {command}|Círculo activo · {command}
 segurando mouse|holding mouse|manteniendo el ratón
+segurando botão direito|holding right mouse button|manteniendo el botón derecho
+segurando botão esquerdo|holding left mouse button|manteniendo el botón izquierdo
+botões do mouse soltos|mouse buttons released|botones del ratón sueltos
+aliviando na borda verde|easing off at the green edge|aliviando en el borde verde
 soltando mouse|releasing mouse|soltando el ratón
 aguardando próximo aviso|waiting for next instruction|esperando la siguiente indicación
 Splash detectado. Fisgando…|Splash detected. Hooking…|Salpicadura detectada. Enganchando…

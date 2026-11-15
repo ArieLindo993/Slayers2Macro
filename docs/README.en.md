@@ -2,7 +2,7 @@
 
 [Português](../README.md) · **English** · [Español](README.es.md)
 
-A visual Windows fishing macro for **Slayers 2 on Roblox**. **Beta 0.0.46** integrates November's circular minigame, splash hook click, held/released mouse, A/D taps and T collection.
+A visual Windows fishing macro for **Slayers 2 on Roblox**. **Beta 0.0.47** integrates November's circular minigame, splash hook click, held/released mouse, A/D taps and T collection.
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 
@@ -21,7 +21,7 @@ For manual installation, extract **Slayers2Macro.zip** and run **Slayers2Macro.e
 1. Equip the rod near water and keep the camera fixed. Point where the line will land and the splash will appear; press **F8**.
 2. Leave automatic calibration enabled and press **F4** with Roblox in the foreground.
 3. The macro casts and lets the line settle. The default guard is **3 seconds**, including a quiet check. After recognizing a splash, it waits **0.18 second (180 ms)** before clicking. Adjust **Post-cast protection (s)** and **Hook delay (s)** to suit the flight and game response.
-4. The goal is to **keep the marker inside the green arc** by following the cues: **green right = hold; red left = release**. Position cannot override red. The last coloured instruction persists between readings; position is only used before the first cue, with no assumed movement through the centre to the left.
+4. The goal is to **keep the needle inside the green arc**. The [minigame guide](https://www.youtube.com/watch?v=BO6waB_XXhY&t=90s) specifies **green right arrow = hold right mouse; red left arrow = hold left mouse**. The macro releases the previous button before switching. Near the green edge in the pulling direction, it eases off both buttons and resumes within a safer margin. A/D remains independent. A dedicated leap response still needs a confirmed visual cue; edge relief is a separate control.
 5. Active A/D side cards request one or two taps according to their dots, independently of mouse control.
 6. After the result, the macro holds **T for three seconds** by default, checks Claim/name/weight and resumes fishing. Watch the first rounds in the preview.
 

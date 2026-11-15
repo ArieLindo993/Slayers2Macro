@@ -15,7 +15,7 @@ class CircularReading:
     center: tuple
     radius: float
     score: float
-    hold: object = None
+    mouse_button: object = None
     marker: object = None
     target: float = 0.
     band: float = .25
@@ -28,7 +28,7 @@ class CircularReader:
     def __init__(self, assets):
         cv2.setNumThreads(2)
         self.templates={}
-        for key in ('ring','ring_mask','mouse_hold','mouse_release','mouse_release_faint'):
+        for key in ('ring','ring_mask','green_right','red_left','red_left_faint'):
             raw=np.fromfile(Path(assets)/('circle_'+key+'.png'),np.uint8)
             self.templates[key]=cv2.imdecode(raw,cv2.IMREAD_GRAYSCALE)
         self.reset()
@@ -105,12 +105,12 @@ class CircularReader:
         marker=float(np.median(angle[white])) if np.count_nonzero(white)>max(4,r*r*.001) else None
         # Commands are the coloured chevrons next to the marker. The white
         # arrows above the ring are not mouse instructions.
-        hold=self.read_mouse_cue(rgb,cx,cy,r,marker)
+        mouse_button=self.read_mouse_cue(rgb,cx,cy,r,marker)
         center=(distance<r*.36)
         gold=center&(rr>180)&(gg>140)&(bb<130)
         complete=np.count_nonzero(gold)>r*r*.018
         key,presses=self.read_keys(rgb,cx,cy,r) if not complete else (None,0)
-        return CircularReading((cx,cy),r,score,hold,marker,target,band,bool(complete),key,presses)
+        return CircularReading((cx,cy),r,score,mouse_button,marker,target,band,bool(complete),key,presses)
 
     def read_mouse_cue(self,rgb,cx,cy,r,marker):
         h,w=rgb.shape[:2]
@@ -124,7 +124,7 @@ class CircularReader:
                (rr>125)&(rr-gg>25)&(rr-bb>10)]
         u,v=np.meshgrid(np.arange(-58,59,dtype=np.float32),np.arange(192,257,dtype=np.float32))
         best=[]
-        for mask,key in zip(masks,('mouse_hold','mouse_release')):
+        for mask,key in zip(masks,('green_right','red_left')):
             mask=(mask&annulus).astype(np.uint8)
             _,_,stats,centers=cv2.connectedComponentsWithStats(mask)
             candidates=[]
@@ -146,15 +146,15 @@ class CircularReader:
                 sy=cy+(u*math.sin(theta)-v*math.cos(theta))*r/166
                 strip=cv2.remap(rgb,sx.astype(np.float32),sy.astype(np.float32),cv2.INTER_LINEAR)
                 a=strip.astype(np.int16);red,green,blue=[a[:,:,j] for j in range(3)]
-                binary=((green>150)&(green-red>45)&(green-blue>45)) if key=='mouse_hold' else ((red>125)&(red-green>25)&(red-blue>10))
+                binary=((green>150)&(green-red>45)&(green-blue>45)) if key=='green_right' else ((red>125)&(red-green>25)&(red-blue>10))
                 references=[self.templates[key]]
-                if key=='mouse_release':references.append(self.templates['mouse_release_faint'])
+                if key=='red_left':references.append(self.templates['red_left_faint'])
                 for reference in references:
                     values=cv2.matchTemplate(binary.astype(np.uint8)*255,reference,cv2.TM_CCOEFF_NORMED)
                     score=max(score,float(np.nan_to_num(values,nan=0.).max()))
             best.append(score)
         self.last_mouse_scores={'green_right':round(best[0],3),'red_left':round(best[1],3)}
-        if max(best)>=.64 and abs(best[0]-best[1])>=.08:return best[0]>best[1]
+        if max(best)>=.64 and abs(best[0]-best[1])>=.08:return 'right' if best[0]>best[1] else 'left'
         return None
 
     @staticmethod
@@ -185,33 +185,50 @@ class CircularReader:
 
 
 class CircularCommand:
-    """Follow the game's coloured guidance; position never overrides release."""
+    """Green/right selects M2; red/left selects M1. None releases both."""
     def __init__(self):self.reset()
 
     def reset(self):
-        self.held=False
+        self.button=None
         self.last_visible=None
         self.instruction=None
+        self.edge_paused=None;self.reason='no_cue'
 
     def step(self,reading,now):
         if reading is not None and reading.complete:
             self.reset()
-            return False
+            return None
         if reading is None:
             if self.last_visible is None or now-self.last_visible>=.15:self.reset()
         else:
             self.last_visible=now
-            if reading.hold is not None:self.instruction=bool(reading.hold)
-            if self.instruction is not None:self.held=self.instruction
-            elif reading.marker is not None:
+            if reading.mouse_button in ('left','right'):
+                if self.instruction!=reading.mouse_button:self.edge_paused=None
+                self.instruction=reading.mouse_button
+            preferred=self.instruction
+            if preferred is None and reading.marker is not None:
                 # Initial fallback only, before the first coloured instruction.
-                # Releasing returns towards the centre; there is no assumed
-                # inertia carrying it through the centre into the left side.
+                # Both directions are active inputs; red is not a release.
                 error=(reading.target-reading.marker+.5)%1.-.5
                 margin=max(.006,min(.025,reading.band*.08))
-                if error>margin:self.held=True
-                elif error<-margin:self.held=False
-        return self.held
+                if error>margin:preferred='right'
+                elif error<-margin:preferred='left'
+            self.button=preferred;self.reason='direction' if preferred else 'no_cue'
+            if preferred is not None:
+                if reading.marker is None:
+                    if self.edge_paused==preferred:self.button=None;self.reason='green_edge'
+                else:
+                    offset=(reading.marker-reading.target+.5)%1.-.5
+                    toward=offset*(1 if preferred=='right' else -1)
+                    half=max(.015,reading.band*.5)
+                    # Pause inside the edge towards which this input pulls.
+                    # A separate resume margin prevents flicker/chattering;
+                    # no assumption about inertia past the centre is needed.
+                    limit=half*(.35 if self.edge_paused==preferred else .75)
+                    if toward>=limit:
+                        self.button=None;self.edge_paused=preferred;self.reason='green_edge'
+                    else:self.edge_paused=None
+        return self.button
 
 
 class KeyPromptCommand:

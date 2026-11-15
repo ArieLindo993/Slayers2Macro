@@ -20,7 +20,7 @@ from PIL import Image, ImageTk, ImageDraw
 from detector import detect
 from engine import Engine
 from circular_engine import CircularEngine
-from circular import CircularReader
+from circular import CircularReader,CircularReading
 from splash import SplashReader
 from claim import ClaimReader
 from signals import Signals
@@ -66,8 +66,9 @@ class Input(C.Structure):
 U.SendInput.argtypes=[W.UINT,C.POINTER(Input),C.c_int]
 U.SendInput.restype=W.UINT
 
-def send_mouse(down):
-    event=Input(type=0,mi=MouseInput(0,0,0,0x0002 if down else 0x0004,0,0))
+def send_mouse(down,button='left'):
+    flags={'left':(0x0002,0x0004),'right':(0x0008,0x0010)}
+    event=Input(type=0,mi=MouseInput(0,0,0,flags[button][0 if down else 1],0,0))
     if U.SendInput(1,C.byref(event),C.sizeof(Input))!=1:
         raise RuntimeError('Windows não aceitou o comando de mouse.')
 
@@ -196,7 +197,7 @@ class App:
         self.circle_reader=CircularReader(assets);self.splash_reader=SplashReader()
         self.claim_reader=ClaimReader(assets);self.claim_job=None;self.last_claim_ocr=0.;self.claim_votes={}
         self.current_circle=None;self.last_circle_scan=-float('inf')
-        self.last_mouse_instruction=None
+        self.last_mouse_button=None
         self.claim_scene=None;self.last_claim_scan=-float('inf');self.circle_splash=False
         self.fishing_keys={};self.circular_scene={};self.circular_scene_time=0.
         self.config['circle_profiles']=saved.get('circle_profiles',{}) if isinstance(locals().get('saved'),dict) and isinstance(saved.get('circle_profiles'),dict) else {}
@@ -216,7 +217,7 @@ class App:
         self.last_ocr_capture=0.;self.ocr_active_priority=0.
         self.pending_reward_readings={};self.empty_ocr_cycles=set()
         self.cycle_id=0;self.last_reward_crop=None;self.last_reward_crops=();self.last_reward_priority=0.
-        self.capture=mss.MSS();self.active=False;self.held=False;self.t_down=False
+        self.capture=mss.MSS();self.active=False;self.held=False;self.right_held=False;self.t_down=False
         self.window=None;self.pending_window=None;self.pending_window_since=0.;self.window_change_logged=False
         self.pending_start=None;self.corner=None;self.previous_keys={}
         self.last_scene=0.;self.last_preview=0.;self.scene={'fishing':False,'loot':None,'reward':False}
@@ -239,7 +240,7 @@ class App:
         preview_card=ttk.Frame(vision,style='Panel.TFrame',padding=12);preview_card.pack(fill='x')
         self.live_preview=ttk.Label(preview_card,text=self.tr('Aguardando o círculo'),anchor='center',style='PanelMuted.TLabel')
         self.live_preview.pack(fill='x',pady=4)
-        ttk.Label(vision,text=self.tr('Mantenha a barra no arco verde\nVerde → segurar · Vermelha ← soltar\nA/D · um ou dois toques'),style='Muted.TLabel',font=('Segoe UI',9),wraplength=218).pack(anchor='w',pady=(10,0))
+        ttk.Label(vision,text=self.tr('Mantenha a barra no arco verde\nVerde → botão direito\nVermelha ← botão esquerdo\nA/D · um ou dois toques'),style='Muted.TLabel',font=('Segoe UI',9),wraplength=218).pack(anchor='w',pady=(10,0))
         self.metrics_text=LocalizedVar(self.tr,value='Qualidade: aguardando leituras')
         ttk.Label(vision,textvariable=self.metrics_text,wraplength=218).pack(anchor='w',pady=10)
         self.profile_text=LocalizedVar(self.tr,value='Perfil: aguardando o jogo')
@@ -680,17 +681,33 @@ class App:
         self.pending_start=time.monotonic()+3
         self.status.set('Volte ao Roblox. Início em 3 segundos…');self.start_button.configure(text=self.tr('Cancelar'))
 
-    def mouse(self,down):
+    def mouse(self,down,button='left'):
         if down and (not self.active or self.dry.get() or game_window()!=self.window):return
-        if down!=self.held:
-            send_mouse(down);self.held=down
-            self.session_log.event('COMANDO_MOUSE_PRESSIONADO' if down else 'COMANDO_MOUSE_LIBERADO',ciclo=self.cycle_id,estado=self.engine.state)
+        if down:self.mouse(False,'right' if button=='left' else 'left')
+        attribute='held' if button=='left' else 'right_held'
+        if down!=getattr(self,attribute,False):
+            if button=='left':send_mouse(down)
+            else:send_mouse(down,button)
+            setattr(self,attribute,down)
+            self.session_log.event('COMANDO_MOUSE_PRESSIONADO' if down else 'COMANDO_MOUSE_LIBERADO',
+                ciclo=self.cycle_id,estado=self.engine.state,botao='esquerdo' if button=='left' else 'direito',
+                motivo_controle=self.engine.mouse_command.reason if isinstance(self.engine,CircularEngine) and self.engine.state=='PESCANDO' else None)
 
     def key_t(self,down):
         if down and (not self.active or self.dry.get() or game_window()!=self.window):return
         if down!=self.t_down:
             send_t(down);self.t_down=down
             self.session_log.event('COMANDO_T_PRESSIONADO' if down else 'COMANDO_T_LIBERADO',ciclo=self.cycle_id)
+
+    def release_inputs(self):
+        # Attempt every release even if Windows rejects one of the inputs.
+        error=None
+        for release in (lambda:self.mouse(False),lambda:self.mouse(False,'right'),
+                        lambda:self.key_t(False),self.release_fishing_keys):
+            try:release()
+            except Exception as exc:
+                if error is None:error=exc
+        if error is not None:raise error
 
     def release_fishing_keys(self,now=None):
         failed=None
@@ -720,11 +737,7 @@ class App:
         if self.active:
             self.paused_state=self.engine.state
         self.active=False;self.pending_start=None
-        # T e mouse são liberados separadamente mesmo se um comando falhar.
-        try:self.mouse(False)
-        finally:
-            try:self.key_t(False)
-            finally:self.release_fishing_keys()
+        self.release_inputs()
         self.engine.state='PARADO';self.status.set(reason);self.start_button.configure(text=self.tr('Iniciar'))
 
     def start(self,window):
@@ -736,7 +749,7 @@ class App:
         self.window=window;self.pending_window=None;self.window_change_logged=False
         self.engine.reset(time.monotonic(),preserve_counts=True);self.active=True
         self.circle_reader.reset();self.splash_reader.reset();self.current_circle=None
-        self.last_mouse_instruction=None
+        self.last_mouse_button=None
         self.claim_scene=None;self.last_claim_scan=-float('inf');self.last_circle_scan=-float('inf')
         self.started_at=time.monotonic();self.capture_retry_at=0.;self.capture_failures=0
         self.session_log.event('MACRO_INICIADO',ciclo=self.cycle_id,modo='observação' if self.dry.get() else 'pesca',calibracao='automática' if self.config['auto_calibrate'] else 'manual',segurar_T=self.config['t_hold'],protecao_lancamento=self.config['cast_settle_seconds'],atraso_fisgada=self.config['splash_click_delay'],perfil=self.profile_key)
@@ -899,7 +912,7 @@ class App:
             self.window=current;self.pending_window=None;self.window_change_logged=False
             return True
         now=time.monotonic()
-        self.mouse(False);self.key_t(False);self.release_fishing_keys()
+        self.release_inputs()
         # Debounce only the dimensions. Changes to origin or HWND during a
         # resize must not restart the stability timer.
         if self.pending_window is None or current[3:]!=self.pending_window[3:]:
@@ -918,7 +931,7 @@ class App:
         # Adopt only after the new client geometry remains stable. This avoids
         # cycling recovery when Roblox briefly exposes alternate foreground
         # surfaces while switching between windowed and fullscreen modes.
-        self.mouse(False);self.key_t(False);self.release_fishing_keys()
+        self.release_inputs()
         self.window=current;self.choose_profile(current)
         if size_changed:
             self.circle_reader.reset();self.splash_reader.reset();self.current_circle=None
@@ -943,6 +956,7 @@ class App:
     def execute(self,actions):
         for kind,value in actions:
             if kind=='mouse':self.mouse(value)
+            elif kind=='right_mouse':self.mouse(value,'right')
             elif kind=='t':self.key_t(value)
             elif kind=='tap':self.tap_fishing_key(value)
             elif kind=='release_keys':self.release_fishing_keys()
@@ -1051,11 +1065,11 @@ class App:
             roi=None if self.config['auto_calibrate'] else self.config['circle_roi']
             reading=self.circle_reader.read(full,roi)
             self.current_circle=reading;self.last_circle_scan=now
-            if reading is not None and not reading.complete and reading.hold is not None and reading.hold!=self.last_mouse_instruction:
-                self.last_mouse_instruction=reading.hold
+            if reading is not None and not reading.complete and reading.mouse_button is not None and reading.mouse_button!=self.last_mouse_button:
+                self.last_mouse_button=reading.mouse_button
                 self.session_log.event('SINAL_MOUSE_LIDO',ciclo=self.cycle_id,
-                    sinal='verde_direita' if reading.hold else 'vermelha_esquerda',
-                    comando='segurar' if reading.hold else 'soltar',**self.circle_reader.last_mouse_scores)
+                    sinal='verde_direita' if reading.mouse_button=='right' else 'vermelha_esquerda',
+                    comando='segurar_direito' if reading.mouse_button=='right' else 'segurar_esquerdo',**self.circle_reader.last_mouse_scores)
         self.capture_failures=0
         stages=('INICIO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
         if now-self.last_claim_scan>=.15 and self.engine.state in stages:
@@ -1313,10 +1327,7 @@ class App:
     def run(self):
         try:self.root.mainloop()
         finally:
-            try:self.mouse(False)
-            finally:
-                try:self.key_t(False)
-                finally:self.release_fishing_keys()
+            self.release_inputs()
 
 
 if __name__=='__main__':
@@ -1345,6 +1356,11 @@ if __name__=='__main__':
         result['auto_calibration']=app.config['auto_calibrate']
         result['manual_selection']=callable(app.open_selection)
         result['circular_flow']=isinstance(app.engine,CircularEngine)
+        dual=CircularEngine(dict(DEFAULTS,cast=[.5,.5]))
+        right=dual.step(0,CircularReading((1,1),1,1,mouse_button='right'))
+        left=dual.step(.1,CircularReading((1,1),1,1,mouse_button='left'))
+        result['two_button_fishing']=(('right_mouse',True) in right and ('mouse',True) not in right
+                                      and ('mouse',True) in left and ('right_mouse',True) not in left)
         result['key_input_layout']=C.sizeof(Input)==40
         # Exercise spawn in the frozen executable, including the OCR model.
         # All frames are synthetic and no game input is sent.

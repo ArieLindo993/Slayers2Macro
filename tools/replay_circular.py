@@ -32,12 +32,12 @@ def main():
                 start=time.perf_counter()
                 reading=reader.read(rgb)
                 rows.append({'seconds':round(seconds,3),'visible':reading is not None,
-                             'hold_instruction':reading.hold if reading else None,
+                             'mouse_button_instruction':reading.mouse_button if reading else None,
                              'complete':reading.complete if reading else False,
                              'key':reading.key if reading else None,
                              'presses':reading.presses if reading else 0,
                              'proposed_key_taps':key_command.step(reading,seconds),
-                             'proposed_mouse_down':command.step(reading,seconds),
+                             'proposed_mouse_button':command.step(reading,seconds),
                              'analysis_ms':round((time.perf_counter()-start)*1000,2)})
                 seconds+=args.interval
         finally:frames.close()
