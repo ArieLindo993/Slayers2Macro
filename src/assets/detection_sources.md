@@ -23,3 +23,10 @@ green/right and red/left chevrons from those recordings. The older white
 the production reader no longer uses them as mouse instructions. The RGB
 `circular_green_cue`/`circular_red_cue` fixtures contain only the circular UI and
 its adjacent game background, excluding characters, player names and paths.
+
+The Beta 0.0.45 `splash_small_blue_*` and `splash_zone_blue_*` NPZ fixtures
+preserve only filtered cyan/blue RGB pixels inside the marked water circle,
+plus frame geometry and sampling rate. All other pixels are zeroed. They do
+not include recording names, paths, audio, player names or character images.
+They cover the three user-confirmed small bursts, a zone-only control, lower
+capture rates and a resized variant. Original recordings remain local.

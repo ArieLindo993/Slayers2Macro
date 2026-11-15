@@ -2,7 +2,7 @@
 
 [Português](../README.md) · [English](README.en.md) · **Español**
 
-Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.44** integra el minijuego circular de noviembre: lanzamiento, salpicadura, mantener/soltar el ratón, toques A/D y recogida con T.
+Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.45** integra el minijuego circular de noviembre: lanzamiento, salpicadura, mantener/soltar el ratón, toques A/D y recogida con T.
 
 **[Descargar actualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Descargas](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Cambios](CHANGELOG.es.md)**
 
@@ -20,7 +20,7 @@ Para instalar manualmente, extrae **Slayers2Macro.zip** y abre **Slayers2Macro.e
 
 1. Equipa la caña cerca del agua y fija la cámara. Apunta donde caerá la línea y aparecerá la salpicadura; pulsa **F8**.
 2. Deja la calibración automática activada y pulsa **F4** con Roblox en primer plano.
-3. El macro lanza y vuelve a pulsar cuando detecta la salpicadura. La protección tras lanzar dura 1,8 segundos por defecto, con una breve comprobación de estabilización. Ajusta **Protección tras lanzar (s)** si el vuelo es más largo. Las flechas **verdes hacia la derecha mantienen** y las **rojas hacia la izquierda sueltan** el ratón; giran con el marcador. Las flechas blancas superiores no son órdenes del ratón. La última orden válida se mantiene entre avisos mientras el círculo siga visible.
+3. El macro lanza, deja asentar la línea y pulsa otra vez al detectar la salpicadura. La protección inicial de 1,8 segundos se ajusta en **Protección tras lanzar (s)**. El objetivo es **mantener el marcador dentro del arco verde**, usando posición y velocidad, anticipación y un pequeño margen para evitar oscilaciones. Si la posición no está disponible temporalmente, las flechas verdes hacia la derecha indican mantener y las rojas hacia la izquierda indican soltar. Las flechas blancas superiores no controlan el ratón.
 4. Las tarjetas activas A/D piden uno o dos toques según sus puntos, junto al control del ratón.
 5. Tras el resultado, mantiene **T tres segundos** por defecto, comprueba Claim/nombre/peso y vuelve a pescar. Observa las primeras rondas en la vista previa.
 

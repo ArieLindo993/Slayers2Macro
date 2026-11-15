@@ -185,12 +185,13 @@ class CircularReader:
 
 
 class CircularCommand:
-    """Keep the last explicit arrow while the ring remains visibly active."""
+    """Keep the marker in the green arc; coloured cues cover missing positions."""
     def __init__(self):self.reset()
 
     def reset(self):
         self.held=False
         self.last_visible=None
+        self.previous_marker=None;self.previous_time=None;self.velocity=0.
 
     def step(self,reading,now):
         if reading is not None and reading.complete:
@@ -200,7 +201,23 @@ class CircularCommand:
             if self.last_visible is None or now-self.last_visible>=.15:self.reset()
         else:
             self.last_visible=now
-            if reading.hold is not None:self.held=bool(reading.hold)
+            if reading.marker is not None:
+                if self.previous_marker is not None and self.previous_time is not None:
+                    dt=now-self.previous_time
+                    delta=(reading.marker-self.previous_marker+.5)%1.-.5
+                    if .01<=dt<=.25 and abs(delta)<.20:
+                        rate=max(-1.5,min(1.5,delta/dt))
+                        self.velocity=.5*self.velocity+.5*rate
+                    else:self.velocity=0.
+                error=(reading.target-reading.marker+.5)%1.-.5
+                predicted_error=error-self.velocity*.07
+                margin=max(.006,min(.025,reading.band*.08))
+                if predicted_error>margin:self.held=True
+                elif predicted_error<-margin:self.held=False
+                self.previous_marker=reading.marker;self.previous_time=now
+            else:
+                self.previous_marker=None;self.previous_time=None;self.velocity=0.
+                if reading.hold is not None:self.held=bool(reading.hold)
         return self.held
 
 

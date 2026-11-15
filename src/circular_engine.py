@@ -52,8 +52,9 @@ class CircularEngine(Engine):
             actions=[]
             if self.state!='PESCANDO':actions+=self.track(now)
             self.last_fishing=now;self.last_marker=now
-            self.message='Círculo ativo · '+('segurando mouse' if reading.hold is True else 'soltando mouse' if reading.hold is False else 'aguardando próximo aviso')
-            actions.append(('mouse',self.mouse_command.step(reading,now)))
+            mouse=self.mouse_command.step(reading,now)
+            self.message='Círculo ativo · '+('segurando mouse' if mouse else 'soltando mouse')
+            actions.append(('mouse',mouse))
             actions.extend(('tap',key) for key in self.key_command.step(reading,now))
             return actions
         if self.state=='PESCANDO':

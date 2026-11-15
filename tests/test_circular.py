@@ -1,5 +1,6 @@
 """New UI recognition and safe mouse-command transitions, without game input."""
 from pathlib import Path
+import math
 import sys, unittest
 import cv2
 import numpy as np
@@ -28,7 +29,7 @@ def frame(width=1920,height=1072,hold=True,center=None):
 
 
 class CircularTests(unittest.TestCase):
-    def test_white_arrows_and_marker_position_are_not_mouse_commands(self):
+    def test_white_arrows_are_ignored_and_position_controls_green_arc(self):
         image=frame()
         cx,cy=round(1920*.772),round(1072*.537)
         yy,xx=np.ogrid[:1072,:1920]
@@ -38,9 +39,42 @@ class CircularTests(unittest.TestCase):
         result=reader.read(image)
         self.assertIsNotNone(result);self.assertIsNone(result.hold)
         command=CircularCommand()
-        self.assertFalse(command.step(CircularReading((1,1),1,1,marker=-.25),0))
+        self.assertTrue(command.step(CircularReading((1,1),1,1,marker=-.25),0))
         self.assertTrue(command.step(CircularReading((1,1),1,1,hold=True),.1))
-        self.assertTrue(command.step(CircularReading((1,1),1,1,marker=.25),.2))
+        self.assertFalse(command.step(CircularReading((1,1),1,1,marker=.25),.2))
+
+    def test_position_overrides_stale_cue_and_anticipates_crossing(self):
+        command=CircularCommand()
+        reading=CircularReading((1,1),1,1,hold=False,marker=-.10,target=0.,band=.10)
+        self.assertTrue(command.step(reading,0.))
+        reading.marker=-.01
+        self.assertFalse(command.step(reading,.1))
+        reading.marker=.15;reading.hold=True
+        self.assertFalse(command.step(reading,.2))
+        reading.marker=None;reading.hold=True
+        self.assertTrue(command.step(reading,.3))
+
+    def test_marker_across_angle_wrap_takes_shortest_direction(self):
+        command=CircularCommand()
+        reading=CircularReading((1,1),1,1,marker=.49,target=-.49,band=.1)
+        self.assertTrue(command.step(reading,0.))
+        reading.marker=-.46;reading.target=.49
+        self.assertFalse(command.step(reading,.1))
+
+    def test_feedback_keeps_marker_in_moving_green_arc_with_inertia(self):
+        # Independent toy physics checks the control objective, not a claim
+        # that the game's unknown motion parameters have been measured.
+        for dt in (.02,.05,.10):
+            command=CircularCommand();marker=.20;velocity=0.;inside=observed=0
+            for i in range(round(20/dt)):
+                now=i*dt;target=.025*math.sin(now*.6)
+                reading=CircularReading((1,1),1,1,hold=True,marker=marker,target=target,band=.18)
+                held=command.step(reading,now)
+                velocity+=(.4*(1 if held else -1)-velocity)*min(1.,dt/.15)
+                marker+=velocity*dt
+                if now>=1.:
+                    observed+=1;inside+=abs(marker-target)<=.09
+            self.assertGreater(inside/observed,.9,dt)
 
     def test_coloured_cues_work_when_marker_is_temporarily_missing(self):
         reader=CircularReader(ROOT/'src/assets')

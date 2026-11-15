@@ -4,6 +4,14 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## Beta 0.0.45 — small blue splashes and green-arc control
+
+- Adds a complementary detector for the confirmed small blue bursts missed by the previous large, bright cyan-particle filter. It checks compact droplets, proximity to marked water, radial shape, directional spread and dominance over zone effects, with resolution-aware thresholds.
+- Spaces full-circle searches while waiting, keeping splash checks between them. Hook/minigame searches retain their previous cadence. Logs include blue-source evidence and capture intervals.
+- Controls position and velocity to keep the marker inside the green arc, with 70 ms anticipation and a small switching margin. Coloured cues cover temporarily missing positions; status reflects the actual mouse command.
+- Replay recognized all three confirmed bursts at 10/15/20/30 fps at original size and in 1280/960/800-pixel examples. Zone-only footage stayed negative, and earlier bites/landing protection remain covered.
+- Filtered anonymous fixtures and an independent inertia simulation support regression checks. Live wins and long sessions remain unverified; very sparse captures, such as the 5 fps replay, can still miss short bursts.
+
 ## Beta 0.0.44 — landing guard and coloured mouse commands
 
 - Reads the green right chevrons to hold and red left chevrons to release, following rotation around the marker and checking colour/shape, including dim red cues.

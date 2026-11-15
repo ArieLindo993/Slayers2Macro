@@ -2,7 +2,7 @@
 
 [Português](../README.md) · **English** · [Español](README.es.md)
 
-A visual Windows fishing macro for **Slayers 2 on Roblox**. **Beta 0.0.44** integrates November's circular minigame, splash hook click, held/released mouse, A/D taps and T collection.
+A visual Windows fishing macro for **Slayers 2 on Roblox**. **Beta 0.0.45** integrates November's circular minigame, splash hook click, held/released mouse, A/D taps and T collection.
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 
@@ -20,7 +20,7 @@ For manual installation, extract **Slayers2Macro.zip** and run **Slayers2Macro.e
 
 1. Equip the rod near water and keep the camera fixed. Point where the line will land and the splash will appear; press **F8**.
 2. Leave automatic calibration enabled and press **F4** with Roblox in the foreground.
-3. The macro casts and clicks again after detecting a splash. A default 1.8-second post-cast guard lets the line settle, with a short quiet check. Adjust **Post-cast protection (s)** for longer flights. **Green right chevrons hold** and **red left chevrons release** the mouse; they rotate with the marker. White upper arrows are not mouse commands. The last valid command is kept between cues while the circle remains visible.
+3. The macro casts, lets the line settle and clicks again after detecting a splash. The default 1.8-second guard is adjustable in **Post-cast protection (s)**. The goal is to **keep the marker inside the green arc**, using position and velocity with anticipation and a small switching margin. When position is temporarily unavailable, green right chevrons mean hold and red left chevrons mean release. White upper arrows do not command the mouse.
 4. Active A/D side cards request one or two taps according to their dots, independently of mouse control.
 5. After the result, the macro holds **T for three seconds** by default, checks Claim/name/weight and resumes fishing. Watch the first rounds in the preview.
 

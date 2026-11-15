@@ -4,6 +4,14 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## Beta 0.0.45 — splash pequeno e controle no arco verde
+
+- Corrige o caso confirmado na gravação de 15/11: o filtro anterior aceitava gotas ciano grandes e brilhantes e descartava os estouros azuis menores. Uma leitura complementar verifica gotas compactas perto do ponto marcado, orientação radial, distribuição em direções diferentes e predominância sobre o efeito da área. Os limites de cor e tamanho consideram a redução de resolução.
+- A busca completa do círculo fica espaçada durante a espera pela fisgada; o splash continua sendo conferido entre essas buscas. Após fisgar e durante o minigame, a leitura do círculo mantém a frequência anterior. Os logs incluem a origem do sinal azul, seus indicadores e o intervalo entre capturas.
+- O objetivo do controle passa a ser explicitamente manter a barrinha dentro do arco verde. Posição e velocidade orientam segurar/soltar, com antecipação de 70 ms e uma pequena margem de troca. As setas coloridas cobrem ausências temporárias da posição; o estado exibido mostra o comando efetivo.
+- O replay reconheceu as três fisgadas confirmadas a 10/15/20/30 quadros por segundo na resolução original e em exemplos reduzidos a 1280, 960 e 800 pixels de largura. O controle negativo da área permaneceu sem cliques; as fisgadas antigas e a proteção do impacto inicial continuam cobertas.
+- As regressões incluem recortes filtrados sem personagens, nomes ou caminhos pessoais, captura prioritária e simulação independente do controle com inércia. Não comprovam vitória ou sessões longas ao vivo. Com amostragem muito espaçada (por exemplo, 5 quadros por segundo no replay), ainda é possível perder estes sinais curtos.
+
 ## Beta 0.0.44 — impacto inicial e comandos coloridos
 
 - Corrige a identificação do comando do mouse: lê os chevrons verdes para a direita (segurar) e vermelhos para a esquerda (soltar) junto ao marcador. A leitura acompanha a rotação, confirma cor e formato e inclui referências de setas vermelhas em diferentes intensidades.

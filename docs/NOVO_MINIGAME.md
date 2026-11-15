@@ -24,11 +24,16 @@ do mouse e resultado. A localização usa os segmentos laterais do anel e exige
 o arco verde para validar a interface. A posição do marcador não é condição
 para localizar o anel: sair da faixa verde não interrompe essa localização.
 
-Desde a Beta 0.0.44, os chevrons coloridos junto ao marcador são lidos como os
-comandos do mouse; as setas brancas superiores não têm essa função. Um sinal
-ausente não é interpretado como ordem para soltar. `CircularCommand` preserva a última ordem enquanto
-há interface ativa, e libera o comando quando o círculo termina ou fica ausente
-por pelo menos 150 ms. O componente apenas propõe um estado; não envia entradas.
+O objetivo, confirmado em 15/11, é manter a barrinha no arco verde. Desde a
+Beta 0.0.45, `CircularCommand` usa a diferença angular para o centro do arco e
+a velocidade medida, antecipando 70 ms e usando uma pequena margem de troca.
+Segurar move no sentido crescente do ângulo; soltar permite retornar. Sem
+posição válida, os chevrons coloridos cobrem temporariamente o controle, e
+sem ambos conserva-se a última ordem enquanto o círculo estiver ativo. As
+setas brancas superiores não comandam o mouse. O botão é liberado no término
+ou após ausência do círculo por pelo menos 150 ms. O componente apenas propõe
+um estado; não envia entradas. A simulação de inércia é independente e não
+representa uma medição da física exata do jogo.
 
 O leitor foi exercitado em 275 quadros amostrados dos dez vídeos. Foram obtidas
 leituras do anel, de ambas as instruções e do resultado dourado. A amostragem
@@ -113,3 +118,24 @@ cor e formato. Não usa os avisos brancos nem a posição como substitutos de um
 ordem. Entre leituras válidas, mantém o comando anterior; perder o círculo o
 libera. As novas referências contêm apenas setas binárias e recortes do círculo,
 sem imagens de personagens, nomes de jogadores ou caminhos locais.
+
+## Estouro azul pequeno — Beta 0.0.45
+
+A gravação posterior contém três estouros que o usuário confirmou como
+fisgadas, perto de 1,7, 3,8 e 5,6 segundos. A Beta 0.0.44 não os reconhecia:
+o filtro ciano exigia brilho, cor e área incompatíveis com essas gotas menores.
+O novo caminho complementar procura núcleos azuis compactos, próximos ao
+ponto marcado, com direções distintas. A orientação radial e a predominância
+das gotas sobre a máscara da área evitam depender do brilho geral. Em imagens
+menores, a intensidade mínima e o tratamento de núcleos com poucos pixels
+consideram a mistura de cores causada pela redução. Grupos mais afastados
+exigem alinhamento e predominância mais fortes.
+
+O replay original reconheceu os três eventos a 10, 15, 20 e 30 quadros por
+segundo; também passaram os exemplos reduzidos a 1280, 960 e 800 pixels de
+largura. O vídeo da área sem fisgada continuou negativo nessas verificações.
+O replay a 5 quadros por segundo perdeu os eventos: a captura precisa ser
+frequente, e o intervalo é registrado no log. Durante a espera, buscas completas
+do círculo ocorrem a cada 400 ms, mantendo capturas de splash entre elas. Após
+fisgar, a busca mantém seu intervalo anterior. Isso reduz trechos sem leitura,
+mas não comprova o desempenho em cada computador ou uma vitória ao vivo.

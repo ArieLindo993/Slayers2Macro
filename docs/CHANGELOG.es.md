@@ -4,6 +4,14 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## Beta 0.0.45 — salpicaduras pequeñas y control del arco verde
+
+- Añade detección de los pequeños estallidos azules confirmados, descartados por el filtro anterior de gotas cian grandes y brillantes. Comprueba forma compacta, proximidad al agua marcada, orientación radial, direcciones distintas y predominio frente al efecto de zona; los umbrales consideran la resolución.
+- Espacia la búsqueda completa del círculo durante la espera y sigue comprobando la salpicadura entre búsquedas. Tras enganchar y durante el minijuego conserva la frecuencia anterior. Los registros incluyen evidencia azul e intervalo de captura.
+- Usa posición y velocidad para mantener el marcador dentro del arco verde, con anticipación de 70 ms y un pequeño margen de cambio. Las flechas de color cubren ausencias temporales de la posición; el estado muestra el comando efectivo.
+- La reproducción reconoció los tres estallidos confirmados a 10/15/20/30 fps en tamaño original y en ejemplos de 1280/960/800 píxeles. El control de zona sin picada permaneció negativo y se conservan las pruebas anteriores y la protección del impacto inicial.
+- Los recortes filtrados anónimos y una simulación independiente con inercia respaldan las regresiones. Falta validar victorias y sesiones largas en directo; una captura muy espaciada, como 5 fps en la reproducción, todavía puede perder señales breves.
+
 ## Beta 0.0.44 — impacto inicial y órdenes de color
 
 - Lee los cheurones verdes hacia la derecha para mantener y rojos hacia la izquierda para soltar, siguiendo su rotación y comprobando color/forma, también con rojo atenuado.

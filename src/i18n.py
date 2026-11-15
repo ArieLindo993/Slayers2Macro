@@ -178,7 +178,7 @@ Conferindo recompensa e presença do item após T…|Checking the reward and ite
 Nome reconhecido|Name recognized|Nombre reconocido
 Sim|Yes|Sí
 Não|No|No
-Verde → segurar · Vermelha ← soltar\nA/D · um ou dois toques|Green → hold · Red ← release\nA/D · one or two taps|Verde → mantener · Roja ← soltar\nA/D · uno o dos toques
+Mantenha a barra no arco verde\nVerde → segurar · Vermelha ← soltar\nA/D · um ou dois toques|Keep the marker inside the green arc\nGreen → hold · Red ← release\nA/D · one or two taps|Mantén el marcador dentro del arco verde\nVerde → mantener · Roja ← soltar\nA/D · uno o dos toques
 Proteção após lançar (s)|Post-cast protection (s)|Protección tras lanzar (s)
 Esperando a linha assentar…|Waiting for the line to settle…|Esperando a que la línea se asiente…
 Se o impacto da linha ainda for clicado, aumente a proteção após lançar.|If the line landing is still clicked, increase post-cast protection.|Si aún se pulsa el impacto de la línea, aumenta la protección tras lanzar.

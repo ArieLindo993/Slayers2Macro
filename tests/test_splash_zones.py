@@ -11,6 +11,39 @@ import macro
 
 
 class SplashZones(unittest.TestCase):
+    def replay_rgb(self,name,settling=False):
+        data=np.load(ROOT/'tests/fixtures'/name)
+        w,h=map(int,data['frame_size']);x0,y0=map(int,data['origin']);point=tuple(data['point'])
+        reader=SplashReader();events=[]
+        engine=CircularEngine(flow_tests.cfg());engine.state='CLIQUE';engine.deadline=0.
+        for i,crop in enumerate(data['rgb']):
+            rgb=np.zeros((h,w,3),np.uint8);rgb[y0:y0+crop.shape[0],x0:x0+crop.shape[1]]=crop
+            now=i/float(data['fps'])
+            armed=not settling or engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO')
+            event=reader.observe(rgb,point,now,armed)
+            if settling:
+                engine.step(now,None,splash=event,impact_activity=reader.stats.get('burst_onset',False))
+                if engine.state=='FISGANDO':return [now]
+            elif event:events.append(now)
+        return events
+
+    def test_recorded_small_blue_bites_at_different_capture_rates_and_size(self):
+        for suffix in ('native','15fps','10fps','half'):
+            with self.subTest(suffix=suffix):
+                events=self.replay_rgb(f'splash_small_blue_{suffix}.npz')
+                self.assertEqual(len(events),3,events)
+                for found,expected in zip(events,(1.7,3.8,5.6)):
+                    self.assertAlmostEqual(found,expected,delta=.15)
+
+    def test_recorded_zone_with_blue_filter_never_hooks(self):
+        for suffix in ('native','half'):
+            self.assertEqual(self.replay_rgb(f'splash_zone_blue_{suffix}.npz'),[])
+
+    def test_small_blue_landing_is_ignored_and_next_burst_hooks(self):
+        events=self.replay_rgb('splash_small_blue_native.npz',settling=True)
+        self.assertEqual(len(events),1)
+        self.assertAlmostEqual(events[0],3.8,delta=.15)
+
     def test_recorded_landing_is_ignored_and_later_bite_hooks(self):
         data=np.load(ROOT/'tests/fixtures/splash_bite_masks.npz')
         shape=tuple(data['shape']);masks=np.unpackbits(data['masks'],count=int(np.prod(shape))).reshape(shape)
@@ -78,6 +111,18 @@ class SplashZones(unittest.TestCase):
 
 class SplashInputPriority(unittest.TestCase):
     setUp=flow_tests.CircularApp.setUp
+    def test_waiting_ticks_keep_checking_splash_between_ring_searches(self):
+        app=self.app;app.active=True;app.engine.state='ESPERANDO';app.engine.deadline=100.
+        app.engine.splash_armed_at=0.;app.last_circle_scan=1.
+        image=np.zeros((1072,1920,3),np.uint8)
+        with patch.object(macro,'game_window',return_value=app.window),patch.object(app,'sample',return_value=image),\
+             patch.object(app.splash_reader,'observe',side_effect=[False,True]),\
+             patch.object(app.circle_reader,'read') as ring_read,patch.object(app,'update_analyses'),\
+             patch.object(macro.time,'monotonic',return_value=1.2):
+            app.update(1.1);self.assertEqual(app.engine.state,'ESPERANDO')
+            app.update(1.2);self.assertEqual(app.engine.state,'FISGANDO')
+            ring_read.assert_not_called();macro.send_mouse.assert_called_with(True)
+
     def test_hook_click_precedes_ring_claim_and_slow_analyses(self):
         app=self.app;app.active=True;app.engine.state='ESPERANDO';app.engine.splash_armed_at=0.
         image=np.zeros((1072,1920,3),np.uint8)

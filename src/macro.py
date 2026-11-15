@@ -235,7 +235,7 @@ class App:
         preview_card=ttk.Frame(vision,style='Panel.TFrame',padding=12);preview_card.pack(fill='x')
         self.live_preview=ttk.Label(preview_card,text=self.tr('Aguardando o círculo'),anchor='center',style='PanelMuted.TLabel')
         self.live_preview.pack(fill='x',pady=4)
-        ttk.Label(vision,text=self.tr('Verde → segurar · Vermelha ← soltar\nA/D · um ou dois toques'),style='Muted.TLabel',font=('Segoe UI',9),wraplength=218).pack(anchor='w',pady=(10,0))
+        ttk.Label(vision,text=self.tr('Mantenha a barra no arco verde\nVerde → segurar · Vermelha ← soltar\nA/D · um ou dois toques'),style='Muted.TLabel',font=('Segoe UI',9),wraplength=218).pack(anchor='w',pady=(10,0))
         self.metrics_text=LocalizedVar(self.tr,value='Qualidade: aguardando leituras')
         ttk.Label(vision,textvariable=self.metrics_text,wraplength=218).pack(anchor='w',pady=10)
         self.profile_text=LocalizedVar(self.tr,value='Perfil: aguardando o jogo')
@@ -1039,7 +1039,10 @@ class App:
             self.last_splash_log=now
             self.session_log.event('LEITURA_SPLASH',ciclo=self.cycle_id,**self.splash_reader.stats)
         reading=None
-        if self.current_circle is not None or now-self.last_circle_scan>=.12:
+        # Waiting frames prioritize the short splash. Full ring searches are
+        # still periodic, and become frequent as soon as a hook is clicked.
+        scan_interval=.40 if self.engine.state in ('ASSENTANDO_LINHA','ESPERANDO') else .12
+        if self.current_circle is not None or now-self.last_circle_scan>=scan_interval:
             self.tick_stage='circulo'
             roi=None if self.config['auto_calibrate'] else self.config['circle_roi']
             reading=self.circle_reader.read(full,roi)

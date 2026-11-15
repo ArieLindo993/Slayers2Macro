@@ -2,7 +2,7 @@
 
 **Português** · [English](docs/README.en.md) · [Español](docs/README.es.md)
 
-Macro visual de pesca para **Slayers 2 no Roblox**, para Windows. **Beta 0.0.44** integra a mecânica circular de novembro: lançamento, splash, segurar/soltar o mouse, pedidos A/D e coleta com T.
+Macro visual de pesca para **Slayers 2 no Roblox**, para Windows. **Beta 0.0.45** integra a mecânica circular de novembro: lançamento, splash, segurar/soltar o mouse, pedidos A/D e coleta com T.
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Alterações por versão](CHANGELOG.md)**
 
@@ -30,7 +30,7 @@ Mantenha `Atualizar.ps1` junto dos atalhos `.cmd` e preserve a pasta oculta `.in
 1. Entre no jogo, equipe a vara e fique perto da água.
 2. Mantenha a câmera fixa. Aponte para **onde a linha vai cair e o splash vai aparecer** e pressione **F8**.
 3. Mantenha a calibração automática ligada e pressione **F4** com o Roblox em primeiro plano.
-4. O macro lança a linha, espera uma mudança visual do splash e dá o segundo clique. Depois do lançamento, há uma proteção inicial de 1,8 segundo para a linha assentar, com uma breve verificação de estabilização. Em **Configurar**, ajuste **Proteção após lançar (s)** se o voo for mais longo. No círculo, os chevrons **verdes para a direita** mandam segurar; os **vermelhos para a esquerda** mandam soltar. Eles giram junto do marcador. Os avisos brancos superiores não comandam o mouse; entre sinais válidos, o último comando é mantido enquanto o círculo permanece visível.
+4. O macro lança, deixa a linha assentar e dá o segundo clique ao detectar o splash. A proteção inicial padrão é de 1,8 segundo, ajustável em **Configurar → Proteção após lançar (s)**. O objetivo do círculo é **manter a barrinha no arco verde**: o controle usa sua posição e velocidade, com antecipação e uma pequena margem para evitar oscilações. Se a posição desaparecer temporariamente, os chevrons verdes para a direita indicam segurar e os vermelhos para a esquerda indicam soltar; os avisos brancos superiores não comandam o mouse.
 5. Quando um cartão lateral fica ativo, o macro propõe um ou dois toques de A/D conforme os pontos. O mouse continua sendo controlado durante esses pedidos.
 6. Após o resultado, tenta coletar segurando **T por três segundos**, lê Claim/nome/peso e volta a pescar. A coleta pode terminar antes do limite de tentativas.
 
