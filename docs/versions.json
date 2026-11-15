@@ -342,7 +342,8 @@
       "original": "Small blue splashes and closed-loop green-arc control",
       "kind": "git",
       "tag": "v0.0.45-beta",
-      "published": false
+      "published": true,
+      "commit": "4e9b119a431f10b67cf909331b98ee4a76a512ec"
     }
   ]
 }
