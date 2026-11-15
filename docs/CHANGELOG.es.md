@@ -4,6 +4,14 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## Beta 0.0.48 — búsqueda persistente y comprobación temporal de salpicaduras
+
+- Separa la presencia del anillo de la lectura de sus controles. Un círculo visible ya no se convierte en recogida tras 850 ms sin leer la aguja; cada captura vuelve a buscarla y libera las entradas dudosas.
+- Exige capturas distintas y ausencia persistente para salir de la pesca. Sin resultado terminado ni Claim, una pérdida de lectura no provoca intentos ciegos con T. El anillo reencontrado cancela un resultado sin confirmar.
+- Lee la aguja blanca radial como una componente, sin promediar el fondo blanco; los chevrons permiten recuperar su posición. La última orden caduca y se vuelve a leer la posición.
+- Compara las partículas nuevas de la salpicadura con la máscara de color anterior, considerando escala e intervalo. Reinicia el fondo por lanzamiento, prioriza los botones sobre la vista previa y evita llenar el OCR por perder la aguja.
+- Añade diagnósticos circulares locales limitados y registros numéricos del detector. Las regresiones cubren pérdida/recuperación, entradas antiguas, protección de recogida y una muestra más larga de la zona sin picadas; se conservan las tres picadas confirmadas. El ejecutable comprueba la recuperación. Estas pruebas no demuestran victorias en vivo ni estabilidad de toda una noche.
+
 ## Beta 0.0.47 — botón derecho, botón izquierdo y equilibrio en el verde
 
 - Corrige la asignación confirmada por el usuario y la [guía de Ashira RBX](https://www.youtube.com/watch?v=BO6waB_XXhY&t=90s): verde/derecha indica **mantener el botón derecho**; rojo/izquierda indica **mantener el botón izquierdo**, no soltar. Las lecturas indican el botón explícitamente.

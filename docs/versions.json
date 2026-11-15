@@ -360,6 +360,13 @@
       "tag": "v0.0.47-beta",
       "published": true,
       "commit": "8b8d5edb4b9529f11088f4b2e79b7d2d87948517"
+    },
+    {
+      "beta": "0.0.48",
+      "original": "Persistent circle reacquisition and temporal splash novelty",
+      "kind": "git",
+      "tag": "v0.0.48-beta",
+      "published": false
     }
   ]
 }

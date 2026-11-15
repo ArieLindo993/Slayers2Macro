@@ -2,7 +2,7 @@
 
 [Português](../README.md) · [English](README.en.md) · **Español**
 
-Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.47** integra el minijuego circular de noviembre: lanzamiento, salpicadura, mantener/soltar el ratón, toques A/D y recogida con T.
+Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.48** integra el minijuego circular de noviembre: lanzamiento, salpicadura, control de ambos botones del ratón, toques A/D y recogida con T.
 
 **[Descargar actualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Descargas](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Cambios](CHANGELOG.es.md)**
 
@@ -37,6 +37,8 @@ Roblox debe seguir visible y enfocado. Perder foco pausa y suelta las entradas; 
 En **Configurar → Idioma y atajos** puedes cambiar idioma y teclas. A, D y T se reservan para el juego; los atajos antiguos en conflicto vuelven a los valores predeterminados. Se conserva el historial y las indicaciones muestran las teclas elegidas.
 
 El modo automático localiza el anillo segmentado en cada ronda y vuelve a buscarlo aunque el marcador salga del arco verde. El modo manual fija la selección del círculo completo; lee las teclas a sus lados. Los perfiles circulares se separan por tamaño, bordes y DPI; no reutilizan selecciones verticales antiguas. Se muestra la resolución activa. **Solo observar** lee sin enviar entradas.
+
+Con el anillo visible, una pérdida de controles mantiene la búsqueda y libera los botones dudosos. La pérdida de lectura no mueve la mira ni inicia recogida ciega con T. Las órdenes caducan y se vuelve a leer la posición.
 
 ## Historial y soporte
 

@@ -1,9 +1,9 @@
-# Minigame circular — Beta 0.0.47
+# Minigame circular — Beta 0.0.48
 
 O aplicativo usa `CircularEngine` como motor padrão nesta beta. Os leitores do
 círculo, splash e Claim estão ligados ao ciclo de pesca. A interface permite
 seleção circular manual e exibe a resolução ativa. A distribuição é identificada
-como Beta 0.0.47; consulte a página de releases para a disponibilidade publicada.
+como Beta 0.0.48; consulte a página de releases para a disponibilidade publicada.
 
 ## Mecânica atual — esclarecimentos de 15 de novembro de 2026
 
@@ -184,3 +184,13 @@ Windows de M1/M2, a ordem das trocas e liberação mesmo quando outra entrada
 falha. O autoteste do executável também verifica o fluxo dos dois botões,
 sem enviar entradas ao jogo. A reprodução de vídeo não demonstra uma vitória
 ao vivo nem identifica automaticamente todos os estados de movimento do peixe.
+
+## Perda de leitura e animação da área — Beta 0.0.48
+
+- Corrige a passagem indevida de pesca para coleta após apenas 850 ms sem leitura. Presença do anel e leitura dos controles agora são evidências separadas: com o círculo visível, continua procurando a agulha a cada captura, libera os botões durante a dúvida e não move a mira nem inicia T.
+- Uma ausência real exige capturas distintas e persistentes. Se não houver resultado dourado nem Claim, a falha não dispara as tentativas cegas de T herdadas do minigame antigo. Claim e notificações continuam permitindo concluir a rodada; um anel reencontrado interrompe um resultado ainda não confirmado.
+- O marcador passa a ser uma componente branca alongada e radial, em vez da mediana de todos os pixels brancos do anel. Os chevrons também podem fornecer sua posição quando o núcleo branco some. A última instrução tem validade curta; depois disso, relê a posição em vez de manter indefinidamente o mesmo botão.
+- O splash exige partículas que apareçam fora da máscara colorida do quadro anterior. A tolerância ao movimento considera escala e intervalo entre capturas. Isso rejeita peixes/efeitos da área que apenas mudam de brilho. A memória da água é renovada a cada lançamento; a leitura de splash não disputa processamento com o minigame.
+- Aplica a mudança de botão antes de desenhar a prévia ou agendar análises. Reduz a frequência da análise auxiliar durante a luta e impede a fila de OCR de ser preenchida apenas porque a agulha sumiu. Referências do anel redimensionadas são reutilizadas.
+- Ativa os recortes locais de diagnóstico também no caminho circular, com limite de quantidade e frequência. O log passa a incluir pontuação/posição do anel, posição e origem da agulha, alvo, faixa, pontuações das setas e motivo da rejeição. Não publica gravações ou registros pessoais.
+- Verificação: regressões de perda prolongada/releitura, comandos vencidos, prioridade do controle, ausência persistente, OCR e diagnóstico; replay preserva as três fisgadas azuis confirmadas pelo usuário em diferentes taxas e tamanhos e rejeita um trecho adicional de oito segundos só com animação da área. O executável verifica perda de leitura e retomada no autoteste. Esses testes não comprovam vitória ou uma sessão longa ao vivo.

@@ -15,6 +15,7 @@ assert data['startup'] and data['collect_without_prompt'] and data['auto_calibra
 assert data['isolated_workers'] and data['blank_scene_safe'], data
 assert data['screen_capture'] and data['circular_flow'] and data['circular_blank_safe'] and data['key_input_layout'],data
 assert data['two_button_fishing'],data
+assert data['circle_loss_safe'] and data['circular_reacquisition'],data
 notices=root/'dist/Slayers2Macro/THIRD_PARTY';notices.mkdir(exist_ok=True)
 dependencies=[]
 for name in ('mss','numpy','opencv-python','Pillow','rapidocr-onnxruntime','onnxruntime','pyinstaller'):

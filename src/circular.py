@@ -22,6 +22,7 @@ class CircularReading:
     complete: bool = False
     key: object = None
     presses: int = 0
+    marker_source: object = None
 
 
 class CircularReader:
@@ -37,10 +38,15 @@ class CircularReader:
         self.geometry=None
         self.shape=None
         self.last_mouse_scores={}
+        self.last_cue_angle=None
+        self.visible=False;self.stats={'reason':'not_scanned'}
+        self.scaled_templates={}
 
     def read(self,rgb,search_roi=None):
         h,w=rgb.shape[:2]
         if self.shape!=(h,w):self.reset();self.shape=(h,w)
+        self.visible=False;self.last_mouse_scores={};self.last_cue_angle=None
+        self.stats={'reason':'ring_missing'}
         # Search at a bounded working resolution. Reacquisition is independent
         # of marker colour, position and whether an arrow is currently visible.
         factor=min(1.,800/w)
@@ -48,8 +54,8 @@ class CircularReader:
         # Empty waiting frames need no expensive multiscale ring search.
         a=image.astype(np.int16)
         neon=(a[:,:,1]>170)&(a[:,:,1]-a[:,:,0]>45)&(a[:,:,1]-a[:,:,2]>50)
-        if int(neon.sum())<max(8,int(h*w*factor*factor*.000025)):
-            self.geometry=None;return None
+        if self.geometry is None and int(neon.sum())<max(8,int(h*w*factor*factor*.000025)):
+            self.stats={'reason':'no_green_pixels'};return None
         gray=cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
         edges=cv2.Canny(gray,25,60)
         scales=[self.geometry[2]] if self.geometry else []
@@ -59,8 +65,11 @@ class CircularReader:
         for scale in dict.fromkeys(round(s,4) for s in scales):
             size=max(24,round(360*scale))
             if size>=min(edges.shape):continue
-            template=cv2.resize(self.templates['ring'],(size,size),interpolation=cv2.INTER_AREA)
-            mask=cv2.resize(self.templates['ring_mask'],(size,size),interpolation=cv2.INTER_NEAREST)
+            if size not in self.scaled_templates:
+                self.scaled_templates[size]=(
+                    cv2.resize(self.templates['ring'],(size,size),interpolation=cv2.INTER_AREA),
+                    cv2.resize(self.templates['ring_mask'],(size,size),interpolation=cv2.INTER_NEAREST))
+            template,mask=self.scaled_templates[size]
             x0,y0,x1,y1=0,round(h*factor*.12),edges.shape[1],round(h*factor*.94)
             if search_roi is not None:
                 rx,ry,rw,rh=search_roi
@@ -76,13 +85,16 @@ class CircularReader:
             matches=np.nan_to_num(matches,nan=0.,posinf=0.,neginf=0.)
             _,score,_,point=cv2.minMaxLoc(matches)
             if best is None or score>best[0]:best=(score,x0+point[0]+size/2,y0+point[1]+size/2,scale)
-            if score>.60:break
+            if score>.60 or (self.geometry and scale==round(self.geometry[2],4) and score>.55):break
         if best is None or best[0]<.46:
-            self.geometry=None
+            self.stats={'reason':'ring_missing','ring_score':round(best[0],3) if best else 0.}
             return None
         score,x,y,scale=best
         self.geometry=(x,y,scale)
         cx,cy,r=x/factor,y/factor,166*scale/factor
+        self.visible=True
+        self.stats={'reason':'target_missing','ring_score':round(score,3),
+                    'center':[round(cx,1),round(cy,1)],'radius':round(r,1)}
         # Target ticks form a curved group in the ring's upper sector. A green
         # scene alone is insufficient: both segmented side arcs matched above.
         x0,x1=max(0,int(cx-r*1.12)),min(w,int(cx+r*1.12)+1)
@@ -97,20 +109,48 @@ class CircularReader:
         green=ring&(gg>170)&(gg-rr>45)&(gg-bb>50)
         top=green&(np.abs(angle)<.22)
         if np.count_nonzero(top)<max(8,r*r*.007):
-            self.geometry=None
             return None
         angles=angle[top]
         target=float(np.median(angles));band=float(np.percentile(angles,95)-np.percentile(angles,5))
-        white=ring&(rr>210)&(gg>210)&(bb>195)
-        marker=float(np.median(angle[white])) if np.count_nonzero(white)>max(4,r*r*.001) else None
+        marker=self.read_marker(pixels,cx-x0,cy-y0,r)
+        marker_source='needle' if marker is not None else None
         # Commands are the coloured chevrons next to the marker. The white
         # arrows above the ring are not mouse instructions.
         mouse_button=self.read_mouse_cue(rgb,cx,cy,r,marker)
+        if marker is None and mouse_button is not None and self.last_cue_angle is not None:
+            marker=self.last_cue_angle/(2*math.pi);marker_source='chevrons'
         center=(distance<r*.36)
         gold=center&(rr>180)&(gg>140)&(bb<130)
         complete=np.count_nonzero(gold)>r*r*.018
         key,presses=self.read_keys(rgb,cx,cy,r) if not complete else (None,0)
-        return CircularReading((cx,cy),r,score,mouse_button,marker,target,band,bool(complete),key,presses)
+        self.stats.update(reason='complete' if complete else 'tracking' if marker is not None else 'needle_missing',
+                          marker=round(marker,4) if marker is not None else None,
+                          marker_source=marker_source,target=round(target,4),band=round(band,4),
+                          mouse_button=mouse_button,**self.last_mouse_scores)
+        return CircularReading((cx,cy),r,score,mouse_button,marker,target,band,bool(complete),key,presses,marker_source)
+
+    @staticmethod
+    def read_marker(rgb,cx,cy,r):
+        """Read the radial white needle, not the median of white scenery."""
+        a=rgb.astype(np.int16);rr,gg,bb=[a[:,:,i] for i in range(3)]
+        yy,xx=np.ogrid[:rgb.shape[0],:rgb.shape[1]]
+        distance=np.hypot(xx-cx,yy-cy)
+        mask=((distance>r*.78)&(distance<r*1.15)&(rr>210)&(gg>210)&(bb>195)).astype(np.uint8)
+        _,labels,stats,centers=cv2.connectedComponentsWithStats(mask)
+        best=None
+        for identity,((x,y,w,h,area),(px,py)) in enumerate(zip(stats[1:],centers[1:]),1):
+            if not max(4,r*r*.0008)<=area<=r*r*.04:continue
+            ys,xs=np.where(labels[y:y+h,x:x+w]==identity)
+            if len(xs)<3:continue
+            eigen,axes=np.linalg.eigh(np.cov(np.stack((xs,ys))))
+            aspect=np.sqrt(eigen[1]/max(.1,eigen[0]))
+            vector=np.array([px-cx,py-cy]);norm=float(np.linalg.norm(vector))
+            if not r*.85<=norm<=r*1.10:continue
+            radial=abs(float(np.dot(axes[:,1],vector/norm)))
+            if aspect<1.5 or radial<.80:continue
+            quality=area*radial
+            if best is None or quality>best[0]:best=(quality,math.atan2(vector[0],-vector[1])/(2*math.pi))
+        return best[1] if best else None
 
     def read_mouse_cue(self,rgb,cx,cy,r,marker):
         h,w=rgb.shape[:2]
@@ -123,7 +163,7 @@ class CircularReader:
         masks=[(gg>150)&(gg-rr>45)&(gg-bb>45),
                (rr>125)&(rr-gg>25)&(rr-bb>10)]
         u,v=np.meshgrid(np.arange(-58,59,dtype=np.float32),np.arange(192,257,dtype=np.float32))
-        best=[]
+        best=[];orientations=[]
         for mask,key in zip(masks,('green_right','red_left')):
             mask=(mask&annulus).astype(np.uint8)
             _,_,stats,centers=cv2.connectedComponentsWithStats(mask)
@@ -140,7 +180,7 @@ class CircularReader:
                                 sum(area*math.cos(theta) for area,theta in candidates))
                 angles += [mean,mean-.04,mean+.04]
             angles += [theta for _,theta in candidates]
-            score=0.
+            score=0.;orientation=None
             for theta in angles:
                 sx=cx+(u*math.cos(theta)+v*math.sin(theta))*r/166
                 sy=cy+(u*math.sin(theta)-v*math.cos(theta))*r/166
@@ -151,10 +191,15 @@ class CircularReader:
                 if key=='red_left':references.append(self.templates['red_left_faint'])
                 for reference in references:
                     values=cv2.matchTemplate(binary.astype(np.uint8)*255,reference,cv2.TM_CCOEFF_NORMED)
-                    score=max(score,float(np.nan_to_num(values,nan=0.).max()))
+                    value=float(np.nan_to_num(values,nan=0.).max())
+                    if value>score:score=value;orientation=theta
             best.append(score)
+            orientations.append(orientation)
         self.last_mouse_scores={'green_right':round(best[0],3),'red_left':round(best[1],3)}
-        if max(best)>=.64 and abs(best[0]-best[1])>=.08:return 'right' if best[0]>best[1] else 'left'
+        if max(best)>=.64 and abs(best[0]-best[1])>=.08:
+            winner=0 if best[0]>best[1] else 1
+            self.last_cue_angle=orientations[winner]
+            return 'right' if winner==0 else 'left'
         return None
 
     @staticmethod
@@ -192,6 +237,7 @@ class CircularCommand:
         self.button=None
         self.last_visible=None
         self.instruction=None
+        self.last_instruction=None
         self.edge_paused=None;self.reason='no_cue'
 
     def step(self,reading,now):
@@ -204,16 +250,18 @@ class CircularCommand:
             self.last_visible=now
             if reading.mouse_button in ('left','right'):
                 if self.instruction!=reading.mouse_button:self.edge_paused=None
-                self.instruction=reading.mouse_button
-            preferred=self.instruction
+                self.instruction=reading.mouse_button;self.last_instruction=now
+            preferred=self.instruction if self.last_instruction is not None and now-self.last_instruction<=.35 else None
             if preferred is None and reading.marker is not None:
-                # Initial fallback only, before the first coloured instruction.
-                # Both directions are active inputs; red is not a release.
+                # Re-read position after a missing/stale instruction as well.
                 error=(reading.target-reading.marker+.5)%1.-.5
                 margin=max(.006,min(.025,reading.band*.08))
                 if error>margin:preferred='right'
                 elif error<-margin:preferred='left'
             self.button=preferred;self.reason='direction' if preferred else 'no_cue'
+            if reading.marker is None and (self.last_instruction is None or now-self.last_instruction>.20):
+                self.button=None;self.reason='needle_missing'
+                return self.button
             if preferred is not None:
                 if reading.marker is None:
                     if self.edge_paused==preferred:self.button=None;self.reason='green_edge'

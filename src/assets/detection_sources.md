@@ -40,3 +40,9 @@ regresses instruction priority over the position fallback.
 The public Ashira RBX guide confirms the two-button semantics around 1:30.
 Its URL is cited in the documentation; downloaded guide video, screenshots
 and full transcripts are not bundled or tracked.
+
+The Beta 0.0.48 `splash_zone_long_*` fixtures retain three threshold masks
+(encoded as palette indices) from an additional eight-second zone-only control.
+They include normalized geometry and sampling rate, without original RGB
+intensities, paths, audio, text or character images. The original clip shows
+Claim after a landed fish; no new bite occurs in this interval.

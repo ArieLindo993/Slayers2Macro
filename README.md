@@ -2,7 +2,7 @@
 
 **Português** · [English](docs/README.en.md) · [Español](docs/README.es.md)
 
-Macro visual de pesca para **Slayers 2 no Roblox**, para Windows. **Beta 0.0.47** integra a mecânica circular de novembro: lançamento, splash, segurar/soltar o mouse, pedidos A/D e coleta com T.
+Macro visual de pesca para **Slayers 2 no Roblox**, para Windows. **Beta 0.0.48** integra a mecânica circular de novembro: lançamento, splash, controle dos dois botões do mouse, pedidos A/D e coleta com T.
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Alterações por versão](CHANGELOG.md)**
 
@@ -36,6 +36,8 @@ Mantenha `Atualizar.ps1` junto dos atalhos `.cmd` e preserve a pasta oculta `.in
 7. Após o resultado, tenta coletar segurando **T por três segundos**, lê Claim/nome/peso e volta a pescar. A coleta pode terminar antes do limite de tentativas.
 
 Acompanhe as primeiras rodadas pela prévia e pelo status. O splash é buscado perto do ponto marcado: se mudar câmera ou posição, marque novamente com F8. A interface exige que o Roblox permaneça visível e em primeiro plano. Ao perder foco, o macro pausa e libera os comandos; volte ao jogo e retome com F4.
+
+Se a agulha deixar de ser reconhecida, o macro solta os botões e continua relendo enquanto o anel estiver visível. Uma falha de leitura não inicia coleta nem move a mira. Sem resultado concluído ou Claim, não tenta T às cegas. Os comandos de cor expiram quando deixam de ser lidos; a posição volta a orientar o controle.
 
 ## Atalhos, idiomas e calibração
 

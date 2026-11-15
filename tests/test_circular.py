@@ -183,19 +183,51 @@ class CircularTests(unittest.TestCase):
             cv2.putText(image,'^^',(590,140),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),3)
             self.assertIsNone(reader.read(image))
 
-    def test_button_is_latched_only_while_ui_is_present(self):
+    def test_missing_instruction_and_needle_cannot_latch_a_button_forever(self):
         command=CircularCommand()
         reading=CircularReading((1,1),1,1.,mouse_button='right')
         self.assertEqual(command.step(reading,1),'right')
         reading.mouse_button=None
-        self.assertEqual(command.step(reading,1.5),'right')
-        self.assertEqual(command.step(None,1.6),'right')
+        self.assertEqual(command.step(reading,1.1),'right')
+        self.assertEqual(command.step(None,1.2),'right')
+        self.assertIsNone(command.step(reading,1.3))
         self.assertIsNone(command.step(None,1.7))
         self.assertIsNone(command.step(reading,2))
         reading.mouse_button='left'
         self.assertEqual(command.step(reading,2.1),'left')
         reading.complete=True
         self.assertIsNone(command.step(reading,2.2))
+
+    def test_stale_arrow_rechecks_position_instead_of_holding_wrong_direction(self):
+        command=CircularCommand()
+        reading=CircularReading((1,1),1,1,mouse_button='right',marker=-.15,band=.15)
+        self.assertEqual(command.step(reading,0),'right')
+        reading.mouse_button=None;reading.marker=.20
+        self.assertEqual(command.step(reading,.5),'left')
+
+    def test_white_scenery_is_not_averaged_into_needle_position(self):
+        rgb=frame();cx,cy=round(1920*.772),round(1072*.537)
+        original=CircularReader.read_marker(rgb,cx,cy,166)
+        cv2.circle(rgb,(cx,cy+166),40,(250,250,250),-1)
+        marker=CircularReader.read_marker(rgb,cx,cy,166)
+        self.assertIsNotNone(marker);self.assertAlmostEqual(marker,original,delta=.015)
+
+    def test_cue_reacquires_position_when_white_core_is_missing(self):
+        rgb=frame();cx,cy=round(1920*.772),round(1072*.537)
+        yy,xx=np.ogrid[:1072,:1920];d=np.hypot(xx-cx,yy-cy)
+        white=(rgb[:,:,0]>210)&(rgb[:,:,1]>210)&(rgb[:,:,2]>195)&(d>166*.78)&(d<166*1.15)
+        rgb[white]=(30,50,80)
+        reading=CircularReader(ROOT/'src/assets').read(rgb)
+        self.assertIsNotNone(reading);self.assertEqual(reading.mouse_button,'right')
+        self.assertIsNotNone(reading.marker);self.assertEqual(reading.marker_source,'chevrons')
+
+    def test_ring_presence_survives_missing_green_target(self):
+        reader=CircularReader(ROOT/'src/assets');rgb=frame()
+        self.assertIsNotNone(reader.read(rgb))
+        green=(rgb[:,:,1].astype(int)-rgb[:,:,0]>45)&(rgb[:,:,1].astype(int)-rgb[:,:,2]>50)
+        rgb[green]=(40,70,100)
+        self.assertIsNone(reader.read(rgb));self.assertTrue(reader.visible)
+        self.assertEqual(reader.stats['reason'],'target_missing')
 
 
 if __name__=='__main__':unittest.main()

@@ -197,7 +197,7 @@ class App:
         self.circle_reader=CircularReader(assets);self.splash_reader=SplashReader()
         self.claim_reader=ClaimReader(assets);self.claim_job=None;self.last_claim_ocr=0.;self.claim_votes={}
         self.current_circle=None;self.last_circle_scan=-float('inf')
-        self.last_mouse_button=None
+        self.last_mouse_button=None;self.last_circle_log=-float('inf');self.last_circle_reason=None
         self.claim_scene=None;self.last_claim_scan=-float('inf');self.circle_splash=False
         self.fishing_keys={};self.circular_scene={};self.circular_scene_time=0.
         self.config['circle_profiles']=saved.get('circle_profiles',{}) if isinstance(locals().get('saved'),dict) and isinstance(saved.get('circle_profiles'),dict) else {}
@@ -981,7 +981,9 @@ class App:
         slow scene scan must not prevent recalibration or erase a short reward
         notice while the OCR process is starting or reading an older image.
         """
-        scene_due=(now-self.last_scene>=.25 and self.scene_job is None
+        circular_tracking=isinstance(self.engine,CircularEngine) and self.engine.state=='PESCANDO'
+        scene_interval=1. if circular_tracking else .25
+        scene_due=(now-self.last_scene>=scene_interval and self.scene_job is None
                    and self.vision_worker.can_submit)
         interval=CALIBRATION_SEARCH_INTERVAL if not self.calibration.locked else 1.
         calibration_due=(not isinstance(self.engine,CircularEngine) and self.config['auto_calibrate'] and self.calibration_job is None
@@ -994,7 +996,7 @@ class App:
         collection_stage=self.engine.state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA','REINICIANDO')
         ocr_due=(not self.dry.get() and owner is not None and needs_name
             and now-self.last_ocr_capture>=OCR_FRAME_INTERVAL
-            and (collection_stage or (self.engine.state=='PESCANDO' and reading is None)))
+            and (collection_stage or (self.engine.state=='PESCANDO' and reading is None and not circular_tracking)))
         if not (scene_due or calibration_due or ocr_due):return
         self.tick_stage='captura'
         if full is None:full=self.sample(full=True)
@@ -1042,8 +1044,10 @@ class App:
         self.tick_stage='sinais';self.poll_scene(now)
         self.tick_stage='captura';full=self.sample(full=True);captured=time.monotonic()
         self.tick_stage='splash'
-        self.circle_splash=self.splash_reader.observe(full,self.config['cast'],captured,
-            self.engine.state=='ESPERANDO' and captured>=self.engine.splash_armed_at)
+        self.circle_splash=False
+        if self.engine.state in ('INICIO','POSICIONANDO','ASSENTANDO_LINHA','ESPERANDO','AGUARDANDO_CIRCULO'):
+            self.circle_splash=self.splash_reader.observe(full,self.config['cast'],captured,
+                self.engine.state=='ESPERANDO' and captured>=self.engine.splash_armed_at)
         if self.circle_splash:
             self.session_log.event('SPLASH_DETECTADO',ciclo=self.cycle_id,**self.splash_reader.stats)
             if not self.dry.get():
@@ -1060,7 +1064,7 @@ class App:
         # Waiting frames prioritize the short splash. Full ring searches are
         # still periodic, and become frequent as soon as a hook is clicked.
         scan_interval=.40 if self.engine.state in ('ASSENTANDO_LINHA','ESPERANDO') else .12
-        if self.current_circle is not None or now-self.last_circle_scan>=scan_interval:
+        if self.engine.state=='PESCANDO' or self.current_circle is not None or now-self.last_circle_scan>=scan_interval:
             self.tick_stage='circulo'
             roi=None if self.config['auto_calibrate'] else self.config['circle_roi']
             reading=self.circle_reader.read(full,roi)
@@ -1071,7 +1075,14 @@ class App:
                     sinal='verde_direita' if reading.mouse_button=='right' else 'vermelha_esquerda',
                     comando='segurar_direito' if reading.mouse_button=='right' else 'segurar_esquerdo',**self.circle_reader.last_mouse_scores)
         self.capture_failures=0
+        reason=self.circle_reader.stats.get('reason')
+        if (self.engine.state=='PESCANDO' or reading is not None) and (now-self.last_circle_log>=.5 or reason!=self.last_circle_reason):
+            self.last_circle_log=now;self.last_circle_reason=reason
+            self.session_log.event('LEITURA_CIRCULO',ciclo=self.cycle_id,visivel=self.circle_reader.visible,
+                                   **self.circle_reader.stats)
         stages=('INICIO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
+        if self.engine.state=='PESCANDO' and not self.circle_reader.visible and reading is None:
+            stages=stages+('PESCANDO',)
         if now-self.last_claim_scan>=.15 and self.engine.state in stages:
             self.tick_stage='aviso_claim';self.claim_scene=self.claim_reader.scan(full);self.last_claim_scan=captured
         claim=self.claim_scene if 0<=captured-self.last_claim_scan<.4 else None
@@ -1082,9 +1093,11 @@ class App:
                 if future is not None:self.claim_job=(future,owner);self.last_claim_ocr=now
         live=reading is not None and not reading.complete
         notification=self.scene.get('reward',False) and 0<=captured-self.scene_time<SCENE_MAX_AGE
-        self.circular_scene={'fishing':live,'loot':claim['point'] if claim else None,'reward':notification}
+        self.circular_scene={'fishing':live or self.circle_reader.visible,
+                             'loot':claim['point'] if claim else None,'reward':notification}
         self.circular_scene_time=captured
-        lost=self.engine.state=='PESCANDO' and reading is None and now-self.engine.last_marker>=.2
+        lost=(self.engine.state=='PESCANDO' and (reading is None or (not reading.complete and reading.marker is None))
+              and now-self.engine.last_marker>=.2)
         if lost!=self.tracking_lost:
             self.session_log.event('LEITURA_PERDIDA' if lost else 'LEITURA_RECUPERADA',ciclo=self.cycle_id)
             self.tracking_lost=lost
@@ -1095,6 +1108,19 @@ class App:
         if reading is not None:
             self.bar_status.set('Círculo localizado · mouse e A/D ativos' if live else 'Minigame concluído · aguardando Claim')
         elif lost:self.bar_status.set('Reencontrando o círculo…')
+        # Apply fresh control before drawing previews, scheduling OCR or saving
+        # evidence. None of those tasks may delay a button change.
+        if not self.dry.get():self.advance(time.monotonic(),reading)
+        if self.diagnostic_job is not None and self.diagnostic_job.done():
+            try:self.diagnostic_job.result()
+            except Exception:pass
+            self.diagnostic_job=None
+        if lost and self.diagnostic_var.get() and now-self.last_diagnostic>=10 and self.diagnostic_job is None:
+            x,y,w,h=self.config['circle_roi'];fh,fw=full.shape[:2]
+            crop=full[int(y*fh):max(int(y*fh)+1,int((y+h)*fh)),int(x*fw):max(int(x*fw)+1,int((x+w)*fw))].copy()
+            self.last_diagnostic=now
+            self.diagnostic_job=self.submit_background(self.diagnostic_worker,self.diagnostics.save,crop,
+                'PESCANDO','current',self.metrics.summary(),None,self.circle_reader.stats.copy())
         if now-self.last_live_preview>=.15:
             if reading is not None:preview=annotated_preview(full,reading)
             else:
@@ -1111,7 +1137,6 @@ class App:
         if self.dry.get():
             self.status.set('Observando: '+('pesca ativa' if live else 'item para coletar' if claim else 'sem pesca ou item reconhecido'))
             return
-        self.advance(time.monotonic(),reading)
 
     def update(self,now):
         if isinstance(self.engine,CircularEngine):return self.update_circular(now)
@@ -1167,7 +1192,7 @@ class App:
         self.tick_stage='controle'
         if isinstance(self.engine,CircularEngine):
             scene=self.circular_scene
-            actions=self.engine.step(now,reading,loot=scene.get('loot'),
+            actions=self.engine.step(now,reading,fishing=scene.get('fishing',False),loot=scene.get('loot'),
                 reward=bool(scene.get('reward') or text_reward),scene_stamp=self.circular_scene_time,
                 scene_valid=0<=now-self.circular_scene_time<.5,splash=self.circle_splash,
                 impact_activity=self.splash_reader.stats.get('signal_active',False))
@@ -1190,6 +1215,7 @@ class App:
                 capturas_sem_item=self.engine.absent_frames,item_visto_na_coleta=self.engine.loot_seen,
                 tentativa=self.engine.collect_attempts,decisao=self.engine.state)
         if self.engine.state!=previous_state:
+            if self.engine.state=='ASSENTANDO_LINHA':self.splash_reader.reset()
             if previous_state=='PREPARANDO_FISGADA' and self.engine.state!='FISGANDO':
                 self.session_log.event('FISGADA_CANCELADA',ciclo=self.cycle_id,proxima_etapa=self.engine.state)
             if previous_state=='AGUARDANDO_CIRCULO' and self.engine.state in ('POSICIONANDO','RECUPERANDO'):
@@ -1361,6 +1387,11 @@ if __name__=='__main__':
         left=dual.step(.1,CircularReading((1,1),1,1,mouse_button='left'))
         result['two_button_fishing']=(('right_mouse',True) in right and ('mouse',True) not in right
                                       and ('mouse',True) in left and ('right_mouse',True) not in left)
+        lost=dual.step(1.,None,fishing=True)
+        result['circle_loss_safe']=(dual.state=='PESCANDO' and not any(
+            kind=='aim' or (kind in ('mouse','right_mouse','t') and value) for kind,value in lost))
+        resumed=dual.step(1.1,CircularReading((1,1),1,1,mouse_button='right',marker=-.2))
+        result['circular_reacquisition']=dual.state=='PESCANDO' and ('right_mouse',True) in resumed
         result['key_input_layout']=C.sizeof(Input)==40
         # Exercise spawn in the frozen executable, including the OCR model.
         # All frames are synthetic and no game input is sent.

@@ -81,7 +81,7 @@ def annotated_preview(rgb,reading):
 class Diagnostics:
     def __init__(self,directory,limit=20):
         self.directory=Path(directory);self.limit=limit;self.last=-float('inf')
-    def save(self,rgb,state,stage,metrics,now=None):
+    def save(self,rgb,state,stage,metrics,now=None,tracking=None):
         now=time.monotonic() if now is None else now
         if now-self.last<10:return False
         self.last=now;self.directory.mkdir(parents=True,exist_ok=True)
@@ -94,6 +94,12 @@ class Diagnostics:
         data={'version':VERSION,'event':'tracking_lost','state':safe_state,'search_stage':safe_stage,
               'observed_seconds':metrics['observed_seconds'],'valid_percent':metrics['valid_percent'],
               'inside_percent':metrics['inside_percent']}
+        if tracking is not None:
+            # Bounded numeric detector evidence only; never arbitrary paths,
+            # item names or a full-window screenshot.
+            allowed=('reason','ring_score','center','radius','marker','marker_source','target','band',
+                     'mouse_button','green_right','red_left')
+            data['circular']={key:value for key,value in tracking.items() if key in allowed}
         (self.directory/(stamp+'.json')).write_text(json.dumps(data,indent=2),encoding='utf-8')
         for old in sorted(self.directory.glob('*.json'))[:-self.limit]:
             old.unlink();old.with_suffix('.png').unlink(missing_ok=True)

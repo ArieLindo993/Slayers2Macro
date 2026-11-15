@@ -2,7 +2,7 @@
 
 [Português](../README.md) · **English** · [Español](README.es.md)
 
-A visual Windows fishing macro for **Slayers 2 on Roblox**. **Beta 0.0.47** integrates November's circular minigame, splash hook click, held/released mouse, A/D taps and T collection.
+A visual Windows fishing macro for **Slayers 2 on Roblox**. **Beta 0.0.48** integrates November's circular minigame, splash hook click, two-button mouse control, A/D taps and T collection.
 
 **[Download updater](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Changelog](CHANGELOG.en.md)**
 
@@ -37,6 +37,8 @@ Roblox must remain visible and focused. Losing focus pauses and releases inputs;
 Use **Settings → Language and shortcuts** to select Portuguese, English or Spanish and customize keys. A, D and T are reserved for gameplay; conflicting old bindings return to defaults. Changes preserve session history. Hints show selected keys.
 
 Automatic mode searches for the segmented ring on each round and reacquires it even if the marker leaves the green arc. Manual mode fixes the selected full circle; side keys are read beside it. Circular profiles are isolated by client size, borders and DPI; old vertical selections are not reused. Active Roblox resolution is visible. **Observe only** inspects without sending input.
+
+While the ring is visible, missing controls trigger persistent reacquisition and release uncertain buttons. Tracking failure does not move the cursor or start blind T collection. Instructions have a short validity; position is reread when they expire.
 
 ## History and support
 

@@ -16,7 +16,8 @@ class SplashZones(unittest.TestCase):
         w,h=map(int,data['frame_size']);x0,y0=map(int,data['origin']);point=tuple(data['point'])
         reader=SplashReader();events=[]
         engine=CircularEngine(flow_tests.cfg());engine.state='CLIQUE';engine.deadline=0.
-        for i,crop in enumerate(data['rgb']):
+        crops=data['palette'][data['codes']] if 'codes' in data else data['rgb']
+        for i,crop in enumerate(crops):
             rgb=np.zeros((h,w,3),np.uint8);rgb[y0:y0+crop.shape[0],x0:x0+crop.shape[1]]=crop
             now=i/float(data['fps'])
             armed=not settling or engine.state=='ESPERANDO'
@@ -38,6 +39,13 @@ class SplashZones(unittest.TestCase):
     def test_recorded_zone_with_blue_filter_never_hooks(self):
         for suffix in ('native','half'):
             self.assertEqual(self.replay_rgb(f'splash_zone_blue_{suffix}.npz'),[])
+
+    def test_long_zone_while_claim_is_present_is_not_a_bite(self):
+        # Eight seconds of rotating zone fish; no line is in the water here.
+        # The old reader generated multiple false hooks on these pixels.
+        for suffix in ('native','half'):
+            with self.subTest(suffix=suffix):
+                self.assertEqual(self.replay_rgb(f'splash_zone_long_{suffix}.npz'),[])
 
     def test_small_blue_landing_is_ignored_and_next_burst_hooks(self):
         events=self.replay_rgb('splash_small_blue_native.npz',settling=True)

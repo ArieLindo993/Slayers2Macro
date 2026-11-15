@@ -11,12 +11,16 @@ class CircularEngine(Engine):
         self.confirmation_source=None
         self.cast_released_at=None;self.last_landing_activity=None
         self.splash_ready=True;self.hook_requested_at=None
+        self.circle_absent_since=None;self.circle_absent_frames=0;self.circle_absent_stamp=None
+        self.result_confirmed=False
 
     def cast(self,now):
         self.mouse_command.reset();self.key_command.reset()
         self.claim_hold_completed=False
         self.cast_released_at=None;self.last_landing_activity=None
         self.splash_ready=False;self.hook_requested_at=None
+        self.result_confirmed=False
+        self.circle_absent_since=None;self.circle_absent_frames=0;self.circle_absent_stamp=None
         return [('right_mouse',False),('release_keys',True)]+super().cast(now)
 
     @staticmethod
@@ -47,6 +51,8 @@ class CircularEngine(Engine):
     def track(self,now):
         actions=super().track(now)
         self.mouse_command.reset();self.key_command.reset()
+        self.circle_absent_since=None;self.circle_absent_frames=0;self.circle_absent_stamp=None
+        self.result_confirmed=False
         self.message='Círculo localizado. Lendo mouse e A/D.'
         return [('right_mouse',False)]+actions
 
@@ -68,13 +74,18 @@ class CircularEngine(Engine):
              scene_stamp=None,scene_valid=True,splash=False,impact_activity=False):
         if self.state=='PARADO':return []
         fresh=scene_valid and (scene_stamp is None or 0<=now-scene_stamp<.5)
-        if not fresh:loot=None;reward=False
+        if not fresh:loot=None;reward=False;reading=None
+        if (fishing and reading is None and not self.result_confirmed
+            and self.state not in ('PESCANDO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')):
+            return self.track(now)+self.mouse_actions(None)
         active=reading is not None and not reading.complete
         if active:
             if reward:self.reward_pending=True
             actions=[]
             if self.state!='PESCANDO':actions+=self.track(now)
-            self.last_fishing=now;self.last_marker=now
+            self.last_fishing=now
+            if reading.marker is not None:self.last_marker=now
+            self.circle_absent_since=None;self.circle_absent_frames=0;self.circle_absent_stamp=None
             mouse=self.mouse_command.step(reading,now)
             self.message='Círculo ativo · '+('segurando botão direito' if mouse=='right' else 'segurando botão esquerdo' if mouse=='left' else 'aliviando na borda verde' if self.mouse_command.reason=='green_edge' else 'botões do mouse soltos')
             actions+=self.mouse_actions(mouse)
@@ -82,13 +93,33 @@ class CircularEngine(Engine):
             return actions
         if self.state=='PESCANDO':
             mouse=self.mouse_command.step(None,now);self.key_command.step(None,now)
-            if reading is not None or now-self.last_fishing>=.85:
+            if fishing and reading is None:
+                # Ring presence and readable controls are separate evidence.
+                # Losing the needle/target may never aim at an item or press T.
+                self.circle_absent_since=None;self.circle_absent_frames=0
+                self.message='Círculo visível. Reencontrando agulha e comandos…'
+                return self.mouse_actions(None)+[('release_keys',True)]
+            if loot and fresh:return self.prepare_collect(now,loot)
+            if reward and fresh:return self.finish(now,True)
+            stamp=now if scene_stamp is None else scene_stamp
+            if fresh and stamp!=self.circle_absent_stamp:
+                self.circle_absent_stamp=stamp;self.circle_absent_frames+=1
+                if self.circle_absent_since is None:self.circle_absent_since=now
+            absent=(self.circle_absent_frames>=3 and self.circle_absent_since is not None
+                    and now-self.circle_absent_since>=1.2)
+            if reading is not None or absent:
+                self.result_confirmed=reading is not None and reading.complete
                 self.state='RESULTADO';self.deadline=now+self.cfg['result_wait']
                 self.collect_attempts=0;self.collect_started=None;self.loot_seen=False
                 self.message='Verificando se há item para coletar…'
                 return self.mouse_actions(None)+[('release_keys',True)]
             self.message='Reencontrando o círculo…'
             return self.mouse_actions(mouse)+[('release_keys',True)]
+        if (self.state=='RESULTADO' and not self.result_confirmed and not loot and not reward
+            and not self.reward_pending and now>=self.deadline):
+            # The legacy flow blindly tried T on any tracking failure. Only a
+            # completed fish or a real Claim prompt may authorize that fallback.
+            return self.finish(now,False,'Círculo desapareceu sem resultado confirmado')
         if self.state=='ASSENTANDO_LINHA':
             if impact_activity:self.last_landing_activity=now
             quiet=self.last_landing_activity is None or now-self.last_landing_activity>=.30

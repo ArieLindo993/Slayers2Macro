@@ -139,6 +139,45 @@ class Flow(unittest.TestCase):
         self.assertEqual(engine.state,'PESCANDO');self.assertIn(('right_mouse',True),actions)
         engine.recover(2);self.assertIsNone(engine.mouse_command.button)
 
+    def test_visible_circle_with_unreadable_controls_never_starts_collection(self):
+        engine=CircularEngine(cfg());engine.step(1,ring(mouse_button='right'))
+        for now in (1.3,2.,3.,5.,8.,12.):
+            actions=engine.step(now,None,fishing=True,scene_stamp=now)
+            self.assertEqual(engine.state,'PESCANDO')
+            self.assertFalse(any(k=='aim' or (k in ('mouse','right_mouse','t') and v) for k,v in actions))
+        self.assertIn(('mouse',True),engine.step(12.1,ring(mouse_button='left',marker=.2)))
+
+    def test_tracking_failure_without_claim_never_blindly_presses_t(self):
+        engine=CircularEngine(cfg());engine.step(1,ring(mouse_button='right'))
+        for now in (1.3,1.8,2.6):engine.step(now,None,scene_stamp=now)
+        self.assertEqual(engine.state,'RESULTADO');self.assertFalse(engine.result_confirmed)
+        actions=engine.step(4.7,None,scene_stamp=4.7)
+        self.assertEqual(engine.state,'REINICIANDO');self.assertEqual(engine.collected,0)
+        self.assertNotIn(('t',True),actions);self.assertFalse(any(k=='aim' for k,v in actions))
+
+    def test_old_or_reused_capture_does_not_confirm_circle_disappearance(self):
+        engine=CircularEngine(cfg());engine.step(1,ring(mouse_button='left'))
+        for now in (1.3,1.4,1.5,2.,3.):engine.step(now,None,scene_stamp=1.3)
+        self.assertEqual(engine.state,'PESCANDO')
+
+    def test_claim_after_tracking_loss_is_still_collected_without_delay(self):
+        engine=CircularEngine(cfg());engine.step(1,ring(mouse_button='right'))
+        engine.step(1.2,None,loot=(.5,.5),scene_stamp=1.2)
+        self.assertEqual(engine.state,'MIRANDO_ITEM')
+        self.assertIn(('t',True),engine.step(1.5,None,loot=(.5,.5),scene_stamp=1.5))
+
+    def test_ring_reappearing_without_controls_cancels_unconfirmed_result(self):
+        engine=CircularEngine(cfg());engine.step(1,ring(mouse_button='right'))
+        for now in (1.3,1.8,2.6):engine.step(now,None,scene_stamp=now)
+        self.assertEqual(engine.state,'RESULTADO')
+        actions=engine.step(4.7,None,fishing=True,scene_stamp=4.7)
+        self.assertEqual(engine.state,'PESCANDO');self.assertNotIn(('t',True),actions)
+
+    def test_stale_circle_does_not_send_old_mouse_or_key_commands(self):
+        engine=CircularEngine(cfg());engine.track(1.)
+        actions=engine.step(2.,ring(mouse_button='right',key='A',presses=2),scene_stamp=1.1)
+        self.assertFalse(any(k=='tap' or (k in ('mouse','right_mouse') and v) for k,v in actions))
+
     def test_result_name_is_not_reward_and_stale_prompt_is_ignored(self):
         engine=CircularEngine(cfg());engine.track(0)
         engine.step(1,ring(complete=True))
@@ -206,6 +245,42 @@ class CircularApp(unittest.TestCase):
             app.update(1)
             self.assertEqual(app.engine.state,'PESCANDO')
             macro.send_mouse.assert_called_with(True,'right');macro.send_fishing_key.assert_called_with('D',True)
+
+    def test_control_is_applied_before_background_work(self):
+        app=self.app;app.active=True;image=np.zeros((1072,1920,3),np.uint8)
+        def background(*args):self.assertTrue(app.right_held)
+        with patch.object(macro,'game_window',return_value=app.window),patch.object(app,'sample',return_value=image),\
+             patch.object(app.circle_reader,'read',return_value=ring(mouse_button='right')),\
+             patch.object(app.claim_reader,'scan',return_value=None),patch.object(app,'update_analyses',side_effect=background):
+            app.update(1.)
+
+    def test_missing_controls_are_rescanned_on_every_tracking_tick(self):
+        app=self.app;app.active=True;app.engine.track(1.);app.diagnostic_var.set(False)
+        app.circle_reader.visible=True;app.circle_reader.stats={'reason':'target_missing'}
+        image=np.zeros((1072,1920,3),np.uint8)
+        with patch.object(macro,'game_window',return_value=app.window),patch.object(app,'sample',return_value=image),\
+             patch.object(app.circle_reader,'read',return_value=None) as read,\
+             patch.object(app,'update_analyses'),patch.object(macro.time,'monotonic',return_value=2.):
+            for now in (2.,2.02,2.04,2.06):app.update(now)
+        self.assertEqual(read.call_count,4);self.assertEqual(app.engine.state,'PESCANDO')
+        self.assertFalse(app.held);self.assertFalse(app.right_held);self.assertFalse(app.t_down)
+
+    def test_missing_needle_does_not_flood_item_ocr(self):
+        app=self.app;app.engine.track(1.);app.last_scene=2.
+        image=np.zeros((1072,1920,3),np.uint8)
+        with patch.object(app,'submit_ocr') as ocr:
+            app.update_analyses(2.1,None,image,2.1)
+        ocr.assert_not_called()
+
+    def test_diagnostic_records_circular_reason_without_arbitrary_fields(self):
+        import json
+        from diagnostics import Diagnostics
+        path=Path(self.temp.name)/'test_diagnostics'
+        diag=Diagnostics(path)
+        self.assertTrue(diag.save(np.zeros((50,50,3),np.uint8),'PESCANDO','current',
+            self.app.metrics.summary(),2.,{'reason':'target_missing','ring_score':.65,'private':'omit'}))
+        data=json.loads(next(path.glob('*.json')).read_text())
+        self.assertEqual(data['circular'],{'reason':'target_missing','ring_score':.65})
 
 
 if __name__=='__main__':unittest.main()

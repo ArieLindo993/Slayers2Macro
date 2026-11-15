@@ -4,6 +4,14 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## Beta 0.0.48 — persistent reacquisition and temporal splash checks
+
+- Separates ring presence from readable controls. A visible ring no longer becomes a collection attempt after 850 ms without a needle reading; every tracking capture retries recognition and releases uncertain inputs.
+- Requires distinct, persistently absent frames before leaving fishing. Without a completed result or Claim, a tracking failure no longer triggers blind T attempts. Reappearing ring evidence cancels an unconfirmed result.
+- Reads the radial white needle as a component rather than averaging white scenery, with chevron-position fallback. Instructions expire; position is reread instead of latching one button indefinitely.
+- Checks newly appearing splash particles against the previous color mask, accounting for scale and capture interval. Resets water history per cast, prioritizes input over previews/background work, and prevents missing controls from flooding item OCR.
+- Adds bounded local circular diagnostics and detailed numeric detector logs. Regressions cover control loss/recovery, stale input, collection safeguards and the longer zone-only sample; the three confirmed small bites remain covered. Frozen startup checks include reacquisition. Recorded playback and automated checks do not prove live wins or overnight stability.
+
 ## Beta 0.0.47 — right mouse, left mouse and green-arc balance
 
 - Corrects the user-confirmed mapping from the [Ashira RBX guide](https://www.youtube.com/watch?v=BO6waB_XXhY&t=90s): green/right means **hold right mouse**; red/left means **hold left mouse**, not release. Readings name the button explicitly instead of using an ambiguous boolean.

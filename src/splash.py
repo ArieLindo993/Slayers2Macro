@@ -9,6 +9,7 @@ class SplashReader:
         self.baseline=None;self.previous_mass=0.;self.previous_time=None
         self.last_burst=-float('inf');self.geometry=None;self.stats={}
         self.pending=None
+        self.previous_color=None
 
     def observe(self,rgb,point,now,armed=True):
         if not point:self.reset();return False
@@ -22,29 +23,48 @@ class SplashReader:
         crop=rgb[y0:y1,x0:x1].astype(np.int16)
         rr,gg,bb=[crop[:,:,i] for i in range(3)]
         yy,xx=np.ogrid[y0:y1,x0:x1]
+        broad=((bb>=225)&(gg-rr>=45)&(bb-rr>=60)&(rr<205)).astype(np.uint8)
+        previous=self.previous_color
+        if previous is not None and previous.shape==broad.shape:
+            dt=.04 if self.previous_time is None else max(.04,min(.2,now-self.previous_time))
+            dilation=max(1,round(2*np.sqrt(scale)*dt/.04))
+            previous=cv2.dilate(previous,np.ones((dilation*2+1,dilation*2+1),np.uint8))
+        else:previous=None
         # Bites throw compact cyan droplets. The zone effect is largely white
         # arcs, fish silhouettes and fragmented mist, not coherent droplets.
         mask=((gg>210)&(bb>242)&(gg-rr>55)&(rr<195)&
               ((xx-cx)**2+(yy-cy)**2<radius*radius)).astype(np.uint8)
-        _,labels,components,_=cv2.connectedComponentsWithStats(mask)
-        masses=[]
-        for identity,(x,y,bw,bh,area) in enumerate(components[1:],1):
+        _,labels,components,centers=cv2.connectedComponentsWithStats(mask)
+        masses=[];directions=[];novel_cyan=0
+        for identity,((x,y,bw,bh,area),(px,py)) in enumerate(zip(components[1:],centers[1:]),1):
             if not max(4,85*scale)<=area<=1200*scale:continue
             ys,xs=np.where(labels[y:y+bh,x:x+bw]==identity)
             if len(xs)<3:continue
             eigen=np.linalg.eigvalsh(np.cov(np.stack((xs,ys))))
             aspect=float(np.sqrt(eigen[1]/max(.1,eigen[0])))
-            if 1.35<=aspect<=8:masses.append(float(area))
+            vector=np.array([px+x0-cx,py+y0-cy]);distance=float(np.linalg.norm(vector))
+            # Preserve tolerance for a float landing away from the click.
+            # Temporal novelty below separates these drops from zone fish.
+            if not max(2,3*np.sqrt(scale))<=distance<=radius:continue
+            direction=vector/distance
+            if 1.35<=aspect<=8:
+                masses.append(float(area));directions.append(direction)
+                if previous is not None and np.mean(previous[y+ys,x+xs]==0)>=.55:novel_cyan+=1
         mass=sum(sorted(masses,reverse=True)[:4])
         coherence=mass/max(1,int(mask.sum()))
+        cyan_spread=0.
+        if len(directions)>=2:
+            vectors=np.asarray(directions)
+            cyan_spread=float(np.arccos(np.clip((vectors@vectors.T).min(),-1,1)))
         feature=mass/scale if len(masses)>=2 and coherence>=.72 else 0.
-        blue_masses,blue_coherence,spread=self.blue_droplets(crop,cx-x0,cy-y0,radius,scale)
+        blue_masses,blue_coherence,spread,novel_blue=self.blue_droplets(crop,cx-x0,cy-y0,radius,scale,previous)
         blue_mass=sum(blue_masses)/scale
         blue_valid=len(blue_masses)>=2 and blue_coherence>=.50*min(1.,np.sqrt(scale)) and spread>=.55 and blue_mass>=20
         blue_feature=blue_mass*3 if blue_valid else 0.
         source='cyan' if feature else 'none'
         if blue_feature>feature:
             feature=blue_feature;masses=blue_masses;coherence=blue_coherence;source='blue_radial'
+        novel=int(novel_blue if source=='blue_radial' else novel_cyan)
         first=self.baseline is None or self.previous_time is None or now-self.previous_time>1.
         if first:self.baseline=feature;self.previous_mass=feature
         rise=feature-self.previous_mass
@@ -54,18 +74,21 @@ class SplashReader:
         sustained=candidate and self.pending is not None and .025<=now-self.pending<=.25
         strong_shape=(len(masses)>=3 and coherence>=.90) or (
             source=='blue_radial' and blue_mass>=30 and (len(masses)>=3 or coherence>=.85))
-        strong=candidate and strong_shape and rise>max(25,feature*.12)
+        onset=novel>=2
+        strong=candidate and onset and strong_shape and rise>max(25,feature*.12)
         event=strong or sustained
         if event or not candidate:self.pending=None
-        elif rise>max(25,feature*.12) and self.pending is None:self.pending=now
+        elif onset and rise>max(25,feature*.12) and self.pending is None:self.pending=now
         self.stats={'particles':len(masses),'coherence':round(coherence,3),
                     'mass':round(feature,1),'baseline':round(self.baseline,1),
+                    'cyan_spread':round(cyan_spread,3),
+                    'new_particles':novel,
                     'source':source,'blue_particles':len(blue_masses),
                     'blue_mass':round(blue_mass,1),'blue_coherence':round(blue_coherence,3),
                     'blue_spread':round(spread,3),
                     'capture_interval_ms':None if self.previous_time is None else round((now-self.previous_time)*1000,1),
-                    'signal_active':bool(feature>self.baseline*1.10+20),
-                    'burst_onset':bool(not first and feature>self.baseline*1.35+40 and rise>max(25,feature*.12)),
+                    'signal_active':bool(feature>self.baseline*1.10+20 and (novel>=1 or self.pending is not None)),
+                    'burst_onset':bool(not first and onset and feature>self.baseline*1.35+40 and rise>max(25,feature*.12)),
                     'armed':bool(armed),'detected':bool(event)}
         # Learn during arming too. Keep cooldown/history across brief disarmed
         # intervals; a sustained bright frame cannot repeatedly trigger clicks.
@@ -73,11 +96,12 @@ class SplashReader:
         alpha=1-np.exp(-dt/1.2)
         if not event:self.baseline+=(feature-self.baseline)*alpha
         self.previous_mass=feature;self.previous_time=now
+        self.previous_color=broad
         if event:self.last_burst=now
         return bool(event)
 
     @staticmethod
-    def blue_droplets(crop,cx,cy,radius,scale):
+    def blue_droplets(crop,cx,cy,radius,scale,previous=None):
         """Small saturated droplets fan out near the marked landing point.
 
         Zone fish and mist contribute to the denominator but cannot issue a
@@ -111,15 +135,16 @@ class SplashReader:
             if not tiny and (not 1.25<=aspect<=8 or radial<.70):continue
             hull=cv2.convexHull(np.column_stack((xs,ys)).astype(np.float32))
             if area/max(area,cv2.contourArea(hull))<.82:continue
-            if distance<=radius*.27:core.append((float(area),direction))
-            if radial>=.90:outer.append((float(area),direction))
+            novel=previous is not None and np.mean(previous[y+ys,x+xs]==0)>=.55
+            if distance<=radius*.27:core.append((float(area),direction,novel))
+            if radial>=.90:outer.append((float(area),direction,novel))
         def summarize(droplets):
             droplets=sorted(droplets,key=lambda item:item[0],reverse=True)[:12]
-            masses=[area for area,_ in droplets];spread=0.
+            masses=[area for area,_,_ in droplets];spread=0.
             if len(droplets)>=2:
-                directions=np.asarray([direction for _,direction in droplets])
+                directions=np.asarray([direction for _,direction,_ in droplets])
                 spread=float(np.arccos(np.clip((directions@directions.T).min(),-1,1)))
-            return masses,sum(masses)/max(1,int(mask.sum())),spread
+            return masses,sum(masses)/max(1,int(mask.sum())),spread,sum(novel for _,_,novel in droplets)
         result=summarize(core);wide=summarize(outer)
         # Later frames spread farther out. A wider group needs much stronger
         # shape alignment and dominance so rotating zone fragments cannot win.
