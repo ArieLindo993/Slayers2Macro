@@ -334,7 +334,8 @@
       "original": "Delayed landing guard and coloured chevron mouse commands",
       "kind": "git",
       "tag": "v0.0.44-beta",
-      "published": false
+      "published": true,
+      "commit": "efc4a025e63651ee1357ebb7aa64e698d4856353"
     }
   ]
 }
