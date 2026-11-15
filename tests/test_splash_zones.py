@@ -19,10 +19,10 @@ class SplashZones(unittest.TestCase):
         for i,crop in enumerate(data['rgb']):
             rgb=np.zeros((h,w,3),np.uint8);rgb[y0:y0+crop.shape[0],x0:x0+crop.shape[1]]=crop
             now=i/float(data['fps'])
-            armed=not settling or engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO')
+            armed=not settling or engine.state=='ESPERANDO'
             event=reader.observe(rgb,point,now,armed)
             if settling:
-                engine.step(now,None,splash=event,impact_activity=reader.stats.get('burst_onset',False))
+                engine.step(now,None,splash=event,impact_activity=reader.stats.get('signal_active',False))
                 if engine.state=='FISGANDO':return [now]
             elif event:events.append(now)
         return events
@@ -42,23 +42,24 @@ class SplashZones(unittest.TestCase):
     def test_small_blue_landing_is_ignored_and_next_burst_hooks(self):
         events=self.replay_rgb('splash_small_blue_native.npz',settling=True)
         self.assertEqual(len(events),1)
-        self.assertAlmostEqual(events[0],3.8,delta=.15)
+        self.assertAlmostEqual(events[0],4.02,delta=.15)
 
     def test_recorded_landing_is_ignored_and_later_bite_hooks(self):
         data=np.load(ROOT/'tests/fixtures/splash_bite_masks.npz')
         shape=tuple(data['shape']);masks=np.unpackbits(data['masks'],count=int(np.prod(shape))).reshape(shape)
         w,h=map(int,data['frame_size']);x0,y0=map(int,data['origin']);point=tuple(data['point'])
-        engine=CircularEngine(flow_tests.cfg());engine.state='CLIQUE';engine.deadline=1.5
+        # Retain coverage of the configurable short-flight profile as well.
+        engine=CircularEngine(dict(flow_tests.cfg(),cast_settle_seconds=1.8));engine.state='CLIQUE';engine.deadline=1.5
         reader=SplashReader();hooks=[]
         for i,mask in enumerate(masks):
             rgb=np.zeros((h,w,3),np.uint8)
             rgb[y0:y0+mask.shape[0],x0:x0+mask.shape[1]][mask.astype(bool)]=(70,230,255)
             now=i/float(data['fps'])
-            event=reader.observe(rgb,point,now,engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO'))
+            event=reader.observe(rgb,point,now,engine.state=='ESPERANDO')
             previous=engine.state
-            engine.step(now,None,splash=event,impact_activity=reader.stats.get('burst_onset',False))
+            engine.step(now,None,splash=event,impact_activity=reader.stats.get('signal_active',False))
             if engine.state=='FISGANDO' and previous!='FISGANDO':hooks.append(now)
-        self.assertEqual(len(hooks),1);self.assertAlmostEqual(hooks[0],4.2,delta=.1)
+        self.assertEqual(len(hooks),1);self.assertAlmostEqual(hooks[0],4.4,delta=.1)
 
     def replay(self,name,armed_at=0):
         data=np.load(ROOT/'tests/fixtures'/name)
@@ -120,8 +121,8 @@ class SplashInputPriority(unittest.TestCase):
              patch.object(app.circle_reader,'read') as ring_read,patch.object(app,'update_analyses'),\
              patch.object(macro.time,'monotonic',return_value=1.2):
             app.update(1.1);self.assertEqual(app.engine.state,'ESPERANDO')
-            app.update(1.2);self.assertEqual(app.engine.state,'FISGANDO')
-            ring_read.assert_not_called();macro.send_mouse.assert_called_with(True)
+            app.update(1.2);self.assertEqual(app.engine.state,'PREPARANDO_FISGADA')
+            ring_read.assert_not_called();self.assertFalse(app.held)
 
     def test_hook_click_precedes_ring_claim_and_slow_analyses(self):
         app=self.app;app.active=True;app.engine.state='ESPERANDO';app.engine.splash_armed_at=0.
@@ -131,8 +132,11 @@ class SplashInputPriority(unittest.TestCase):
              patch.object(app.circle_reader,'read') as ring_read,patch.object(app.claim_reader,'scan') as claim_read,\
              patch.object(app,'update_analyses') as background:
             app.update(1)
-            self.assertEqual(app.engine.state,'FISGANDO')
-            macro.send_mouse.assert_called_with(True)
+            self.assertEqual(app.engine.state,'PREPARANDO_FISGADA')
+            self.assertFalse(app.held)
+            with patch.object(macro.time,'monotonic',return_value=app.engine.deadline+.001):
+                app.update(app.engine.deadline+.001)
+            self.assertEqual(app.engine.state,'FISGANDO');macro.send_mouse.assert_called_with(True)
             ring_read.assert_not_called();claim_read.assert_not_called();background.assert_not_called()
 
     def test_hook_mouse_release_precedes_next_capture(self):

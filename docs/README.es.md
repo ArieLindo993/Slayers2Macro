@@ -2,7 +2,7 @@
 
 [Português](../README.md) · [English](README.en.md) · **Español**
 
-Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.45** integra el minijuego circular de noviembre: lanzamiento, salpicadura, mantener/soltar el ratón, toques A/D y recogida con T.
+Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.46** integra el minijuego circular de noviembre: lanzamiento, salpicadura, mantener/soltar el ratón, toques A/D y recogida con T.
 
 **[Descargar actualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Descargas](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Cambios](CHANGELOG.es.md)**
 
@@ -20,9 +20,10 @@ Para instalar manualmente, extrae **Slayers2Macro.zip** y abre **Slayers2Macro.e
 
 1. Equipa la caña cerca del agua y fija la cámara. Apunta donde caerá la línea y aparecerá la salpicadura; pulsa **F8**.
 2. Deja la calibración automática activada y pulsa **F4** con Roblox en primer plano.
-3. El macro lanza, deja asentar la línea y pulsa otra vez al detectar la salpicadura. La protección inicial de 1,8 segundos se ajusta en **Protección tras lanzar (s)**. El objetivo es **mantener el marcador dentro del arco verde**, usando posición y velocidad, anticipación y un pequeño margen para evitar oscilaciones. Si la posición no está disponible temporalmente, las flechas verdes hacia la derecha indican mantener y las rojas hacia la izquierda indican soltar. Las flechas blancas superiores no controlan el ratón.
-4. Las tarjetas activas A/D piden uno o dos toques según sus puntos, junto al control del ratón.
-5. Tras el resultado, mantiene **T tres segundos** por defecto, comprueba Claim/nombre/peso y vuelve a pescar. Observa las primeras rondas en la vista previa.
+3. El macro lanza y deja asentar la línea. La protección predeterminada es de **3 segundos**, con comprobación de estabilización. Tras reconocer la salpicadura, espera **0,18 segundos (180 ms)** antes de pulsar. Ajusta **Protección tras lanzar (s)** y **Retraso del enganche (s)** según el vuelo y la respuesta del juego.
+4. El objetivo es **mantener el marcador dentro del arco verde**, siguiendo los avisos: **verde hacia la derecha = mantener; rojo hacia la izquierda = soltar**. La posición no puede contradecir el rojo. La última instrucción se conserva entre lecturas; la posición solo se usa antes del primer aviso, sin anticipar un movimiento a la izquierda del centro.
+5. Las tarjetas activas A/D piden uno o dos toques según sus puntos, junto al control del ratón.
+6. Tras el resultado, mantiene **T tres segundos** por defecto, comprueba Claim/nombre/peso y vuelve a pescar. Observa las primeras rondas en la vista previa.
 
 Roblox debe seguir visible y enfocado. Perder foco pausa y suelta las entradas; vuelve y continúa con F4. Si mueves cámara o personaje, marca el agua de nuevo. La salpicadura se busca alrededor del punto marcado.
 

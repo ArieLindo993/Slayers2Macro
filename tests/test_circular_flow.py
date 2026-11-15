@@ -24,13 +24,54 @@ class Flow(unittest.TestCase):
         self.assertNotIn(('mouse',True),engine.step(1.81,None,splash=True,impact_activity=True))
         self.assertEqual(engine.state,'ASSENTANDO_LINHA')
         engine.step(2.0,None);self.assertEqual(engine.state,'ASSENTANDO_LINHA')
-        engine.step(2.12,None);self.assertEqual(engine.state,'ESPERANDO')
-        self.assertIn(('mouse',True),engine.step(2.3,None,splash=True))
+        engine.step(3.12,None);self.assertEqual(engine.state,'ESPERANDO')
+        self.assertNotIn(('mouse',True),engine.step(3.3,None,splash=True))
+        self.assertEqual(engine.state,'PREPARANDO_FISGADA')
+        self.assertIn(('mouse',True),engine.step(3.49,None))
 
     def test_continuous_zone_activity_cannot_keep_settling_forever(self):
         engine=CircularEngine(cfg());engine.state='CLIQUE';engine.deadline=0.
         engine.step(0,None)
-        for now in (.5,1.,1.5,1.9,2.5,3.01):engine.step(now,None,impact_activity=True)
+        for now in (.5,1.,1.5,1.9,2.5,3.01,3.6,4.21):engine.step(now,None,impact_activity=True)
+        self.assertEqual(engine.state,'ESPERANDO')
+        self.assertNotIn(('mouse',True),engine.step(4.3,None,splash=True,impact_activity=True))
+        self.assertEqual(engine.state,'ESPERANDO')
+        engine.step(4.65,None)
+        engine.step(4.7,None,splash=True,impact_activity=True)
+        self.assertEqual(engine.state,'PREPARANDO_FISGADA')
+
+    def test_delayed_impact_after_old_guard_never_hooks(self):
+        engine=CircularEngine(cfg());engine.state='CLIQUE';engine.deadline=0.
+        engine.step(0,None)
+        for now in (1.8,2.0,2.57,2.7,2.9):
+            self.assertNotIn(('mouse',True),engine.step(now,None,splash=True,impact_activity=True))
+            self.assertEqual(engine.state,'ASSENTANDO_LINHA')
+        engine.step(3.25,None);self.assertEqual(engine.state,'ESPERANDO')
+        engine.step(4.,None,splash=True,impact_activity=True)
+        self.assertEqual(engine.state,'PREPARANDO_FISGADA')
+        self.assertNotIn(('mouse',True),engine.step(4.17,None))
+        self.assertIn(('mouse',True),engine.step(4.19,None))
+
+    def test_pending_hook_is_cancelled_by_pause_or_visible_circle(self):
+        for interruption in ('stop','circle'):
+            engine=CircularEngine(cfg());engine.state='ESPERANDO';engine.splash_armed_at=0.
+            engine.step(1.,None,splash=True)
+            if interruption=='stop':engine.stop('Pausado.')
+            else:engine.step(1.05,ring(hold=False))
+            self.assertNotIn(('mouse',True),engine.step(1.3,None))
+            self.assertNotEqual(engine.state,'FISGANDO')
+
+    def test_wait_for_circle_does_not_repeatedly_reel_each_burst(self):
+        engine=CircularEngine(cfg());engine.state='AGUARDANDO_CIRCULO';engine.deadline=5.
+        for now in (1.,2.,3.,4.):
+            self.assertNotIn(('mouse',True),engine.step(now,None,splash=True))
+            self.assertEqual(engine.state,'AGUARDANDO_CIRCULO')
+        engine.step(5.1,None);self.assertEqual(engine.state,'POSICIONANDO')
+
+    def test_overdue_hook_is_dropped_instead_of_clicking_an_old_splash(self):
+        engine=CircularEngine(cfg());engine.state='ESPERANDO';engine.splash_armed_at=0.
+        engine.step(1.,None,splash=True)
+        self.assertNotIn(('mouse',True),engine.step(2.,None))
         self.assertEqual(engine.state,'ESPERANDO')
 
     def test_existing_minigame_can_resume_during_settle_guard(self):
@@ -45,8 +86,9 @@ class Flow(unittest.TestCase):
             now=max(now,engine.deadline+.01);engine.step(now,None)
             now+=.2;engine.step(now,None)
             now+=.3;engine.step(now,None)
-            now+=1.9;engine.step(now,None)
+            now+=3.1;engine.step(now,None)
             now+=.1;engine.step(now,None,splash=True)
+            now+=.2;engine.step(now,None)
             now+=.11;engine.step(now,None)
             now+=.1;engine.step(now,ring(hold=True,key='D',presses=1))
             now+=.2;engine.step(now,ring(hold=False))
@@ -69,22 +111,24 @@ class Flow(unittest.TestCase):
         self.assertEqual(engine.state,'ASSENTANDO_LINHA')
         self.assertEqual(engine.step(1.6,None,splash=True),[('mouse',False)]) # initial impact is not armed
         self.assertEqual(engine.step(2.5,None,splash=True),[('mouse',False)])
-        engine.step(3.35,None)
-        self.assertIn(('mouse',True),engine.step(3.5,None,splash=True))
+        engine.step(4.55,None)
+        self.assertNotIn(('mouse',True),engine.step(4.6,None,splash=True))
+        self.assertEqual(engine.state,'PREPARANDO_FISGADA')
+        self.assertIn(('mouse',True),engine.step(4.8,None))
         self.assertEqual(engine.state,'FISGANDO')
-        self.assertIn(('mouse',False),engine.step(3.6,None))
+        self.assertIn(('mouse',False),engine.step(4.9,None))
         r=ring(hold=True,key='A',presses=2)
-        actions=engine.step(3.8,r)
+        actions=engine.step(5.1,r)
         self.assertIn(('mouse',True),actions);self.assertIn(('tap','A'),actions)
-        self.assertIn(('tap','A'),engine.step(3.91,r))
-        self.assertNotIn(('tap','A'),engine.step(4.1,r))
-        self.assertIn(('mouse',False),engine.step(4.2,ring(hold=False)))
-        engine.step(5,ring(complete=True));self.assertEqual(engine.state,'RESULTADO')
-        engine.step(5.1,None,loot=(.6,.4));engine.step(5.4,None,loot=(.6,.4))
+        self.assertIn(('tap','A'),engine.step(5.21,r))
+        self.assertNotIn(('tap','A'),engine.step(5.4,r))
+        self.assertIn(('mouse',False),engine.step(5.5,ring(hold=False)))
+        engine.step(6.3,ring(complete=True));self.assertEqual(engine.state,'RESULTADO')
+        engine.step(6.4,None,loot=(.6,.4));engine.step(6.7,None,loot=(.6,.4))
         self.assertEqual(engine.state,'TECLA_T')
-        engine.step(8.5,None,loot=(.6,.4))
+        engine.step(9.8,None,loot=(.6,.4))
         self.assertEqual(engine.state,'VERIFICANDO_COLETA')
-        for t in (8.6,8.9,9.3,9.9,10.1):engine.step(t,None)
+        for t in (9.9,10.2,10.6,11.2,11.4):engine.step(t,None)
         self.assertEqual(engine.cycles,1);self.assertEqual(engine.collected,1)
         self.assertEqual(engine.collect_attempts,0)
 

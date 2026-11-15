@@ -4,6 +4,14 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## Beta 0.0.46 — protección del impacto, tiempo del enganche y prioridad del rojo
+
+- Sube la protección predeterminada de 1,8 a 3 segundos tras confirmar un clic en el impacto unos 2,57 segundos después del lanzamiento. La estabilización considera la señal elevada completa; si sigue activa al alcanzar el límite, espera a que se estabilice antes de aceptar otro enganche.
+- Migra una vez el antiguo valor guardado de 1,8 segundos y conserva otros ajustes y cambios deliberados posteriores. Añade un retraso configurable de 0,18 segundos (0,08–0,4). La protección puede ignorar picadas muy tempranas tras lanzar.
+- Programa un único clic después de detectar, manteniendo la respuesta a pausa y pérdida de foco y descartando acciones demasiado tardías. Espera hasta cuatro segundos por el círculo sin tirones repetidos; sin confirmación, vuelve a lanzar dentro del límite existente.
+- Rojo para soltar y verde para mantener tienen prioridad sobre la posición. Conserva la última instrucción mientras el círculo esté activo; la posición solo es un apoyo inicial. Retira la suposición incorrecta de que al soltar el marcador cruza el centro hacia la izquierda. El objetivo sigue siendo el arco verde.
+- Registra enganches programados, efectivos, cancelados y no confirmados. La reproducción omite el impacto cerca de 32 segundos y propone el siguiente clic unos 200 ms después de detectar; los 87 cuadros reconocidos con rojo sueltan. Falta verificar la aceptación en directo.
+
 ## Beta 0.0.45 — salpicaduras pequeñas y control del arco verde
 
 - Añade detección de los pequeños estallidos azules confirmados, descartados por el filtro anterior de gotas cian grandes y brillantes. Comprueba forma compacta, proximidad al agua marcada, orientación radial, direcciones distintas y predominio frente al efecto de zona; los umbrales consideran la resolución.

@@ -24,16 +24,16 @@ do mouse e resultado. A localização usa os segmentos laterais do anel e exige
 o arco verde para validar a interface. A posição do marcador não é condição
 para localizar o anel: sair da faixa verde não interrompe essa localização.
 
-O objetivo, confirmado em 15/11, é manter a barrinha no arco verde. Desde a
-Beta 0.0.45, `CircularCommand` usa a diferença angular para o centro do arco e
-a velocidade medida, antecipando 70 ms e usando uma pequena margem de troca.
-Segurar move no sentido crescente do ângulo; soltar permite retornar. Sem
-posição válida, os chevrons coloridos cobrem temporariamente o controle, e
-sem ambos conserva-se a última ordem enquanto o círculo estiver ativo. As
-setas brancas superiores não comandam o mouse. O botão é liberado no término
-ou após ausência do círculo por pelo menos 150 ms. O componente apenas propõe
-um estado; não envia entradas. A simulação de inércia é independente e não
-representa uma medição da física exata do jogo.
+O objetivo, confirmado em 15/11, é manter a barrinha no arco verde. A observação
+posterior esclareceu que soltar faz a barra retornar ao centro, sem atravessá-lo
+para a esquerda. Desde a Beta 0.0.46, `CircularCommand` prioriza as instruções
+coloridas: verde segura e vermelho solta. A última instrução permanece válida
+entre leituras enquanto o círculo estiver ativo. A posição só serve como apoio
+antes do primeiro aviso; não pode contrariar o vermelho. As setas brancas
+superiores não comandam o mouse. O botão é liberado no término ou após ausência
+do círculo por pelo menos 150 ms. O componente apenas propõe um estado; não envia
+entradas. A antiga simulação de inércia foi retirada por não representar esse
+comportamento observado.
 
 O leitor foi exercitado em 275 quadros amostrados dos dez vídeos. Foram obtidas
 leituras do anel, de ambas as instruções e do resultado dourado. A amostragem
@@ -139,3 +139,28 @@ frequente, e o intervalo é registrado no log. Durante a espera, buscas completa
 do círculo ocorrem a cada 400 ms, mantendo capturas de splash entre elas. Após
 fisgar, a busca mantém seu intervalo anterior. Isso reduz trechos sem leitura,
 mas não comprova o desempenho em cada computador ou uma vitória ao vivo.
+
+## Impacto tardio e momento de fisgar — Beta 0.0.46
+
+O novo trecho e o log mostram a queda inicial sendo clicada cerca de 2,57 s após
+o lançamento. O usuário confirmou que a puxada perto de 32 s é esse impacto.
+A proteção padrão passa a 3 s e monitora a duração do sinal elevado, incluindo
+a cauda da animação. Ao chegar ao limite com sinal ainda ativo, não aceita uma
+nova fisgada até observar estabilização. O antigo padrão salvo de 1,8 s é migrado
+uma vez; outros ajustes, e escolhas posteriores à migração, são mantidos.
+
+Um splash aceito agenda a fisgada para 180 ms depois, por padrão. A espera usa
+um estado com prazo, sem bloquear os atalhos. O botão é pressionado por cerca
+de 90 ms. Pausa, perda de foco ou círculo já reconhecido cancelam a ação pendente;
+mais de 250 ms de atraso além do prazo também cancela o clique. Sem círculo após
+quatro segundos, tenta novo lançamento dentro do limite existente, em vez de
+puxar novamente a cada emissão de partículas. Os tempos dependem da resposta do
+jogo: o atraso é configurável entre 80 e 400 ms e a proteção também é ajustável.
+Uma proteção longa pode ignorar a primeira fisgada se ela vier muito cedo.
+
+No replay desse trecho, o impacto perto de 32 s ficou sem clique. O próximo
+evento foi lido por volta de 34 s e gerou uma proposta de clique perto de 34,2 s.
+No minigame, todos os 87 quadros reconhecidos com aviso vermelho resultaram em
+soltar, inclusive com diferença entre a posição e o centro do arco. A regressão
+inclui um recorte anônimo desse caso. A gravação não muda com as entradas
+propostas; portanto ainda falta validar sua aceitação pelo jogo ao vivo.

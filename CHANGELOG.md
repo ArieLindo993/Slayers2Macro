@@ -4,6 +4,14 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## Beta 0.0.46 — proteção do impacto, tempo da fisgada e prioridade do vermelho
+
+- O relato confirmado e o log mostram um clique no impacto cerca de 2,57 segundos depois de lançar, além do padrão anterior de 1,8 segundo. A proteção padrão passa a 3 segundos e considera o sinal elevado inteiro, além do instante inicial. Se atingir o limite de assentamento com sinal ativo, aguarda estabilização antes de aceitar outra fisgada.
+- Migra uma única vez o antigo padrão salvo de 1,8 para 3 segundos; mantém outros ajustes e alterações deliberadas feitas após a atualização. Acrescenta **Atraso da fisgada (s)**, com padrão de 0,18 segundo e ajuste entre 0,08 e 0,4. Os tempos são configuráveis; a proteção pode ignorar fisgadas que ocorram muito cedo após lançar.
+- O splash agenda um clique, em vez de pressionar no mesmo instante. A espera não bloqueia os atalhos; pausa, perda de foco ou um círculo já reconhecido cancelam a ação pendente. Uma ação muito atrasada é descartada. Após clicar, aguarda até quatro segundos pelo círculo, sem puxadas repetidas a cada partícula; sem confirmação, tenta novo lançamento dentro do limite existente.
+- A instrução colorida tem prioridade: vermelho solta e verde segura. Mantém a última ordem enquanto o círculo está ativo; a posição serve apenas antes do primeiro aviso. Retira a antecipação que supunha atravessar o centro para a esquerda ao soltar, hipótese contrariada pela observação do jogo. O objetivo continua sendo manter a barrinha no arco verde.
+- Registra agendamento, atraso efetivo, cancelamento e falta de confirmação da fisgada. No replay do trecho informado, o impacto perto de 32 s não gera clique; o próximo evento é clicado aproximadamente 200 ms depois de ser lido. Os 87 quadros reconhecidos com aviso vermelho no trecho do círculo resultam em soltar. Esses resultados são propostas de entrada sobre gravação; não comprovam aceitação ao vivo.
+
 ## Beta 0.0.45 — splash pequeno e controle no arco verde
 
 - Corrige o caso confirmado na gravação de 15/11: o filtro anterior aceitava gotas ciano grandes e brilhantes e descartava os estouros azuis menores. Uma leitura complementar verifica gotas compactas perto do ponto marcado, orientação radial, distribuição em direções diferentes e predominância sobre o efeito da área. Os limites de cor e tamanho consideram a redução de resolução.

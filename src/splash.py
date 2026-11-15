@@ -64,6 +64,7 @@ class SplashReader:
                     'blue_mass':round(blue_mass,1),'blue_coherence':round(blue_coherence,3),
                     'blue_spread':round(spread,3),
                     'capture_interval_ms':None if self.previous_time is None else round((now-self.previous_time)*1000,1),
+                    'signal_active':bool(feature>self.baseline*1.10+20),
                     'burst_onset':bool(not first and feature>self.baseline*1.35+40 and rise>max(25,feature*.12)),
                     'armed':bool(armed),'detected':bool(event)}
         # Learn during arming too. Keep cooldown/history across brief disarmed

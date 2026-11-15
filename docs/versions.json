@@ -344,6 +344,13 @@
       "tag": "v0.0.45-beta",
       "published": true,
       "commit": "4e9b119a431f10b67cf909331b98ee4a76a512ec"
+    },
+    {
+      "beta": "0.0.46",
+      "original": "Landing protection, delayed hook and red-release priority",
+      "kind": "git",
+      "tag": "v0.0.46-beta",
+      "published": false
     }
   ]
 }

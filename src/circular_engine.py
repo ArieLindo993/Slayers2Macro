@@ -10,12 +10,20 @@ class CircularEngine(Engine):
         self.splash_armed_at=float('inf');self.claim_hold_completed=False
         self.confirmation_source=None
         self.cast_released_at=None;self.last_landing_activity=None
+        self.splash_ready=True;self.hook_requested_at=None
 
     def cast(self,now):
         self.mouse_command.reset();self.key_command.reset()
         self.claim_hold_completed=False
         self.cast_released_at=None;self.last_landing_activity=None
+        self.splash_ready=False;self.hook_requested_at=None
         return [('release_keys',True)]+super().cast(now)
+
+    def prepare_hook(self,now):
+        self.state='PREPARANDO_FISGADA';self.hook_requested_at=now
+        self.deadline=now+self.cfg.get('splash_click_delay',.18)
+        self.message='Splash confirmado. Aguardando o instante de fisgar…'
+        return [('mouse',False)]
 
     def recover(self,now,reason='cast_unconfirmed',require_marker=False):
         self.mouse_command.reset();self.key_command.reset()
@@ -71,9 +79,22 @@ class CircularEngine(Engine):
             quiet=self.last_landing_activity is None or now-self.last_landing_activity>=.30
             if now>=self.deadline and (quiet or now>=self.deadline+1.2):
                 self.state='ESPERANDO';self.splash_armed_at=now
+                self.splash_ready=quiet
                 self.deadline=now+self.cfg['wait_seconds']
-                self.message='Linha lançada. Aguardando o splash…'
+                self.message='Linha lançada. Aguardando o splash…' if quiet else 'Aguardando estabilização da água antes de fisgar…'
             return [('mouse',False)]
+        if self.state=='PREPARANDO_FISGADA':
+            if now>self.deadline+.25:
+                self.state='ESPERANDO';self.splash_armed_at=now+.3
+                self.splash_ready=False;self.last_landing_activity=now
+                self.deadline=now+self.cfg['wait_seconds']
+                self.message='Janela da fisgada passou. Aguardando novo splash…'
+                return [('mouse',False)]
+            if now>=self.deadline:
+                self.state='FISGANDO';self.deadline=now+.09
+                self.message='Fisgando após a confirmação do splash…'
+                return [('mouse',True)]
+            return []
         if self.state=='FISGANDO':
             if now>=self.deadline:
                 self.state='AGUARDANDO_CIRCULO';self.deadline=now+4
@@ -81,27 +102,29 @@ class CircularEngine(Engine):
                 return [('mouse',False)]
             return []
         if self.state=='AGUARDANDO_CIRCULO':
-            if splash:
-                self.state='FISGANDO';self.deadline=now+.09
-                return [('mouse',True)]
+            # One hook click, then wait for confirmation. Further particles
+            # must not repeatedly reel the line before the circle can appear.
             if loot:return self.prepare_collect(now,loot)
             if now>=self.deadline:
-                self.state='ESPERANDO';self.deadline=now+self.cfg['wait_seconds']
-                self.splash_armed_at=now+.4
+                if self.attempts>=self.cfg['max_cast']:return self.recover(now)
+                return self.cast(now)
             return []
-        if self.state=='ESPERANDO' and splash and now>=self.splash_armed_at:
-            self.state='FISGANDO';self.deadline=now+.09
-            self.message='Splash detectado. Fisgando…'
-            return [('mouse',True)]
+        if self.state=='ESPERANDO':
+            if not self.splash_ready:
+                if impact_activity:self.last_landing_activity=now
+                elif self.last_landing_activity is None or now-self.last_landing_activity>=.30:
+                    self.splash_ready=True;self.message='Linha lançada. Aguardando o splash…'
+            if splash and self.splash_ready and now>=self.splash_armed_at:return self.prepare_hook(now)
         previous=self.state
         actions=super().step(now,None,False,loot,reward,scene_stamp,scene_valid)
         if previous=='CLIQUE' and self.state=='ESPERANDO':
-            # The first landing burst can arrive after the former 0.9 s guard.
+            # The first landing burst can arrive after the former 1.8 s guard.
             # Keep it disarmed through the configurable settling interval and
             # a short quiet gap. The upper bound prevents zone mist deadlocks.
             self.state='ASSENTANDO_LINHA';self.splash_armed_at=float('inf')
             self.cast_released_at=now;self.last_landing_activity=now
-            self.deadline=now+self.cfg.get('cast_settle_seconds',1.8)
+            self.splash_ready=False
+            self.deadline=now+self.cfg.get('cast_settle_seconds',3.)
             self.message='Esperando a linha assentar…'
         if previous=='TECLA_T' and self.state=='VERIFICANDO_COLETA':self.claim_hold_completed=True
         return actions

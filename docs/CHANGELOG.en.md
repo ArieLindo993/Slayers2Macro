@@ -4,6 +4,14 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## Beta 0.0.46 — landing protection, hook timing and red-cue priority
+
+- Raises default post-cast protection from 1.8 to 3 seconds after a confirmed landing click about 2.57 seconds after release. Settling considers the elevated signal throughout the burst; an active signal at the time limit must settle before another hook is accepted.
+- Upgrades the old saved 1.8-second default once, preserving other custom settings and later deliberate changes. Adds an adjustable 0.18-second hook delay (0.08–0.4 seconds). A protective interval can skip bites occurring very early after casting.
+- Schedules one hook click after detection, with responsive pause/focus handling and expiry for overdue inputs. Waits up to four seconds for the circle without repeated reeling; retries a fresh cast within existing limits if unconfirmed.
+- Red release and green hold take priority over position. The last coloured instruction persists while the circle is active; position is only an initial fallback. Removes the incorrect assumption that release carries the marker past centre to the left. The goal remains the green arc.
+- Logs scheduled, actual, cancelled and unconfirmed hooks. Recorded replay skips the landing near 32 seconds and proposes the next click about 200 ms after detection; all 87 recognized red-cue frames release. Replay cannot prove acceptance by the live game.
+
 ## Beta 0.0.45 — small blue splashes and green-arc control
 
 - Adds a complementary detector for the confirmed small blue bursts missed by the previous large, bright cyan-particle filter. It checks compact droplets, proximity to marked water, radial shape, directional spread and dominance over zone effects, with resolution-aware thresholds.

@@ -30,3 +30,8 @@ plus frame geometry and sampling rate. All other pixels are zeroed. They do
 not include recording names, paths, audio, player names or character images.
 They cover the three user-confirmed small bursts, a zone-only control, lower
 capture rates and a resized variant. Original recordings remain local.
+
+`circular_release_centre.png` is a circle-only crop from the later November 15
+report, where red release guidance appears with the marker near the centre.
+It excludes characters, player names, recording names and local paths, and
+regresses instruction priority over the position fallback.

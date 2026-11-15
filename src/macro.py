@@ -124,7 +124,8 @@ def reward_cycle_owner(state,cycle):
 
 DEFAULTS={'roi':[.733,.289,.034,.369],'cast':None,'anticipation':.10,
           'wait_seconds':20.,'result_wait':2.,'recast_seconds':1.5,
-          'cast_hold':.25,'cast_settle_seconds':1.8,'t_hold':3.0,'max_cast':3,'max_collect':5,'collect_timeout':35.,'auto_calibrate':True,'fast_collection_defaults':True}
+          'cast_hold':.25,'cast_settle_seconds':3.,'splash_click_delay':.18,'hook_timing_revision':1,
+          't_hold':3.0,'max_cast':3,'max_collect':5,'collect_timeout':35.,'auto_calibrate':True,'fast_collection_defaults':True}
 
 # Observações lentas continuam úteis por um intervalo limitado. A barra usa
 # capturas próprias em cada tick; nunca usa imagens atrasadas para mover o mouse.
@@ -164,9 +165,12 @@ class App:
                 roi=profile.get('roi',[])
                 if len(roi)==4 and all(isinstance(v,(int,float)) and 0<v<1 for v in roi) and roi[0]+roi[2]<=1 and roi[1]+roi[3]<=1:
                     self.config['calibration_profile']=profile
-            for key,lo,hi in [('cast_hold',.08,1),('cast_settle_seconds',.6,5),('t_hold',.2,5),('wait_seconds',10,60),('result_wait',.5,20)]:
+            for key,lo,hi in [('cast_hold',.08,1),('cast_settle_seconds',.6,5),('splash_click_delay',.08,.4),('t_hold',.2,5),('wait_seconds',10,60),('result_wait',.5,20)]:
                 value=saved.get(key)
                 if isinstance(value,(int,float)) and lo<=value<=hi:self.config[key]=value
+            if saved.get('hook_timing_revision')!=1 and self.config['cast_settle_seconds']==1.8:
+                self.config['cast_settle_seconds']=DEFAULTS['cast_settle_seconds']
+            self.config['hook_timing_revision']=1
             point=saved.get('cast')
             if isinstance(point,list) and len(point)==2 and all(isinstance(v,(int,float)) and 0<v<1 for v in point):self.config['cast']=point
             roi=saved.get('roi')
@@ -541,7 +545,7 @@ class App:
         self.stop('Ajuste as opções e volte ao jogo para iniciar.')
         if self.settings and self.settings.winfo_exists():self.settings.lift();return
         self.settings=tk.Toplevel(self.root);self.settings.title(self.tr('Configurar pesca'))
-        self.settings.geometry('640x640');self.settings.resizable(False,False);self.settings.configure(bg=BG)
+        self.settings.geometry('640x700');self.settings.minsize(600,640);self.settings.resizable(True,True);self.settings.configure(bg=BG)
         container=ttk.Frame(self.settings,padding=18);container.pack(fill='both',expand=True)
         ttk.Button(container,text=self.tr('Salvar e fechar'),style='Go.TButton',command=self.apply_settings).pack(fill='x',side='bottom',pady=(12,0))
         tabs=ttk.Notebook(container);tabs.pack(fill='both',expand=True)
@@ -560,13 +564,13 @@ class App:
         ttk.Label(preferences,text=self.tr('Escolha teclas diferentes. A, D e T ficam reservados à pesca.'),wraplength=535,style='Muted.TLabel').pack(anchor='w',pady=12)
         ttk.Button(preferences,text=self.tr('Restaurar padrões'),command=self.reset_hotkey_fields).pack(anchor='w')
         self.fields={}
-        for key,label,lo,hi in [('cast_hold','Duração do clique (s)',.08,1),('cast_settle_seconds','Proteção após lançar (s)',.6,5),('t_hold','Segurar T (s)',.2,5),
+        for key,label,lo,hi in [('cast_hold','Duração do clique (s)',.08,1),('cast_settle_seconds','Proteção após lançar (s)',.6,5),('splash_click_delay','Atraso da fisgada (s)',.08,.4),('t_hold','Segurar T (s)',.2,5),
                                ('wait_seconds','Esperar a pesca antes de repetir (s)',10,60),
                                ('result_wait','Esperar item depois da pesca (s)',.5,20)]:
             row=ttk.Frame(frame);row.pack(fill='x',pady=5)
             ttk.Label(row,text=self.tr(label)).pack(side='left')
             var=tk.StringVar(value=str(self.config[key]));self.fields[key]=(var,lo,hi)
-            ttk.Spinbox(row,textvariable=var,from_=lo,to=hi,increment=.1,width=7).pack(side='right')
+            ttk.Spinbox(row,textvariable=var,from_=lo,to=hi,increment=.01 if key=='splash_click_delay' else .1,width=7).pack(side='right')
         ttk.Label(frame,text=self.tr('Se o impacto da linha ainda for clicado, aumente a proteção após lançar.'),
                   style='Muted.TLabel',wraplength=520).pack(anchor='w',pady=(4,0))
         ttk.Checkbutton(frame,text=self.tr('Só observar (não envia comandos)'),variable=self.dry,
@@ -735,7 +739,7 @@ class App:
         self.last_mouse_instruction=None
         self.claim_scene=None;self.last_claim_scan=-float('inf');self.last_circle_scan=-float('inf')
         self.started_at=time.monotonic();self.capture_retry_at=0.;self.capture_failures=0
-        self.session_log.event('MACRO_INICIADO',ciclo=self.cycle_id,modo='observação' if self.dry.get() else 'pesca',calibracao='automática' if self.config['auto_calibrate'] else 'manual',segurar_T=self.config['t_hold'],protecao_lancamento=self.config['cast_settle_seconds'],perfil=self.profile_key)
+        self.session_log.event('MACRO_INICIADO',ciclo=self.cycle_id,modo='observação' if self.dry.get() else 'pesca',calibracao='automática' if self.config['auto_calibrate'] else 'manual',segurar_T=self.config['t_hold'],protecao_lancamento=self.config['cast_settle_seconds'],atraso_fisgada=self.config['splash_click_delay'],perfil=self.profile_key)
         self.journal.record('started',self.engine.state,active=True,cycles=self.engine.cycles)
         if self.paused_state in ('RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA'):
             self.engine.state='RESULTADO';self.engine.deadline=time.monotonic()+1
@@ -1017,7 +1021,7 @@ class App:
 
     def update_circular(self,now):
         if not self.sync_window() or now<self.capture_retry_at:return
-        if self.engine.state in ('CLIQUE','FISGANDO') and not self.dry.get():
+        if self.engine.state in ('CLIQUE','PREPARANDO_FISGADA','FISGANDO') and not self.dry.get():
             # Timed clicks must finish before CV/OCR can delay key release.
             self.circle_splash=False;self.circular_scene={};self.circular_scene_time=now
             self.advance(now,None);return
@@ -1025,7 +1029,7 @@ class App:
         self.tick_stage='captura';full=self.sample(full=True);captured=time.monotonic()
         self.tick_stage='splash'
         self.circle_splash=self.splash_reader.observe(full,self.config['cast'],captured,
-            self.engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO') and captured>=self.engine.splash_armed_at)
+            self.engine.state=='ESPERANDO' and captured>=self.engine.splash_armed_at)
         if self.circle_splash:
             self.session_log.event('SPLASH_DETECTADO',ciclo=self.cycle_id,**self.splash_reader.stats)
             if not self.dry.get():
@@ -1152,7 +1156,7 @@ class App:
             actions=self.engine.step(now,reading,loot=scene.get('loot'),
                 reward=bool(scene.get('reward') or text_reward),scene_stamp=self.circular_scene_time,
                 scene_valid=0<=now-self.circular_scene_time<.5,splash=self.circle_splash,
-                impact_activity=self.splash_reader.stats.get('burst_onset',False))
+                impact_activity=self.splash_reader.stats.get('signal_active',False))
         elif (reading is None and now-max(self.scene_time,self.started_at)>5
             and self.engine.state!='RECUPERANDO'):
             actions=self.engine.recover(now,reason='vision_unavailable')
@@ -1172,6 +1176,14 @@ class App:
                 capturas_sem_item=self.engine.absent_frames,item_visto_na_coleta=self.engine.loot_seen,
                 tentativa=self.engine.collect_attempts,decisao=self.engine.state)
         if self.engine.state!=previous_state:
+            if previous_state=='PREPARANDO_FISGADA' and self.engine.state!='FISGANDO':
+                self.session_log.event('FISGADA_CANCELADA',ciclo=self.cycle_id,proxima_etapa=self.engine.state)
+            if previous_state=='AGUARDANDO_CIRCULO' and self.engine.state in ('POSICIONANDO','RECUPERANDO'):
+                self.session_log.event('FISGADA_NAO_CONFIRMADA',ciclo=self.cycle_id,proxima_etapa=self.engine.state)
+            if self.engine.state in ('PREPARANDO_FISGADA','FISGANDO'):
+                self.session_log.event('FISGADA_AGENDADA' if self.engine.state=='PREPARANDO_FISGADA' else 'FISGADA_CLICADA',
+                    ciclo=self.cycle_id,atraso_configurado=self.config['splash_click_delay'],
+                    desde_deteccao=round(now-self.engine.hook_requested_at,3) if self.engine.hook_requested_at is not None else None)
             events={'POSICIONANDO':'LANCAMENTO_PREPARADO','CLIQUE':'VARA_LANCADA','ASSENTANDO_LINHA':'AGUARDANDO_IMPACTO_LINHA','ESPERANDO':'AGUARDANDO_PESCA','PESCANDO':'MINIGAME_INICIADO','RESULTADO':'MINIGAME_ENCERRADO','MIRANDO_ITEM':'TENTATIVA_DE_COLETA','TECLA_T':'T_PRESSIONADO','VERIFICANDO_COLETA':'T_LIBERADO_VERIFICANDO_COLETA','REINICIANDO':'PREPARANDO_PROXIMA_PESCA','PARADO':'PARADA_AUTOMATICA','RECUPERANDO':'RECUPERACAO_AUTOMATICA'}
             self.session_log.event(events.get(self.engine.state,'MUDANCA_DE_ESTADO'),ciclo=self.cycle_id,anterior=previous_state,estado=self.engine.state,lancamento=self.engine.attempts,tentativa_coleta=self.engine.collect_attempts,descricao=self.engine.message)
         if previous_state=='PESCANDO' and self.engine.state!='PESCANDO':

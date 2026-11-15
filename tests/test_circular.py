@@ -1,6 +1,5 @@
 """New UI recognition and safe mouse-command transitions, without game input."""
 from pathlib import Path
-import math
 import sys, unittest
 import cv2
 import numpy as np
@@ -41,18 +40,21 @@ class CircularTests(unittest.TestCase):
         command=CircularCommand()
         self.assertTrue(command.step(CircularReading((1,1),1,1,marker=-.25),0))
         self.assertTrue(command.step(CircularReading((1,1),1,1,hold=True),.1))
-        self.assertFalse(command.step(CircularReading((1,1),1,1,marker=.25),.2))
+        self.assertTrue(command.step(CircularReading((1,1),1,1,marker=.25),.2))
+        self.assertFalse(CircularCommand().step(CircularReading((1,1),1,1,marker=.25),.2))
 
-    def test_position_overrides_stale_cue_and_anticipates_crossing(self):
+    def test_release_instruction_overrides_position_and_remains_latched(self):
         command=CircularCommand()
         reading=CircularReading((1,1),1,1,hold=False,marker=-.10,target=0.,band=.10)
-        self.assertTrue(command.step(reading,0.))
+        self.assertFalse(command.step(reading,0.))
         reading.marker=-.01
         self.assertFalse(command.step(reading,.1))
         reading.marker=.15;reading.hold=True
-        self.assertFalse(command.step(reading,.2))
-        reading.marker=None;reading.hold=True
+        self.assertTrue(command.step(reading,.2))
+        reading.marker=.25;reading.hold=None
         self.assertTrue(command.step(reading,.3))
+        reading.hold=False
+        self.assertFalse(command.step(reading,.4))
 
     def test_marker_across_angle_wrap_takes_shortest_direction(self):
         command=CircularCommand()
@@ -61,20 +63,25 @@ class CircularTests(unittest.TestCase):
         reading.marker=-.46;reading.target=.49
         self.assertFalse(command.step(reading,.1))
 
-    def test_feedback_keeps_marker_in_moving_green_arc_with_inertia(self):
-        # Independent toy physics checks the control objective, not a claim
-        # that the game's unknown motion parameters have been measured.
-        for dt in (.02,.05,.10):
-            command=CircularCommand();marker=.20;velocity=0.;inside=observed=0
-            for i in range(round(20/dt)):
-                now=i*dt;target=.025*math.sin(now*.6)
-                reading=CircularReading((1,1),1,1,hold=True,marker=marker,target=target,band=.18)
-                held=command.step(reading,now)
-                velocity+=(.4*(1 if held else -1)-velocity)*min(1.,dt/.15)
-                marker+=velocity*dt
-                if now>=1.:
-                    observed+=1;inside+=abs(marker-target)<=.09
-            self.assertGreater(inside/observed,.9,dt)
+    def test_release_returns_to_centre_without_assumed_left_overshoot(self):
+        command=CircularCommand()
+        command.step(CircularReading((1,1),1,1,hold=True),0.)
+        marker=.20
+        for i in range(60):
+            marker=max(0.,marker-.01)
+            reading=CircularReading((1,1),1,1,hold=False if i==0 else None,marker=marker,target=.035,band=.15)
+            self.assertFalse(command.step(reading,(i+1)*.05),i)
+        self.assertEqual(marker,0.)
+        self.assertTrue(command.step(CircularReading((1,1),1,1,hold=True,marker=0.),3.1))
+
+    def test_recorded_red_at_centre_is_released_despite_position_offset(self):
+        rgb=np.full((1072,1920,3),30,np.uint8)
+        crop=cv2.cvtColor(cv2.imread(str(ROOT/'tests/fixtures/circular_release_centre.png')),cv2.COLOR_BGR2RGB)
+        rgb[316:756,1222:1742]=crop
+        reading=CircularReader(ROOT/'src/assets').read(rgb)
+        self.assertIsNotNone(reading);self.assertIs(reading.hold,False)
+        self.assertLess(reading.marker,reading.target)
+        self.assertFalse(CircularCommand().step(reading,0.))
 
     def test_coloured_cues_work_when_marker_is_temporarily_missing(self):
         reader=CircularReader(ROOT/'src/assets')

@@ -35,11 +35,11 @@ def main():
             for index,data in enumerate(frames):
                 now=index*args.interval;image=np.frombuffer(data,np.uint8).reshape(h,w,3)
                 started=time.perf_counter();reading=reader.read(image)
-                bite=splash.observe(image,args.water,now,engine.state in ('ESPERANDO','AGUARDANDO_CIRCULO'))
+                bite=splash.observe(image,args.water,now,engine.state=='ESPERANDO')
                 found=claim.scan(image) if reading is None or reading.complete else None
                 before=engine.state
                 actions=engine.step(now,reading,loot=found['point'] if found else None,splash=bite,
-                                    impact_activity=splash.stats.get('burst_onset',False))
+                                    impact_activity=splash.stats.get('signal_active',False))
                 rows.append({'seconds':round(now,3),'state':engine.state,'changed':before!=engine.state,
                              'circle':reading is not None,'completed_circle':bool(reading and reading.complete),
                              'key':reading.key if reading else None,'presses':reading.presses if reading else 0,
