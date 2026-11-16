@@ -204,6 +204,7 @@ Círculo manual salvo · automático pode ser reativado|Manual circle saved · a
 Círculo localizado · mouse e A/D ativos|Circle located · mouse and A/D active|Círculo localizado · ratón y A/D activos
 Minigame concluído · aguardando Claim|Minigame complete · waiting for Claim|Minijuego terminado · esperando Claim
 Reencontrando o círculo…|Finding the circle again…|Buscando el círculo de nuevo…
+Observando a água · aguardando fisgada|Watching the water · waiting for a bite|Observando el agua · esperando una picada
 Círculo visível. Reencontrando agulha e comandos…|Circle visible. Finding the needle and controls again…|Círculo visible. Buscando la aguja y los controles de nuevo…
 Círculo desapareceu sem resultado confirmado|Circle disappeared without a confirmed result|El círculo desapareció sin un resultado confirmado
 Arraste ao redor do círculo inteiro. As teclas laterais são lidas automaticamente.|Drag around the entire circle. Side keys are read automatically.|Arrastra alrededor del círculo completo. Las teclas laterales se leen automáticamente.

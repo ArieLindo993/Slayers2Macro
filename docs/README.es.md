@@ -2,7 +2,7 @@
 
 [Português](../README.md) · [English](README.en.md) · **Español**
 
-Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.48** integra el minijuego circular de noviembre: lanzamiento, salpicadura, control de ambos botones del ratón, toques A/D y recogida con T.
+Macro visual para Windows y **Slayers 2 en Roblox**. **Beta 0.0.49** integra el minijuego circular de noviembre: lanzamiento, salpicadura, control de ambos botones del ratón, toques A/D y recogida con T.
 
 **[Descargar actualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Descargas](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Cambios](CHANGELOG.es.md)**
 

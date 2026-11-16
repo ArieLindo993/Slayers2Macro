@@ -4,6 +4,13 @@
 
 Older entries below summarize the documented releases. The [Portuguese changelog](../CHANGELOG.md) includes the detailed investigations and validation notes. Recorded-frame and automated tests do not guarantee uninterrupted live gameplay.
 
+## Beta 0.0.49 — bites inside dense fishing-zone effects
+
+- Diagnoses the latest 0.0.48 session: casting succeeded but no bite or circular minigame was recorded. The matching clip contains float flashes rejected by whole-zone particle dominance; the final pause followed resizing and focus loss.
+- Adds a localized cyan-flash check with a recent brightness reference, while retaining small-droplet recognition, landing protection and the configured hook delay.
+- Moves waiting-phase ring searches out of the capture thread. Worker hints require a fresh local reading before input; stale or previous-session hints cannot issue commands. Water preview and bounded waiting diagnostics improve evidence collection.
+- Adds five-mask regression fixtures for the three complete flashes and the partial final one, plus static-light and background-search safeguards. General tests passed; playback does not prove live hook acceptance or a successful circular fight. This session never entered that fight.
+
 ## Beta 0.0.48 — persistent reacquisition and temporal splash checks
 
 - Separates ring presence from readable controls. A visible ring no longer becomes a collection attempt after 850 ms without a needle reading; every tracking capture retries recognition and releases uncertain inputs.

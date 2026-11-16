@@ -4,6 +4,15 @@
 
 Alterações verificadas nas tags e no código do repositório. A versão mais recente pode ser instalada pelo atualizador.
 
+## Beta 0.0.49 — fisgada em áreas com efeitos intensos
+
+- A sessão analisada da Beta 0.0.48 lançou a vara, ficou esperando e não registrou nenhuma fisgada nem entrada no círculo. A gravação correspondente mostra clarões da boia descartados pelo filtro de predominância das gotas sobre toda a área. A pausa final foi precedida por redimensionamento e perda de foco, não por um encerramento interno do aplicativo.
+- Acrescenta uma leitura rápida do clarão ciano perto da boia, comparando intensidade, núcleo muito brilhante e crescimento em relação a cerca de 200 ms antes. Não divide esse sinal pela animação inteira da área. A leitura de gotas azuis pequenas permanece disponível; a proteção após lançar e o atraso configurável antes do clique são preservados.
+- Durante a espera, a busca pesada do círculo passa para o processo de calibração. O resultado só fornece uma indicação de localização: a captura atual precisa confirmar os controles antes de qualquer entrada. Resultados antigos ou de outra sessão não movimentam o mouse. A espera usa agendamento mais frequente, sem prometer uma taxa de captura independente do computador.
+- A prévia mostra a água marcada enquanto aguarda a fisgada. Logs incluem brilho local, núcleo, referência, crescimento e intervalo entre capturas. Com diagnósticos ativados, uma espera prolongada também salva um recorte local da água e indicadores limitados, em vez de depender de entrar no minigame para produzir evidências.
+- Regressões usam somente máscaras de cinco limiares de cor da gravação, sem intensidades RGB originais, nomes, personagens, caminhos ou áudio. Incluem os três splashes completos e o começo de outro no último quadro nativo. Os controles negativos e os exemplos anteriores de gotas pequenas permanecem cobertos. Uma luz ciano estática não é fisgada.
+- Os 220 testes gerais passaram antes da alteração da numeração. As verificações específicas são repetidas com os novos dados; o executável verifica também a localização circular em processo separado. Replay mede reconhecimento e propostas de entrada: não confirma aceitação do clique, vitória no círculo ou estabilidade de uma partida longa. Essa sessão não contém um minigame circular para validar seu controle.
+
 ## Beta 0.0.48 — releitura persistente e splash com comparação temporal
 
 - Corrige a passagem indevida de pesca para coleta após apenas 850 ms sem leitura. Presença do anel e leitura dos controles agora são evidências separadas: com o círculo visível, continua procurando a agulha a cada captura, libera os botões durante a dúvida e não move a mira nem inicia T.

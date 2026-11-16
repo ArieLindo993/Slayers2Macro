@@ -282,5 +282,15 @@ class CircularApp(unittest.TestCase):
         data=json.loads(next(path.glob('*.json')).read_text())
         self.assertEqual(data['circular'],{'reason':'target_missing','ring_score':.65})
 
+    def test_unconfirmed_splash_has_local_diagnostic_with_bounded_fields(self):
+        import json
+        from diagnostics import Diagnostics
+        path=Path(self.temp.name)/'water_diagnostics';diag=Diagnostics(path)
+        self.assertTrue(diag.save(np.zeros((50,50,3),np.uint8),'ESPERANDO','current',
+            self.app.metrics.summary(),2.,{'flash_mass':120.,'armed':True,'private':'omit'},'splash_unconfirmed'))
+        data=json.loads(next(path.glob('*.json')).read_text())
+        self.assertEqual(data['event'],'splash_unconfirmed');self.assertEqual(data['state'],'ESPERANDO')
+        self.assertEqual(data['splash'],{'flash_mass':120.,'armed':True})
+
 
 if __name__=='__main__':unittest.main()

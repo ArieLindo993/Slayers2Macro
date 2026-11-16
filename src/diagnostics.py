@@ -81,7 +81,7 @@ def annotated_preview(rgb,reading):
 class Diagnostics:
     def __init__(self,directory,limit=20):
         self.directory=Path(directory);self.limit=limit;self.last=-float('inf')
-    def save(self,rgb,state,stage,metrics,now=None,tracking=None):
+    def save(self,rgb,state,stage,metrics,now=None,tracking=None,event='tracking_lost'):
         now=time.monotonic() if now is None else now
         if now-self.last<10:return False
         self.last=now;self.directory.mkdir(parents=True,exist_ok=True)
@@ -89,9 +89,10 @@ class Diagnostics:
         im=Image.fromarray(rgb).convert('RGB');im.thumbnail((256,600))
         stamp=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')
         im.save(self.directory/(stamp+'.png'))
-        safe_state=state if state in ('PESCANDO','RESULTADO','PARADO') else 'OTHER'
+        safe_state=state if state in ('PESCANDO','RESULTADO','PARADO','ESPERANDO') else 'OTHER'
         safe_stage=stage if stage in ('current','nearby','screen') else 'current'
-        data={'version':VERSION,'event':'tracking_lost','state':safe_state,'search_stage':safe_stage,
+        safe_event=event if event in ('tracking_lost','splash_unconfirmed') else 'tracking_lost'
+        data={'version':VERSION,'event':safe_event,'state':safe_state,'search_stage':safe_stage,
               'observed_seconds':metrics['observed_seconds'],'valid_percent':metrics['valid_percent'],
               'inside_percent':metrics['inside_percent']}
         if tracking is not None:
@@ -99,7 +100,12 @@ class Diagnostics:
             # item names or a full-window screenshot.
             allowed=('reason','ring_score','center','radius','marker','marker_source','target','band',
                      'mouse_button','green_right','red_left')
-            data['circular']={key:value for key,value in tracking.items() if key in allowed}
+            if safe_event=='splash_unconfirmed':
+                allowed=('source','flash_mass','flash_core','flash_reference','flash_growth','flash_candidate',
+                         'particles','mass','coherence','new_particles','blue_particles','blue_mass',
+                         'blue_coherence','blue_spread','capture_interval_ms','armed','detected')
+            data['splash' if safe_event=='splash_unconfirmed' else 'circular']={
+                key:value for key,value in tracking.items() if key in allowed}
         (self.directory/(stamp+'.json')).write_text(json.dumps(data,indent=2),encoding='utf-8')
         for old in sorted(self.directory.glob('*.json'))[:-self.limit]:
             old.unlink();old.with_suffix('.png').unlink(missing_ok=True)

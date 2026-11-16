@@ -197,6 +197,7 @@ class App:
         self.circle_reader=CircularReader(assets);self.splash_reader=SplashReader()
         self.claim_reader=ClaimReader(assets);self.claim_job=None;self.last_claim_ocr=0.;self.claim_votes={}
         self.current_circle=None;self.last_circle_scan=-float('inf')
+        self.circular_job=None
         self.last_mouse_button=None;self.last_circle_log=-float('inf');self.last_circle_reason=None
         self.claim_scene=None;self.last_claim_scan=-float('inf');self.circle_splash=False
         self.fishing_keys={};self.circular_scene={};self.circular_scene_time=0.
@@ -1042,32 +1043,51 @@ class App:
             self.circle_splash=False;self.circular_scene={};self.circular_scene_time=now
             self.advance(now,None);return
         self.tick_stage='sinais';self.poll_scene(now)
+        circle_hint=False
+        if self.circular_job is not None and self.circular_job[0].done():
+            future,epoch,stamp=self.circular_job;self.circular_job=None
+            try:hint=future.result()
+            except Exception as exc:self.background_error('circulo',exc)
+            else:
+                if epoch==self.scene_epoch and 0<=now-stamp<.5 and hint['visible'] and hint['geometry']:
+                    self.circle_reader.geometry=hint['geometry'];self.circle_reader.shape=hint['shape']
+                    circle_hint=True
         self.tick_stage='captura';full=self.sample(full=True);captured=time.monotonic()
         self.tick_stage='splash'
         self.circle_splash=False
         if self.engine.state in ('INICIO','POSICIONANDO','ASSENTANDO_LINHA','ESPERANDO','AGUARDANDO_CIRCULO'):
             self.circle_splash=self.splash_reader.observe(full,self.config['cast'],captured,
-                self.engine.state=='ESPERANDO' and captured>=self.engine.splash_armed_at)
+                self.engine.state=='ESPERANDO' and captured>=self.engine.splash_armed_at and not circle_hint)
         if self.circle_splash:
             self.session_log.event('SPLASH_DETECTADO',ciclo=self.cycle_id,**self.splash_reader.stats)
             if not self.dry.get():
                 self.circular_scene={};self.circular_scene_time=captured
                 self.advance(time.monotonic(),None)
                 return
+        if (self.engine.state=='ESPERANDO' and self.splash_reader.stats.get('flash_mass',0)>=100
+            and now-getattr(self,'last_flash_candidate_log',-float('inf'))>=.3):
+            self.last_flash_candidate_log=now
+            self.session_log.event('CANDIDATO_SPLASH_LOCAL',ciclo=self.cycle_id,**self.splash_reader.stats)
         if self.engine.state=='ASSENTANDO_LINHA' and self.splash_reader.stats.get('burst_onset'):
             self.session_log.event('IMPACTO_LINHA_IGNORADO',ciclo=self.cycle_id,
                 desde_lancamento=round(captured-(self.engine.cast_released_at or captured),3))
         if self.engine.state in ('ASSENTANDO_LINHA','ESPERANDO','AGUARDANDO_CIRCULO') and now-getattr(self,'last_splash_log',0)>=2:
             self.last_splash_log=now
             self.session_log.event('LEITURA_SPLASH',ciclo=self.cycle_id,**self.splash_reader.stats)
-        reading=None
+        reading=None;circle_scanned=False
         # Waiting frames prioritize the short splash. Full ring searches are
         # still periodic, and become frequent as soon as a hook is clicked.
         scan_interval=.40 if self.engine.state in ('ASSENTANDO_LINHA','ESPERANDO') else .12
-        if self.engine.state=='PESCANDO' or self.current_circle is not None or now-self.last_circle_scan>=scan_interval:
+        waiting=self.engine.state in ('ASSENTANDO_LINHA','ESPERANDO')
+        roi=None if self.config['auto_calibrate'] else self.config['circle_roi']
+        if waiting and not circle_hint:
+            if self.circular_job is None and now-self.last_circle_scan>=scan_interval:
+                future=self.submit_background(self.calibration_worker,self.circle_reader.locate,full,roi,self.scene_epoch)
+                if future is not None:self.circular_job=(future,self.scene_epoch,captured);self.last_circle_scan=now
+        elif circle_hint or self.engine.state=='PESCANDO' or self.current_circle is not None or now-self.last_circle_scan>=scan_interval:
             self.tick_stage='circulo'
-            roi=None if self.config['auto_calibrate'] else self.config['circle_roi']
             reading=self.circle_reader.read(full,roi)
+            circle_scanned=True
             self.current_circle=reading;self.last_circle_scan=now
             if reading is not None and not reading.complete and reading.mouse_button is not None and reading.mouse_button!=self.last_mouse_button:
                 self.last_mouse_button=reading.mouse_button
@@ -1075,13 +1095,14 @@ class App:
                     sinal='verde_direita' if reading.mouse_button=='right' else 'vermelha_esquerda',
                     comando='segurar_direito' if reading.mouse_button=='right' else 'segurar_esquerdo',**self.circle_reader.last_mouse_scores)
         self.capture_failures=0
+        ring_visible=circle_scanned and self.circle_reader.visible
         reason=self.circle_reader.stats.get('reason')
         if (self.engine.state=='PESCANDO' or reading is not None) and (now-self.last_circle_log>=.5 or reason!=self.last_circle_reason):
             self.last_circle_log=now;self.last_circle_reason=reason
-            self.session_log.event('LEITURA_CIRCULO',ciclo=self.cycle_id,visivel=self.circle_reader.visible,
+            self.session_log.event('LEITURA_CIRCULO',ciclo=self.cycle_id,visivel=ring_visible,
                                    **self.circle_reader.stats)
         stages=('INICIO','RESULTADO','MIRANDO_ITEM','TECLA_T','VERIFICANDO_COLETA')
-        if self.engine.state=='PESCANDO' and not self.circle_reader.visible and reading is None:
+        if self.engine.state=='PESCANDO' and not ring_visible and reading is None:
             stages=stages+('PESCANDO',)
         if now-self.last_claim_scan>=.15 and self.engine.state in stages:
             self.tick_stage='aviso_claim';self.claim_scene=self.claim_reader.scan(full);self.last_claim_scan=captured
@@ -1093,7 +1114,7 @@ class App:
                 if future is not None:self.claim_job=(future,owner);self.last_claim_ocr=now
         live=reading is not None and not reading.complete
         notification=self.scene.get('reward',False) and 0<=captured-self.scene_time<SCENE_MAX_AGE
-        self.circular_scene={'fishing':live or self.circle_reader.visible,
+        self.circular_scene={'fishing':live or ring_visible,
                              'loot':claim['point'] if claim else None,'reward':notification}
         self.circular_scene_time=captured
         lost=(self.engine.state=='PESCANDO' and (reading is None or (not reading.complete and reading.marker is None))
@@ -1108,6 +1129,7 @@ class App:
         if reading is not None:
             self.bar_status.set('Círculo localizado · mouse e A/D ativos' if live else 'Minigame concluído · aguardando Claim')
         elif lost:self.bar_status.set('Reencontrando o círculo…')
+        elif waiting:self.bar_status.set('Observando a água · aguardando fisgada')
         # Apply fresh control before drawing previews, scheduling OCR or saving
         # evidence. None of those tasks may delay a button change.
         if not self.dry.get():self.advance(time.monotonic(),reading)
@@ -1121,8 +1143,21 @@ class App:
             self.last_diagnostic=now
             self.diagnostic_job=self.submit_background(self.diagnostic_worker,self.diagnostics.save,crop,
                 'PESCANDO','current',self.metrics.summary(),None,self.circle_reader.stats.copy())
+        elif (self.engine.state=='ESPERANDO' and captured-self.engine.splash_armed_at>=8
+              and self.diagnostic_var.get() and now-self.last_diagnostic>=10 and self.diagnostic_job is None):
+            px,py=self.config['cast'];fh,fw=full.shape[:2];radius=max(35,round(min(fw,fh)*.19))
+            cx,cy=px*fw,py*fh
+            crop=full[max(0,int(cy-radius)):min(fh,int(cy+radius)),max(0,int(cx-radius)):min(fw,int(cx+radius))].copy()
+            self.last_diagnostic=now
+            self.diagnostic_job=self.submit_background(self.diagnostic_worker,self.diagnostics.save,crop,
+                'ESPERANDO','current',self.metrics.summary(),None,self.splash_reader.stats.copy(),'splash_unconfirmed')
         if now-self.last_live_preview>=.15:
             if reading is not None:preview=annotated_preview(full,reading)
+            elif waiting and self.config['cast']:
+                px,py=self.config['cast'];fh,fw=full.shape[:2];radius=max(35,round(min(fw,fh)*.19))
+                cx,cy=px*fw,py*fh
+                crop=full[max(0,int(cy-radius)):min(fh,int(cy+radius)),max(0,int(cx-radius)):min(fw,int(cx+radius))]
+                preview=annotated_preview(crop,None)
             else:
                 # Preview and diagnostics contain only the selected minigame
                 # region, never the whole desktop or game window.
@@ -1326,7 +1361,9 @@ class App:
                 if not self.fail(failure):return
         except Exception as exc:
             if not self.fail(exc):return
-        self.root.after(20,self.tick)
+        fast_wait=(self.active and isinstance(self.engine,CircularEngine) and self.engine.state in
+                   ('ASSENTANDO_LINHA','ESPERANDO','PREPARANDO_FISGADA','FISGANDO'))
+        self.root.after(5 if fast_wait else 20,self.tick)
 
     def fail(self,exc):
         frames=traceback.extract_tb(exc.__traceback__)[-5:]
@@ -1405,6 +1442,11 @@ if __name__=='__main__':
             time.sleep(.02)
         result['isolated_workers']=all(f.done() and f.exception() is None for _,f in jobs)
         result['blank_scene_safe']=result['isolated_workers'] and not jobs[0][1].result()['fishing'] and not jobs[1][1].result()['fishing'] and jobs[2][1].result() is None
+        locator=app.calibration_worker.submit(app.circle_reader.locate,blank,None,1)
+        deadline=time.monotonic()+10
+        while not locator.done() and time.monotonic()<deadline:
+            app.calibration_worker.poll();time.sleep(.01)
+        result['background_circle_locator']=locator.done() and locator.exception() is None and not locator.result()['visible']
         result['circular_blank_safe']=app.circle_reader.read(blank) is None and app.claim_reader.scan(blank) is None
         app.history.path=None;app.close();Path(sys.argv[2]).write_text(json.dumps(result),encoding='utf-8')
         test_data.cleanup()

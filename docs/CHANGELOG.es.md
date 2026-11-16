@@ -4,6 +4,13 @@
 
 Las entradas anteriores se resumen a continuación. El [historial en portugués](../CHANGELOG.md) incluye investigaciones y validaciones detalladas. Las pruebas automáticas y con capturas no garantizan sesiones ininterrumpidas en el juego.
 
+## Beta 0.0.49 — picadas con efectos intensos en el agua
+
+- Diagnostica la última sesión 0.0.48: lanzó la caña pero no registró picada ni minijuego circular. La grabación muestra destellos de la boya descartados por la proporción de gotas sobre toda la zona; la pausa final siguió a cambios de tamaño y pérdida de foco.
+- Añade una comprobación local del destello cian contra una referencia reciente. Conserva las gotas pequeñas, la protección del lanzamiento y el retraso de enganche configurado.
+- Lleva la búsqueda del anillo durante la espera a un proceso separado. Sus indicaciones necesitan una lectura nueva antes de enviar entradas; resultados antiguos no generan comandos. La vista previa muestra el agua y los diagnósticos también cubren esperas prolongadas.
+- Añade máscaras de cinco umbrales para las tres picadas completas y el inicio de otra al final, además de pruebas de luz estática y búsqueda en segundo plano. Las pruebas generales pasaron; la reproducción no demuestra aceptación del clic ni victoria en el círculo. Esta sesión no llegó a ese minijuego.
+
 ## Beta 0.0.48 — búsqueda persistente y comprobación temporal de salpicaduras
 
 - Separa la presencia del anillo de la lectura de sus controles. Un círculo visible ya no se convierte en recogida tras 850 ms sin leer la aguja; cada captura vuelve a buscarla y libera las entradas dudosas.

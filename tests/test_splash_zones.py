@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 import numpy as np
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'src'))
-from splash import SplashReader
+from splash import SplashReader,LocalizedFlash
 from circular_engine import CircularEngine
 import test_circular_flow as flow_tests
 import macro
@@ -35,6 +35,29 @@ class SplashZones(unittest.TestCase):
                 self.assertEqual(len(events),3,events)
                 for found,expected in zip(events,(1.7,3.8,5.6)):
                     self.assertAlmostEqual(found,expected,delta=.15)
+
+    def test_dense_zone_flash_recording_that_beta48_missed(self):
+        for suffix in ('native','half'):
+            with self.subTest(suffix=suffix):
+                events=self.replay_rgb(f'splash_dense_flash_{suffix}.npz')
+                expected_times=(1.10,4.25,7.30,9.4667) if suffix=='native' else (1.10,4.25,7.30)
+                # The last native frame contains the start of a fourth flash;
+                # the 20 fps half sample ends before its peak.
+                self.assertEqual(len(events),len(expected_times),events)
+                for found,expected in zip(events,expected_times):
+                    self.assertAlmostEqual(found,expected,delta=.13)
+
+    def test_static_cyan_light_cannot_be_a_local_flash(self):
+        image=np.zeros((150,150,3),np.uint8);image[55:95,55:95]=(60,255,255)
+        reader=LocalizedFlash()
+        for i in range(100):
+            event,stats=reader.observe(image,75,75,205,1.,i/30)
+            self.assertFalse(event,stats)
+
+    def test_local_flash_during_landing_is_ignored_before_later_bite(self):
+        events=self.replay_rgb('splash_dense_flash_native.npz',settling=True)
+        self.assertEqual(len(events),1)
+        self.assertAlmostEqual(events[0],4.43,delta=.1)
 
     def test_recorded_zone_with_blue_filter_never_hooks(self):
         for suffix in ('native','half'):
@@ -153,6 +176,48 @@ class SplashInputPriority(unittest.TestCase):
             app.update(1.1)
             self.assertEqual(app.engine.state,'AGUARDANDO_CIRCULO')
             macro.send_mouse.assert_called_with(False);sample.assert_not_called()
+
+    def test_waiting_circle_search_never_runs_in_capture_thread(self):
+        from concurrent.futures import Future
+        app=self.app;app.active=True;app.engine.state='ESPERANDO';app.engine.deadline=100.
+        app.engine.splash_armed_at=0.;future=Future()
+        app.circle_reader.visible=True  # A cached ring is not a fresh presence observation.
+        image=np.zeros((1072,1920,3),np.uint8)
+        with patch.object(macro,'game_window',return_value=app.window),patch.object(app,'sample',return_value=image),\
+             patch.object(app.circle_reader,'read',side_effect=AssertionError('blocking ring search')),\
+            patch.object(app,'submit_background',return_value=future) as submit,patch.object(app,'update_analyses'),\
+            patch.object(macro.time,'monotonic',return_value=2.):
+            app.update(2.)
+            self.assertIs(app.circular_job[0],future)
+            self.assertIs(submit.call_args[0][0],app.calibration_worker)
+            self.assertEqual(app.engine.state,'ESPERANDO')
+
+    def test_worker_circle_hint_requires_fresh_capture_before_control(self):
+        from concurrent.futures import Future
+        app=self.app;app.active=True;app.engine.state='ESPERANDO';app.engine.deadline=100.
+        app.engine.splash_armed_at=0.
+        future=Future();future.set_result({'visible':True,'geometry':(600,240,.4),'shape':(1072,1920),'usable':True})
+        app.circular_job=(future,app.scene_epoch,1.9)
+        image=np.zeros((1072,1920,3),np.uint8)
+        with patch.object(macro,'game_window',return_value=app.window),patch.object(app,'sample',return_value=image),\
+             patch.object(app.splash_reader,'observe',return_value=False),\
+             patch.object(app.circle_reader,'read',return_value=flow_tests.ring(mouse_button='right')) as reread,\
+             patch.object(app,'update_analyses'),patch.object(macro.time,'monotonic',return_value=2.):
+            app.update(2.)
+            reread.assert_called_once();self.assertEqual(app.engine.state,'PESCANDO');self.assertTrue(app.right_held)
+
+    def test_stale_worker_circle_hint_cannot_issue_commands(self):
+        from concurrent.futures import Future
+        app=self.app;app.active=True;app.engine.state='ESPERANDO';app.engine.deadline=100.;app.engine.splash_armed_at=0.
+        future=Future();future.set_result({'visible':True,'geometry':(600,240,.4),'shape':(1072,1920),'usable':True})
+        app.circular_job=(future,app.scene_epoch,0.)
+        image=np.zeros((1072,1920,3),np.uint8)
+        with patch.object(macro,'game_window',return_value=app.window),patch.object(app,'sample',return_value=image),\
+             patch.object(app.circle_reader,'read',side_effect=AssertionError('stale hint used')),\
+            patch.object(app,'submit_background',return_value=None),patch.object(app,'update_analyses'),\
+            patch.object(macro.time,'monotonic',return_value=2.):
+            app.update(2.)
+            self.assertEqual(app.engine.state,'ESPERANDO');self.assertFalse(app.held);self.assertFalse(app.right_held)
 
 
 if __name__=='__main__':unittest.main()

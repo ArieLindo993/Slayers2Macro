@@ -129,6 +129,13 @@ class CircularReader:
                           mouse_button=mouse_button,**self.last_mouse_scores)
         return CircularReading((cx,cy),r,score,mouse_button,marker,target,band,bool(complete),key,presses,marker_source)
 
+    def locate(self,rgb,search_roi,epoch):
+        """Worker hint only; the caller rereads fresh pixels before any input."""
+        if getattr(self,'locate_epoch',None)!=epoch:self.reset()
+        reading=self.read(rgb,search_roi);self.locate_epoch=epoch
+        return {'visible':self.visible,'geometry':self.geometry,'shape':rgb.shape[:2],
+                'usable':reading is not None}
+
     @staticmethod
     def read_marker(rgb,cx,cy,r):
         """Read the radial white needle, not the median of white scenery."""

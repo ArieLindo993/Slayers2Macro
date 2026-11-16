@@ -1,7 +1,7 @@
 """Identidade do produto, independente de contas e diretórios pessoais."""
 APP_NAME = 'Fishing Macro'
 APP_ID = 'FishingMacro'
-VERSION = '0.0.48-beta'
-DISPLAY_VERSION = 'Beta 0.0.48'
+VERSION = '0.0.49-beta'
+DISPLAY_VERSION = 'Beta 0.0.49'
 DETECTOR_REVISION = 5
 GAME_PROFILE = 'Slayers 2'

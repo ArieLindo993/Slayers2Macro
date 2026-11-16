@@ -2,7 +2,7 @@
 
 **Português** · [English](docs/README.en.md) · [Español](docs/README.es.md)
 
-Macro visual de pesca para **Slayers 2 no Roblox**, para Windows. **Beta 0.0.48** integra a mecânica circular de novembro: lançamento, splash, controle dos dois botões do mouse, pedidos A/D e coleta com T.
+Macro visual de pesca para **Slayers 2 no Roblox**, para Windows. **Beta 0.0.49** integra a mecânica circular de novembro: lançamento, splash, controle dos dois botões do mouse, pedidos A/D e coleta com T.
 
 **[Baixar atualizador](https://github.com/ArieLindo993/Slayers2Macro/releases/latest/download/Atualizador.zip)** · **[Versões e downloads](https://github.com/ArieLindo993/Slayers2Macro/releases)** · **[Alterações por versão](CHANGELOG.md)**
 

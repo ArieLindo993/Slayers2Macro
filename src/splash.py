@@ -1,6 +1,33 @@
 """Coherent cyan or small radial blue droplets distinguish bites from zone glow."""
 import cv2
 import numpy as np
+from collections import deque
+
+
+class LocalizedFlash:
+    """Short cyan bloom at the float; distant zone fish are not its denominator."""
+    def __init__(self):self.history=deque()
+
+    def observe(self,rgb,cx,cy,radius,scale,now):
+        if self.history and (now<=self.history[-1][0] or now-self.history[-1][0]>1.):self.history.clear()
+        while self.history and now-self.history[0][0]>.65:self.history.popleft()
+        h,w=rgb.shape[:2];focus=max(8,round(radius*.20))
+        x0,x1=max(0,int(cx-focus)),min(w,int(cx+focus)+1)
+        y0,y1=max(0,int(cy-focus)),min(h,int(cy+focus)+1)
+        a=rgb[y0:y1,x0:x1].astype(np.int16);rr,gg,bb=[a[:,:,i] for i in range(3)]
+        yy,xx=np.ogrid[y0:y1,x0:x1];disc=(xx-cx)**2+(yy-cy)**2<focus*focus
+        cyan=disc&(bb>245)&(gg-rr>45)
+        mass=float(np.count_nonzero(cyan&(gg>235)))/scale
+        core=float(np.count_nonzero(cyan&(gg>245)))/scale
+        references=[row for row in self.history if .12<=now-row[0]<=.60]
+        reference=min(references,key=lambda row:abs(now-row[0]-.20))[1] if references else None
+        growth=mass-reference if reference is not None else 0.
+        candidate=(reference is not None and mass>=150 and core>=60
+                   and growth>=120 and mass>=reference*2+60)
+        self.history.append((now,mass))
+        return bool(candidate),{'flash_mass':round(mass,1),'flash_core':round(core,1),
+            'flash_reference':round(reference,1) if reference is not None else None,
+            'flash_growth':round(growth,1),'flash_candidate':bool(candidate)}
 
 
 class SplashReader:
@@ -10,6 +37,7 @@ class SplashReader:
         self.last_burst=-float('inf');self.geometry=None;self.stats={}
         self.pending=None
         self.previous_color=None
+        self.flash=LocalizedFlash()
 
     def observe(self,rgb,point,now,armed=True):
         if not point:self.reset();return False
@@ -18,6 +46,14 @@ class SplashReader:
         if self.geometry!=geometry:self.reset();self.geometry=geometry
         scale=max(.2,min(w,h)/1072)**2
         radius=max(35,round(min(w,h)*.19))
+        flash,flash_stats=self.flash.observe(rgb,cx,cy,radius,scale,now)
+        if flash and armed and now-self.last_burst>=1.5:
+            self.stats={'source':'localized_flash','detected':True,'armed':True,
+                'signal_active':True,'burst_onset':True,**flash_stats,
+                'capture_interval_ms':None if self.previous_time is None else round((now-self.previous_time)*1000,1)}
+            self.last_burst=now;self.previous_time=now;self.previous_color=None
+            self.baseline=None;self.pending=None
+            return True
         x0,x1=max(0,int(cx-radius)),min(w,int(cx+radius))
         y0,y1=max(0,int(cy-radius)),min(h,int(cy+radius))
         crop=rgb[y0:y1,x0:x1].astype(np.int16)
@@ -87,9 +123,9 @@ class SplashReader:
                     'blue_mass':round(blue_mass,1),'blue_coherence':round(blue_coherence,3),
                     'blue_spread':round(spread,3),
                     'capture_interval_ms':None if self.previous_time is None else round((now-self.previous_time)*1000,1),
-                    'signal_active':bool(feature>self.baseline*1.10+20 and (novel>=1 or self.pending is not None)),
-                    'burst_onset':bool(not first and onset and feature>self.baseline*1.35+40 and rise>max(25,feature*.12)),
-                    'armed':bool(armed),'detected':bool(event)}
+                    'signal_active':bool(flash or (feature>self.baseline*1.10+20 and (novel>=1 or self.pending is not None))),
+                    'burst_onset':bool(flash or (not first and onset and feature>self.baseline*1.35+40 and rise>max(25,feature*.12))),
+                    'armed':bool(armed),'detected':bool(event),**flash_stats}
         # Learn during arming too. Keep cooldown/history across brief disarmed
         # intervals; a sustained bright frame cannot repeatedly trigger clicks.
         dt=.05 if self.previous_time is None else max(0,min(1.,now-self.previous_time))

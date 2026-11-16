@@ -368,6 +368,13 @@
       "tag": "v0.0.48-beta",
       "published": true,
       "commit": "a8e1da220bb0b7bf9d6bdf1e4396cebc352b294c"
+    },
+    {
+      "beta": "0.0.49",
+      "original": "Localized float flashes and nonblocking splash capture",
+      "kind": "git",
+      "tag": "v0.0.49-beta",
+      "published": false
     }
   ]
 }
