@@ -374,7 +374,8 @@
       "original": "Localized float flashes and nonblocking splash capture",
       "kind": "git",
       "tag": "v0.0.49-beta",
-      "published": false
+      "published": true,
+      "commit": "fec262b50a879c719184f5b03556d264e9e59669"
     }
   ]
 }
